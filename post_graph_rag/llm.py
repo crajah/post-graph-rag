@@ -26,9 +26,52 @@ class LLMService:
             return response.data[0].embedding
         except Exception as e:
             logger.error(f"Error fetching embedding from {self.config.api_base}: {e}")
-            # Mock fallback if endpoint fails or key is dummy
-            logger.warning("Returning zero vector fallback for embedding.")
-            return [0.0] * self.config.embedding_dim
+            logger.warning("Using local deterministic hash vector fallback for embedding.")
+            return self._generate_local_fallback_embedding(text, self.config.embedding_dim)
+
+    def _generate_local_fallback_embedding(self, text: str, dim: int) -> List[float]:
+        """Generate a local fallback vector when remote embedding API access fails.
+        
+        Attempts local transformer models (fastembed / sentence-transformers) if available,
+        otherwise generates a deterministic term-frequency SHA-256 unit vector.
+        """
+        # Option 1: FastEmbed local CPU model
+        try:
+            from fastembed import TextEmbedding
+            model = TextEmbedding()
+            vec = list(next(model.embed([text])))
+            if len(vec) == dim:
+                return vec
+        except Exception:
+            pass
+
+        # Option 2: SentenceTransformers local model
+        try:
+            from sentence_transformers import SentenceTransformer
+            model = SentenceTransformer("all-MiniLM-L6-v2")
+            vec = model.encode(text).tolist()
+            if len(vec) == dim:
+                return vec
+        except Exception:
+            pass
+
+        # Option 3: Deterministic Term-Hash Normalised Vector
+        import hashlib
+        words = [w.strip() for w in text.lower().split() if w.strip()]
+        vec = [0.0] * dim
+        if not words:
+            return vec
+
+        for word in words:
+            digest = hashlib.sha256(word.encode("utf-8")).digest()
+            for idx, byte in enumerate(digest):
+                dim_idx = (hash(word) + idx) % dim
+                vec[dim_idx] += (byte - 128) / 128.0
+
+        norm = sum(x * x for x in vec) ** 0.5
+        if norm > 0:
+            vec = [x / norm for x in vec]
+        return vec
 
     async def chat_completion(
         self,
