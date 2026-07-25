@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "post-graph-rag"
+version = "0.1.1"
+description = "Graph RAG library leveraging post-graph and pgvector on PostgreSQL with OpenAI-compatible LLMs."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Chandan Rajah", email = "chandan.rajah@gmail.com" }
+]
+keywords = ["graph-rag", "rag", "knowledge-graph", "post-graph", "pgvector", "llm", "openai"]
+dependencies = [
+    "post-graph>=0.1.4",
+    "openai>=1.0.0",
+    "pydantic>=2.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/crajah/post-graph-rag"
+Repository = "https://github.com/crajah/post-graph-rag"
