@@ -8,6 +8,8 @@ from post_graph_rag.llm import LLMService
 
 logger = logging.getLogger(__name__)
 
+from post_graph_rag.models import KeywordResult
+
 class Entity(BaseModel):
     name: str = Field(..., description="Canonical entity name (e.g., 'PostgreSQL', 'DeepSeek-V3.2')")
     type: str = Field(..., description="Entity type/category (e.g., 'Software', 'Person', 'Organization', 'Concept', 'Location')")
@@ -22,6 +24,10 @@ class Triple(BaseModel):
 class ExtractionResult(BaseModel):
     entities: List[Entity] = Field(default_factory=list)
     triples: List[Triple] = Field(default_factory=list)
+
+class KeywordResultSchema(BaseModel):
+    high_level_keywords: List[str] = Field(default_factory=list, description="High-level overarching themes, concepts, or intent terms")
+    low_level_keywords: List[str] = Field(default_factory=list, description="Specific entities, proper nouns, jargon, or concrete items")
 
 SYSTEM_PROMPT = """You are an expert, domain-agnostic Knowledge Graph Extractor.
 
@@ -44,6 +50,14 @@ OUTPUT REQUIREMENTS:
 Return your response formatted strictly according to the required schema.
 """
 
+KEYWORD_SYSTEM_PROMPT = """You are an expert dual-level keyword extractor for a Retrieval-Augmented Generation (RAG) system.
+Your job is to analyze the user query and extract:
+1. high_level_keywords: Overarching themes, domain concepts, or core intent.
+2. low_level_keywords: Specific entities, proper nouns, technical terms, or concrete items.
+
+Return your response strictly adhering to the JSON schema.
+"""
+
 class GraphExtractor:
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
@@ -59,7 +73,6 @@ class GraphExtractor:
         if isinstance(result, ExtractionResult) and (result.entities or result.triples):
             return result
 
-        # Fallback parsing if JSON string was returned by LLM
         if isinstance(result, str) and result.strip():
             try:
                 data = json.loads(result)
@@ -67,12 +80,10 @@ class GraphExtractor:
             except Exception:
                 pass
 
-        # Fully generic rule-based heuristic extraction fallback (no domain-specific logic)
         logger.info("Executing generic heuristic extraction fallback...")
         entities = []
         triples = []
 
-        # Find proper nouns / capitalized terms
         words = re.findall(r'\b[A-Z][a-zA-Z0-9_\-]+\b', text)
         stop_words = {
             "The", "A", "An", "In", "On", "At", "By", "With", "From", "To", "And", "Or", "But",
@@ -87,7 +98,6 @@ class GraphExtractor:
                 seen_entities[word] = e
                 entities.append(e)
 
-        # Extract basic co-occurring entity pairs as generic relations
         entity_names = list(seen_entities.keys())
         for i in range(len(entity_names) - 1):
             subj = entity_names[i]
@@ -100,3 +110,22 @@ class GraphExtractor:
             ))
 
         return ExtractionResult(entities=entities, triples=triples)
+
+    async def extract_keywords(self, query: str) -> KeywordResult:
+        """Extract high-level and low-level keywords from user query."""
+        messages = [
+            {"role": "system", "content": KEYWORD_SYSTEM_PROMPT},
+            {"role": "user", "content": f"User Query: {query}"}
+        ]
+        try:
+            res = await self.llm_service.chat_completion(messages, response_format=KeywordResultSchema)
+            if isinstance(res, KeywordResultSchema):
+                return KeywordResult(high_level_keywords=res.high_level_keywords, low_level_keywords=res.low_level_keywords)
+            if isinstance(res, str) and res.strip():
+                data = json.loads(res)
+                return KeywordResult(high_level_keywords=data.get("high_level_keywords", []), low_level_keywords=data.get("low_level_keywords", []))
+        except Exception as e:
+            logger.debug(f"Keyword extraction exception: {e}")
+
+        words = [w.strip("?,.!") for w in query.split() if len(w) > 2]
+        return KeywordResult(high_level_keywords=[query], low_level_keywords=words)

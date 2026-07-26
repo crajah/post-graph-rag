@@ -1,6 +1,6 @@
-"""Data models for post-graph-rag including DocumentMetadata."""
+"""Data models for post-graph-rag including DocumentMetadata, QueryParam, and KeywordResult."""
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 @dataclass
 class DocumentMetadata:
@@ -39,3 +39,30 @@ class DocumentMetadata:
         known_args = {k: data[k] for k in known_keys if k in data}
         extra_args = {k: v for k, v in data.items() if k not in known_keys}
         return cls(**known_args, extra=extra_args)
+
+@dataclass
+class KeywordResult:
+    """Dual-level keyword extraction result."""
+    high_level_keywords: List[str] = field(default_factory=list)
+    low_level_keywords: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "high_level": self.high_level_keywords,
+            "low_level": self.low_level_keywords
+        }
+
+@dataclass
+class QueryParam:
+    """Configuration parameters controlling RAG retrieval and synthesis behavior."""
+    mode: str = "mix"                           # "mix", "local", "global", "hybrid", "naive", or "bypass"
+    top_k: int = 5                              # Top items to retrieve
+    max_total_tokens: int = 4000                # Total context token budget
+    max_entity_tokens: int = 1500               # Max entity context token budget
+    max_relation_tokens: int = 1500             # Max relation context token budget
+    response_type: str = "Multiple Paragraphs"  # Expected answer formatting
+    stream: bool = False                        # Stream response chunks if True
+    only_need_context: bool = False             # Return raw context without synthesis if True
+    conversation_history: List[Dict[str, str]] = field(default_factory=list) # Multi-turn chat history
+    hl_keywords: List[str] = field(default_factory=list) # Custom high-level search terms
+    ll_keywords: List[str] = field(default_factory=list) # Custom low-level search terms
