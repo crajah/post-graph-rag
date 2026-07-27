@@ -11,3 +11,4 @@ class RAGConfig:
     embedding_dim: int = int(os.getenv("RAG_EMBEDDING_DIM", "4096"))
     db_uri: str = os.getenv("POSTGRES_URI", "postgresql://crajah@localhost:5432/postgres")
     realm: str = os.getenv("RAG_REALM", "default")
+    space: str = os.getenv("RAG_SPACE", "default")

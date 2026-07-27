@@ -7,7 +7,7 @@ from post_graph_rag.extractor import GraphExtractor, Entity, Triple, ExtractionR
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.engine import GraphRAG
 
-__version__ = "0.1.4"
+__version__ = "0.2.0"
 __all__ = [
     "RAGConfig",
     "DocumentMetadata",
