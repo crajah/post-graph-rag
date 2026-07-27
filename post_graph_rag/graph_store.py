@@ -12,6 +12,7 @@ class RAGGraphStore:
         self.config = config
         self.client = AsyncPostGraph(dsn=config.db_uri)
         self.realm = config.realm
+        self.space = config.space or "default"
 
     async def connect(self):
         await self.client.connect()
@@ -63,7 +64,7 @@ class RAGGraphStore:
         except Exception as e:
             logger.info(f"Doc Mentions edge table note: {e}")
 
-    async def add_document(self, text: str, embedding: List[float], metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None) -> Vertex:
+    async def add_document(self, text: str, embedding: List[float], metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None, space: Optional[str] = None) -> Vertex:
         """Insert or upsert a document text chunk with embedding and structured metadata."""
         meta_dict = {}
         if isinstance(metadata, DocumentMetadata):
@@ -71,31 +72,36 @@ class RAGGraphStore:
         elif isinstance(metadata, dict):
             meta_dict = DocumentMetadata.from_dict(metadata).to_dict()
 
+        target_space = space or meta_dict.get("space") or self.space
         payload = {"text": text, **meta_dict}
         return await self.client.add_vertex(
             "documents",
             realm=self.realm,
+            space=target_space,
             payload=payload,
             embedding=embedding
         )
 
-    async def upsert_entity(self, name: str, entity_type: str, description: str, embedding: List[float]) -> Vertex:
+    async def upsert_entity(self, name: str, entity_type: str, description: str, embedding: List[float], space: Optional[str] = None) -> Vertex:
         """Upsert an entity vertex by name."""
+        target_space = space or self.space
         payload = {"name": name, "type": entity_type, "description": description}
-        # Fetch existing by searching name in payload if present, or upsert
         return await self.client.upsert_vertex(
             "entities",
             realm=self.realm,
+            space=target_space,
             payload=payload,
             embedding=embedding
         )
 
-    async def add_relation(self, from_entity: Vertex, to_entity: Vertex, relation_type: str, description: Optional[str] = None) -> Edge:
+    async def add_relation(self, from_entity: Vertex, to_entity: Vertex, relation_type: str, description: Optional[str] = None, space: Optional[str] = None) -> Edge:
         """Create a relationship edge between two entity vertices."""
+        target_space = space or self.space
         payload = {"description": description or ""}
         return await self.client.add_edge(
             "relations",
             realm=self.realm,
+            space=target_space,
             from_id=from_entity.id,
             to_id=to_entity.id,
             relation_type=relation_type,
@@ -103,18 +109,18 @@ class RAGGraphStore:
             check_cycle=False
         )
 
-    async def search_similar_entities(self, query_vec: List[float], top_k: int = 5) -> List[Tuple[Vertex, float]]:
-        """Vector similarity search over entity vertices."""
+    async def search_similar_entities(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Vertex, float]]:
+        """Vector similarity search over entity vertices, optionally scoped by space."""
         try:
-            return await self.client.vector_search("entities", realm=self.realm, query_vector=query_vec, top_k=top_k)
+            return await self.client.vector_search("entities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k)
         except Exception as e:
             logger.warning(f"Entity vector search failed: {e}")
             return []
 
-    async def search_similar_documents(self, query_vec: List[float], top_k: int = 5) -> List[Tuple[Vertex, float]]:
-        """Vector similarity search over document vertices."""
+    async def search_similar_documents(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Vertex, float]]:
+        """Vector similarity search over document vertices, optionally scoped by space."""
         try:
-            return await self.client.vector_search("documents", realm=self.realm, query_vector=query_vec, top_k=top_k)
+            return await self.client.vector_search("documents", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k)
         except Exception as e:
             logger.warning(f"Document vector search failed: {e}")
             return []

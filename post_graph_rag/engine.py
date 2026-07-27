@@ -38,13 +38,14 @@ class GraphRAG:
         """Close database connection."""
         await self.store.close()
 
-    async def index_document(self, text: str, metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None) -> Dict[str, Any]:
+    async def index_document(self, text: str, metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None, space: Optional[str] = None) -> Dict[str, Any]:
         """Index a document: extract entities/triples, compute embeddings, and populate graph."""
         meta_obj = metadata if isinstance(metadata, DocumentMetadata) else DocumentMetadata.from_dict(metadata or {})
+        target_space = space or meta_obj.space or self.config.space
         
         # 1. Compute embedding for document chunk
         doc_emb = await self.llm.get_embedding(text)
-        doc_vertex = await self.store.add_document(text, doc_emb, meta_obj)
+        doc_vertex = await self.store.add_document(text, doc_emb, meta_obj, space=target_space)
 
         # 2. Extract entities and triples using LLM
         extraction: ExtractionResult = await self.extractor.extract_from_text(text)
@@ -58,7 +59,8 @@ class GraphRAG:
                 name=entity.name,
                 entity_type=entity.type,
                 description=entity.description,
-                embedding=entity_emb
+                embedding=entity_emb,
+                space=target_space
             )
             entity_vertex_map[entity.name.lower()] = e_vertex
 
@@ -73,15 +75,15 @@ class GraphRAG:
 
             if not subj_vertex:
                 s_emb = await self.llm.get_embedding(triple.subject)
-                subj_vertex = await self.store.upsert_entity(triple.subject, "Concept", "", s_emb)
+                subj_vertex = await self.store.upsert_entity(triple.subject, "Concept", "", s_emb, space=target_space)
                 entity_vertex_map[subj_key] = subj_vertex
 
             if not obj_vertex:
                 o_emb = await self.llm.get_embedding(triple.object)
-                obj_vertex = await self.store.upsert_entity(triple.object, "Concept", "", o_emb)
+                obj_vertex = await self.store.upsert_entity(triple.object, "Concept", "", o_emb, space=target_space)
                 entity_vertex_map[obj_key] = obj_vertex
 
-            edge = await self.store.add_relation(subj_vertex, obj_vertex, triple.predicate, triple.description)
+            edge = await self.store.add_relation(subj_vertex, obj_vertex, triple.predicate, triple.description, space=target_space)
             added_relations.append(edge)
 
         return {
@@ -96,6 +98,7 @@ class GraphRAG:
         """Structured data retrieval API: returns raw retrieved entities, relationships, chunks, and metadata without LLM synthesis."""
         p = param or QueryParam()
         mode = p.mode.lower()
+        target_space = p.space or self.config.space
 
         # Dual-level keyword extraction
         if not p.hl_keywords and not p.ll_keywords and mode != "bypass":
@@ -117,9 +120,11 @@ class GraphRAG:
         global_relations = []
 
         if mode in ("mix", "local", "hybrid"):
-            similar_entities = await self.store.search_similar_entities(query_vec, top_k=p.top_k)
+            similar_entities = await self.store.search_similar_entities(query_vec, top_k=p.top_k, space=target_space)
         if mode in ("mix", "local", "hybrid", "naive"):
-            similar_docs = await self.store.search_similar_documents(query_vec, top_k=p.top_k)
+            similar_docs = await self.store.search_similar_documents(query_vec, top_k=p.top_k, space=target_space)
+        if mode in ("global", "hybrid"):
+            global_relations = await self.store.get_all_relations(limit=p.top_k * 5)
         if mode in ("global", "hybrid"):
             global_relations = await self.store.get_all_relations(limit=p.top_k * 5)
 

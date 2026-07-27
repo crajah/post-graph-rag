@@ -19,7 +19,8 @@ Traditional Vector RAG systems suffer from **"chunk isolation"**—they retrieve
 `post-graph-rag` solves this by building a **dual representation** inside PostgreSQL:
 1. **Unstructured Vector Passages**: Full document chunks indexed with `pgvector` HNSW embeddings.
 2. **Knowledge Graph Triples**: Extracted Subject-Predicate-Object entities connected by graph edges.
-3. **Structured Document Metadata**: Rich metadata tracking (`source`, `category`, `collection`, `document`, `page`, `paragraph`).
+3. **Structured Document Metadata**: Rich metadata tracking (`source`, `category`, `collection`, `document`, `page`, `paragraph`, `space`).
+4. **Application-Level Space Sub-grouping (`space`)**: Scopes indexing and vector similarity search to application-specific environments (e.g. `production`, `sandbox`, `staging`, `user_workspace`) within `{realm}` tenant partitions.
 
 ---
 

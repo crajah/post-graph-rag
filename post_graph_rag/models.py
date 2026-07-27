@@ -14,6 +14,7 @@ class DocumentMetadata:
     document: Optional[str] = None      # e.g., "architecture_spec.pdf", "user_guide.md"
     page: Optional[int] = None          # e.g., Page number (1-based)
     paragraph: Optional[int] = None     # e.g., Paragraph index (1-based)
+    space: Optional[str] = None         # e.g., Sub-grouping space ("production", "sandbox")
     extra: Dict[str, Any] = field(default_factory=dict) # Any additional custom key-value pairs
 
     def to_dict(self) -> Dict[str, Any]:
@@ -25,6 +26,7 @@ class DocumentMetadata:
             "document": self.document,
             "page": self.page,
             "paragraph": self.paragraph,
+            "space": self.space,
         }
         if self.extra:
             res.update(self.extra)
@@ -35,7 +37,7 @@ class DocumentMetadata:
         """Reconstruct DocumentMetadata from dictionary data."""
         if not data:
             return cls()
-        known_keys = {"source", "category", "collection", "document", "page", "paragraph"}
+        known_keys = {"source", "category", "collection", "document", "page", "paragraph", "space"}
         known_args = {k: data[k] for k in known_keys if k in data}
         extra_args = {k: v for k, v in data.items() if k not in known_keys}
         return cls(**known_args, extra=extra_args)
@@ -63,6 +65,7 @@ class QueryParam:
     response_type: str = "Multiple Paragraphs"  # Expected answer formatting
     stream: bool = False                        # Stream response chunks if True
     only_need_context: bool = False             # Return raw context without synthesis if True
+    space: Optional[str] = None                 # Optional space filter ("production", "sandbox")
     conversation_history: List[Dict[str, str]] = field(default_factory=list) # Multi-turn chat history
     hl_keywords: List[str] = field(default_factory=list) # Custom high-level search terms
     ll_keywords: List[str] = field(default_factory=list) # Custom low-level search terms
