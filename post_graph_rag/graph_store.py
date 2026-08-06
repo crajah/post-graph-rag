@@ -1,7 +1,7 @@
 """Graph Store implementation wrapping post-graph and pgvector."""
 import logging
 from typing import List, Dict, Any, Tuple, Optional, Union
-from post_graph import AsyncPostGraph, Vertex, Edge, TableNotFoundError
+from post_graph import AsyncPostGraph, Vertex, Edge, TableNotFoundError, RESERVED_SPACE_ALL
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.models import DocumentMetadata
 
@@ -132,3 +132,33 @@ class RAGGraphStore:
             return []
         steps = await vertex.outgoing("relations")
         return [(step.edge, step.neighbor_vertex) for step in steps]
+
+    async def get_all_relations(self, limit: int = 50, space: Optional[str] = None) -> List[Tuple[Edge, Vertex, Vertex]]:
+        """Fetch relations with their source and target entity vertices, optionally filtered by space.
+
+        Returns list of (edge, from_vertex, to_vertex) tuples.
+        """
+        target_space = space or self.space
+        try:
+            entities = await self.client.get_vertices(
+                "entities",
+                realm=self.realm,
+                space=target_space if target_space != RESERVED_SPACE_ALL else RESERVED_SPACE_ALL
+            )
+        except Exception as e:
+            logger.warning(f"Failed to fetch entities for global relations: {e}")
+            return []
+
+        results = []
+        for entity in entities:
+            if len(results) >= limit:
+                break
+            try:
+                steps = await entity.outgoing("relations")
+                for step in steps:
+                    if len(results) >= limit:
+                        break
+                    results.append((step.edge, entity, step.neighbor_vertex))
+            except Exception:
+                continue
+        return results

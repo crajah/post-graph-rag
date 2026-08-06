@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import List, Dict, Any, Optional, Union
-from post_graph import Vertex
+from post_graph import Vertex, RESERVED_SPACE_ALL
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.models import DocumentMetadata, QueryParam, KeywordResult
 from post_graph_rag.llm import LLMService
@@ -124,17 +124,23 @@ class GraphRAG:
         if mode in ("mix", "local", "hybrid", "naive"):
             similar_docs = await self.store.search_similar_documents(query_vec, top_k=p.top_k, space=target_space)
         if mode in ("global", "hybrid"):
-            global_relations = await self.store.get_all_relations(limit=p.top_k * 5)
-        if mode in ("global", "hybrid"):
-            global_relations = await self.store.get_all_relations(limit=p.top_k * 5)
+            global_relations = await self.store.get_all_relations(limit=p.top_k * 5, space=target_space)
 
         # Fallback if empty vector hits
         if mode in ("mix", "local", "hybrid") and not similar_entities:
             try:
                 table_ref = self.store.client._get_table_ref("entities", self.config.realm)
-                rows = await self.store.client._fetch(f"SELECT realm, id, fqid, payload, created_at, updated_at FROM {table_ref} LIMIT $1", p.top_k * 3)
+                space_clause = ""
+                fallback_args = [self.config.realm, p.top_k * 3]
+                if target_space and target_space != RESERVED_SPACE_ALL:
+                    space_clause = " AND space = $3"
+                    fallback_args.append(target_space)
+                rows = await self.store.client._fetch(
+                    f"SELECT realm, id, space, fqid, payload, created_at, updated_at FROM {table_ref} WHERE realm = $1{space_clause} LIMIT $2",
+                    *fallback_args
+                )
                 for r in rows:
-                    v = Vertex(realm=r['realm'], id=str(r['id']), fqid=r['fqid'], payload=r['payload'] if isinstance(r['payload'], dict) else json.loads(r['payload']), created_at=r['created_at'], updated_at=r['updated_at'], table_name="entities", _client=self.store.client)
+                    v = Vertex(realm=r['realm'], id=str(r['id']), space=r.get('space') or 'default', fqid=r['fqid'], payload=r['payload'] if isinstance(r['payload'], dict) else json.loads(r['payload']), created_at=r['created_at'], updated_at=r['updated_at'], table_name="entities", _client=self.store.client)
                     similar_entities.append((v, 0.0))
             except Exception:
                 pass
@@ -142,9 +148,17 @@ class GraphRAG:
         if mode in ("mix", "local", "hybrid", "naive") and not similar_docs:
             try:
                 table_ref = self.store.client._get_table_ref("documents", self.config.realm)
-                rows = await self.store.client._fetch(f"SELECT realm, id, fqid, payload, created_at, updated_at FROM {table_ref} LIMIT $1", p.top_k)
+                space_clause = ""
+                fallback_args = [self.config.realm, p.top_k]
+                if target_space and target_space != RESERVED_SPACE_ALL:
+                    space_clause = " AND space = $3"
+                    fallback_args.append(target_space)
+                rows = await self.store.client._fetch(
+                    f"SELECT realm, id, space, fqid, payload, created_at, updated_at FROM {table_ref} WHERE realm = $1{space_clause} LIMIT $2",
+                    *fallback_args
+                )
                 for r in rows:
-                    v = Vertex(realm=r['realm'], id=str(r['id']), fqid=r['fqid'], payload=r['payload'] if isinstance(r['payload'], dict) else json.loads(r['payload']), created_at=r['created_at'], updated_at=r['updated_at'], table_name="documents", _client=self.store.client)
+                    v = Vertex(realm=r['realm'], id=str(r['id']), space=r.get('space') or 'default', fqid=r['fqid'], payload=r['payload'] if isinstance(r['payload'], dict) else json.loads(r['payload']), created_at=r['created_at'], updated_at=r['updated_at'], table_name="documents", _client=self.store.client)
                     similar_docs.append((v, 0.0))
             except Exception:
                 pass
