@@ -1,14 +1,21 @@
-import json
 import logging
-from typing import List, Dict, Any, Optional, Union
-from post_graph import Vertex, RESERVED_SPACE_ALL
+from typing import Callable, List, Dict, Any, Optional, Tuple, Union
+from post_graph import Vertex
+from post_graph_rag.chunking import make_paragraph_chunker
 from post_graph_rag.config import RAGConfig
-from post_graph_rag.models import DocumentMetadata, QueryParam, KeywordResult
+from post_graph_rag.models import DocumentContext, DocumentMetadata, QueryParam
 from post_graph_rag.llm import LLMService
 from post_graph_rag.extractor import GraphExtractor, ExtractionResult
 from post_graph_rag.graph_store import RAGGraphStore
 
 logger = logging.getLogger(__name__)
+
+RETRIEVAL_MODES = ("mix", "local", "global", "hybrid", "naive", "bypass")
+
+ENTITY_MODES = ("mix", "local", "hybrid")
+DOCUMENT_MODES = ("mix", "local", "hybrid", "naive")
+GLOBAL_MODES = ("global", "hybrid")
+
 
 def _truncate_by_tokens(text_items: List[str], max_tokens: int) -> str:
     """Helper to truncate a list of string passages to respect max token budget."""
@@ -22,11 +29,38 @@ def _truncate_by_tokens(text_items: List[str], max_tokens: int) -> str:
         current_tokens += item_tokens
     return "\n".join(selected)
 
+
 class GraphRAG:
-    def __init__(self, config: Optional[RAGConfig] = None):
+    """Indexing and retrieval orchestrator.
+
+    The LLM service, extractor and chunker can all be replaced, so callers can
+    tune extraction or supply their own splitter without forking the library.
+    """
+
+    def __init__(
+        self,
+        config: Optional[RAGConfig] = None,
+        llm: Optional[LLMService] = None,
+        extractor: Optional[GraphExtractor] = None,
+        chunker: Optional[Callable[[str], List[str]]] = None,
+    ):
         self.config = config or RAGConfig()
-        self.llm = LLMService(self.config)
-        self.extractor = GraphExtractor(self.llm)
+        self.llm = llm or LLMService(self.config)
+        self.extractor = extractor or GraphExtractor(
+            self.llm,
+            system_prompt=self.config.extraction_prompt,
+            entity_types=self.config.entity_types or None,
+            predicate_vocabulary=self.config.predicate_vocabulary or None,
+            predicate_aliases=self.config.predicate_aliases or None,
+            gleaning_passes=self.config.gleaning_passes,
+            min_confidence=self.config.min_relation_confidence,
+            drop_negated=self.config.drop_negated_relations,
+            reject_possessive_entities=self.config.reject_possessive_entities,
+        )
+        self.chunker = chunker or make_paragraph_chunker(
+            chunk_chars=self.config.chunk_chars,
+            overlap_chars=self.config.chunk_overlap_chars,
+        )
         self.store = RAGGraphStore(self.config)
 
     async def initialize(self):
@@ -38,73 +72,136 @@ class GraphRAG:
         """Close database connection."""
         await self.store.close()
 
-    async def index_document(self, text: str, metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None, space: Optional[str] = None) -> Dict[str, Any]:
-        """Index a document: extract entities/triples, compute embeddings, and populate graph."""
+    # ---------------------------------------------------------------- indexing
+
+    async def index_text(
+        self,
+        text: str,
+        metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None,
+        space: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Chunk a whole document and index each chunk with running context.
+
+        Each chunk is extracted with the document title and the canonical entity
+        names found so far, so references that only resolve against earlier text
+        ("he", "the engine") attach to the right entity instead of becoming
+        vertices of their own.
+        """
+        meta_obj = metadata if isinstance(metadata, DocumentMetadata) else DocumentMetadata.from_dict(metadata or {})
+        chunks = self.chunker(text)
+        context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
+
+        results = []
+        for idx, chunk in enumerate(chunks, 1):
+            chunk_meta = DocumentMetadata.from_dict({**meta_obj.to_dict(), "paragraph": idx})
+            res = await self.index_document(chunk, metadata=chunk_meta, space=space, context=context)
+            results.append(res)
+            # Feed this chunk's canonical names forward as context.
+            for name in res["entities"]:
+                if name not in context.known_entities:
+                    context.known_entities.append(name)
+            del context.known_entities[: max(0, len(context.known_entities) - self.config.context_entity_limit)]
+        return results
+
+    async def index_document(
+        self,
+        text: str,
+        metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None,
+        space: Optional[str] = None,
+        context: Optional[DocumentContext] = None,
+    ) -> Dict[str, Any]:
+        """Index one chunk: extract entities/triples, embed, and populate the graph."""
         meta_obj = metadata if isinstance(metadata, DocumentMetadata) else DocumentMetadata.from_dict(metadata or {})
         target_space = space or meta_obj.space or self.config.space
-        
-        # 1. Compute embedding for document chunk
+
+        if context is None and (meta_obj.document or meta_obj.source):
+            context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
+
         doc_emb = await self.llm.get_embedding(text)
         doc_vertex = await self.store.add_document(text, doc_emb, meta_obj, space=target_space)
 
-        # 2. Extract entities and triples using LLM
-        extraction: ExtractionResult = await self.extractor.extract_from_text(text)
+        extraction: ExtractionResult = await self.extractor.extract_from_text(text, context=context)
 
-        entity_vertex_map = {}
-        # 3. Insert/Upsert entities with embeddings
-        for entity in extraction.entities:
-            entity_text = f"{entity.name} ({entity.type}): {entity.description}"
-            entity_emb = await self.llm.get_embedding(entity_text)
+        # One batched request instead of one round trip per entity.
+        entity_texts = [
+            f"{e.name} ({e.type}): {e.description}" + (f" Also known as: {', '.join(e.aliases)}." if e.aliases else "")
+            for e in extraction.entities
+        ]
+        entity_embs = await self.llm.get_embeddings(entity_texts)
+
+        entity_vertex_map: Dict[str, Vertex] = {}
+        for entity, emb in zip(extraction.entities, entity_embs):
             e_vertex = await self.store.upsert_entity(
                 name=entity.name,
                 entity_type=entity.type,
                 description=entity.description,
-                embedding=entity_emb,
-                space=target_space
+                embedding=emb,
+                space=target_space,
+                aliases=entity.aliases,
             )
             entity_vertex_map[entity.name.lower()] = e_vertex
+            for alias in entity.aliases:
+                entity_vertex_map.setdefault(alias.lower(), e_vertex)
 
-        # 4. Insert relationship edges
-        added_relations = []
+        # Triple endpoints the extractor did not return as full entities.
+        missing = []
         for triple in extraction.triples:
-            subj_key = triple.subject.lower()
-            obj_key = triple.object.lower()
+            for endpoint in (triple.subject, triple.object):
+                if endpoint.lower() not in entity_vertex_map and endpoint not in missing:
+                    missing.append(endpoint)
+        if missing:
+            stub_embs = await self.llm.get_embeddings(missing)
+            for name, emb in zip(missing, stub_embs):
+                entity_vertex_map[name.lower()] = await self.store.upsert_entity(
+                    name, "Concept", "", emb, space=target_space
+                )
 
-            subj_vertex = entity_vertex_map.get(subj_key)
-            obj_vertex = entity_vertex_map.get(obj_key)
+        rel_embs: List[Optional[List[float]]] = [None] * len(extraction.triples)
+        if self.config.embed_relations and extraction.triples:
+            rel_texts = [
+                f"{t.subject} {t.predicate} {t.object}. {t.description or ''}".strip()
+                for t in extraction.triples
+            ]
+            rel_embs = list(await self.llm.get_embeddings(rel_texts))
 
-            if not subj_vertex:
-                s_emb = await self.llm.get_embedding(triple.subject)
-                subj_vertex = await self.store.upsert_entity(triple.subject, "Concept", "", s_emb, space=target_space)
-                entity_vertex_map[subj_key] = subj_vertex
-
-            if not obj_vertex:
-                o_emb = await self.llm.get_embedding(triple.object)
-                obj_vertex = await self.store.upsert_entity(triple.object, "Concept", "", o_emb, space=target_space)
-                entity_vertex_map[obj_key] = obj_vertex
-
-            edge = await self.store.add_relation(subj_vertex, obj_vertex, triple.predicate, triple.description, space=target_space)
+        added_relations = []
+        for triple, rel_emb in zip(extraction.triples, rel_embs):
+            subj_vertex = entity_vertex_map[triple.subject.lower()]
+            obj_vertex = entity_vertex_map[triple.object.lower()]
+            edge = await self.store.add_relation(
+                subj_vertex, obj_vertex, triple.predicate, triple.description,
+                space=target_space, embedding=rel_emb,
+                negated=triple.negated, confidence=triple.confidence,
+            )
             added_relations.append(edge)
+
+        # Link the chunk to every entity it mentions, populating doc_mentions.
+        mentioned = {v.id: v for v in entity_vertex_map.values()}
+        mentions = 0
+        for e_vertex in mentioned.values():
+            if await self.store.add_doc_mention(doc_vertex, e_vertex, space=target_space):
+                mentions += 1
 
         return {
             "document_id": doc_vertex.id,
             "entities_extracted": len(extraction.entities),
             "triples_extracted": len(extraction.triples),
+            "relations_added": len(added_relations),
+            "mentions_added": mentions,
+            "negated_relations": sum(1 for t in extraction.triples if t.negated),
             "entities": [e.name for e in extraction.entities],
             "metadata": meta_obj.to_dict()
         }
+
+    # --------------------------------------------------------------- retrieval
 
     async def query_data(self, question: str, param: Optional[QueryParam] = None) -> Dict[str, Any]:
         """Structured data retrieval API: returns raw retrieved entities, relationships, chunks, and metadata without LLM synthesis."""
         p = param or QueryParam()
         mode = p.mode.lower()
+        if mode not in RETRIEVAL_MODES:
+            raise ValueError(f"Unknown retrieval mode '{p.mode}'. Expected one of {RETRIEVAL_MODES}.")
         target_space = p.space or self.config.space
-
-        # Dual-level keyword extraction
-        if not p.hl_keywords and not p.ll_keywords and mode != "bypass":
-            kw_res = await self.extractor.extract_keywords(question)
-            p.hl_keywords = kw_res.high_level_keywords
-            p.ll_keywords = kw_res.low_level_keywords
 
         if mode == "bypass":
             return {
@@ -114,100 +211,73 @@ class GraphRAG:
                 "metadata": {"query_mode": mode, "keywords": {"high_level": [], "low_level": []}}
             }
 
+        if not p.hl_keywords and not p.ll_keywords:
+            kw_res = await self.extractor.extract_keywords(question)
+            p.hl_keywords = kw_res.high_level_keywords
+            p.ll_keywords = kw_res.low_level_keywords
+
         query_vec = await self.llm.get_embedding(question)
-        similar_entities = []
-        similar_docs = []
-        global_relations = []
 
-        if mode in ("mix", "local", "hybrid"):
-            similar_entities = await self.store.search_similar_entities(query_vec, top_k=p.top_k, space=target_space)
-        if mode in ("mix", "local", "hybrid", "naive"):
-            similar_docs = await self.store.search_similar_documents(query_vec, top_k=p.top_k, space=target_space)
-        if mode in ("global", "hybrid"):
-            global_relations = await self.store.get_all_relations(limit=p.top_k * 5, space=target_space)
+        # Low-level keywords name concrete entities, so they sharpen entity search.
+        # High-level keywords describe themes, so they steer relation ranking.
+        entity_vec = query_vec
+        if p.ll_keywords:
+            entity_vec = await self.llm.get_embedding(
+                f"{question}\nEntities: {', '.join(p.ll_keywords)}"
+            )
 
-        # Fallback if empty vector hits
-        if mode in ("mix", "local", "hybrid") and not similar_entities:
-            try:
-                table_ref = self.store.client._get_table_ref("entities", self.config.realm)
-                space_clause = ""
-                fallback_args = [self.config.realm, p.top_k * 3]
-                if target_space and target_space != RESERVED_SPACE_ALL:
-                    space_clause = " AND space = $3"
-                    fallback_args.append(target_space)
-                rows = await self.store.client._fetch(
-                    f"SELECT realm, id, space, fqid, payload, created_at, updated_at FROM {table_ref} WHERE realm = $1{space_clause} LIMIT $2",
-                    *fallback_args
+        similar_entities: List[Tuple[Vertex, float]] = []
+        similar_docs: List[Tuple[Vertex, float]] = []
+        graph_triples: List[Dict[str, Any]] = []
+
+        if mode in ENTITY_MODES:
+            similar_entities = await self.store.search_similar_entities(
+                entity_vec, top_k=p.top_k, space=target_space
+            )
+        if mode in DOCUMENT_MODES:
+            similar_docs = await self.store.search_similar_documents(
+                query_vec, top_k=p.top_k, space=target_space
+            )
+
+        if mode in ENTITY_MODES:
+            for entity_vertex, _dist in similar_entities:
+                for edge, target in await self.store.get_neighbors(entity_vertex.id, space=target_space):
+                    graph_triples.append(self._format_triple(edge, entity_vertex, target))
+
+            # Pull in passages that mention the matched entities. A question can
+            # match an entity by name while the passage explaining it uses none
+            # of the query's wording, including passages in other documents.
+            if self.config.expand_chunks_via_mentions and similar_entities and mode in DOCUMENT_MODES:
+                have = [v.id for v, _ in similar_docs]
+                extra = await self.store.find_chunks_mentioning(
+                    [v.id for v, _ in similar_entities],
+                    limit=p.top_k,
+                    space=target_space,
+                    exclude_ids=have,
                 )
-                for r in rows:
-                    v = Vertex(realm=r['realm'], id=str(r['id']), space=r.get('space') or 'default', fqid=r['fqid'], payload=r['payload'] if isinstance(r['payload'], dict) else json.loads(r['payload']), created_at=r['created_at'], updated_at=r['updated_at'], table_name="entities", _client=self.store.client)
-                    similar_entities.append((v, 0.0))
-            except Exception:
-                pass
+                similar_docs.extend((v, 1.0) for v in extra)
 
-        if mode in ("mix", "local", "hybrid", "naive") and not similar_docs:
-            try:
-                table_ref = self.store.client._get_table_ref("documents", self.config.realm)
-                space_clause = ""
-                fallback_args = [self.config.realm, p.top_k]
-                if target_space and target_space != RESERVED_SPACE_ALL:
-                    space_clause = " AND space = $3"
-                    fallback_args.append(target_space)
-                rows = await self.store.client._fetch(
-                    f"SELECT realm, id, space, fqid, payload, created_at, updated_at FROM {table_ref} WHERE realm = $1{space_clause} LIMIT $2",
-                    *fallback_args
-                )
-                for r in rows:
-                    v = Vertex(realm=r['realm'], id=str(r['id']), space=r.get('space') or 'default', fqid=r['fqid'], payload=r['payload'] if isinstance(r['payload'], dict) else json.loads(r['payload']), created_at=r['created_at'], updated_at=r['updated_at'], table_name="documents", _client=self.store.client)
-                    similar_docs.append((v, 0.0))
-            except Exception:
-                pass
+        if mode in GLOBAL_MODES:
+            graph_triples.extend(await self._global_relations(p, query_vec, target_space))
 
-        # Gather graph relationships from entities
-        graph_triples = []
-        if mode in ("mix", "local", "hybrid"):
-            for entity_vertex, dist in similar_entities:
-                neighbors = await self.store.get_neighbors(entity_vertex.id)
-                for edge, target in neighbors:
-                    subj_name = entity_vertex.payload.get("name", entity_vertex.id)
-                    obj_name = target.payload.get("name", target.id)
-                    rel_type = edge.relation_type
-                    graph_triples.append({
-                        "src_id": subj_name,
-                        "tgt_id": obj_name,
-                        "relation_type": rel_type,
-                        "description": edge.payload.get("description", ""),
-                        "weight": edge.payload.get("weight", 1)
-                    })
-
-        if mode in ("global", "hybrid"):
-            for edge, from_v, to_v in global_relations:
-                subj_name = from_v.payload.get("name", from_v.id)
-                obj_name = to_v.payload.get("name", to_v.id)
-                graph_triples.append({
-                    "src_id": subj_name,
-                    "tgt_id": obj_name,
-                    "relation_type": edge.relation_type,
-                    "description": edge.payload.get("description", ""),
-                    "weight": edge.payload.get("weight", 1)
-                })
+        graph_triples = self._dedupe_triples(graph_triples)
 
         formatted_entities = [{
             "entity_name": v.payload.get("name"),
             "entity_type": v.payload.get("type"),
             "description": v.payload.get("description")
-        } for v, dist in similar_entities]
+        } for v, _dist in similar_entities]
 
         formatted_chunks = [{
             "chunk_id": v.id,
             "content": v.payload.get("text"),
             "metadata": DocumentMetadata.from_dict(v.payload).to_dict()
-        } for v, dist in similar_docs]
+        } for v, _dist in similar_docs]
 
         references = [{
             "reference_id": f"[{idx + 1}]",
             "document": v.payload.get("document") or f"Doc Chunk {v.id}"
-        } for idx, (v, dist) in enumerate(similar_docs)]
+        } for idx, (v, _dist) in enumerate(similar_docs)]
 
         return {
             "status": "success",
@@ -231,6 +301,81 @@ class GraphRAG:
                 }
             }
         }
+
+    async def _global_relations(self, p: QueryParam, query_vec: List[float], space: str) -> List[Dict[str, Any]]:
+        """Collect graph-wide relations for 'global'/'hybrid' modes.
+
+        Uses relation embeddings when ``embed_relations`` is enabled; otherwise
+        enumerates relations and ranks them by keyword overlap, which is still
+        far better than returning whichever rows were read first.
+        """
+        limit = p.top_k * 5
+
+        if self.config.embed_relations:
+            hits = await self.store.search_similar_relations(query_vec, top_k=limit, space=space)
+            if hits:
+                resolved = []
+                for edge, _dist in hits:
+                    from_v, to_v = await self.store.get_relation_endpoints(edge)
+                    if from_v is None or to_v is None:
+                        continue
+                    resolved.append(self._format_triple(edge, from_v, to_v))
+                return resolved
+
+        candidates = [
+            self._format_triple(edge, from_v, to_v)
+            for edge, from_v, to_v in await self.store.get_all_relations(limit=limit, space=space)
+        ]
+        return self._rank_by_keywords(candidates, p.hl_keywords + p.ll_keywords, limit)
+
+    @staticmethod
+    def _format_triple(edge: Any, from_v: Vertex, to_v: Vertex) -> Dict[str, Any]:
+        payload = edge.payload or {}
+        return {
+            "src_id": from_v.payload.get("name", from_v.id),
+            "tgt_id": to_v.payload.get("name", to_v.id),
+            "relation_type": edge.relation_type,
+            "description": payload.get("description", ""),
+            "weight": payload.get("weight", 1),
+            "negated": bool(payload.get("negated", False)),
+            "confidence": float(payload.get("confidence", 1.0)),
+        }
+
+    @staticmethod
+    def _rank_by_keywords(triples: List[Dict[str, Any]], keywords: List[str], limit: int) -> List[Dict[str, Any]]:
+        """Order global-mode relations by keyword overlap.
+
+        Global mode has no per-relation vector to search against, so without this
+        it returns whatever ``get_all_relations`` happened to read first.
+        """
+        terms = {k.lower() for k in keywords if k}
+
+        def score(t: Dict[str, Any]) -> tuple:
+            haystack = " ".join([
+                str(t.get("src_id", "")), str(t.get("tgt_id", "")),
+                str(t.get("relation_type", "")), str(t.get("description", ""))
+            ]).lower()
+            overlap = sum(1 for term in terms if term in haystack)
+            # Weight breaks ties: a relation corroborated by several chunks is
+            # more likely to matter than one seen once.
+            return (overlap, int(t.get("weight", 1)))
+
+        return sorted(triples, key=score, reverse=True)[:limit]
+
+    @staticmethod
+    def _dedupe_triples(triples: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove duplicate relations that entity-hop and global passes both found."""
+        seen = set()
+        out = []
+        for t in triples:
+            key = (str(t.get("src_id")).lower(), str(t.get("relation_type")).lower(), str(t.get("tgt_id")).lower())
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(t)
+        return out
+
+    # --------------------------------------------------------------- synthesis
 
     async def query(
         self,
@@ -258,22 +403,37 @@ class GraphRAG:
             if p.stream:
                 return self.llm.chat_completion_stream(messages)
             answer = await self.llm.chat_completion(messages)
-            return {"question": question, "answer": answer, "mode": mode, "retrieved_documents": [], "retrieved_entities": [], "retrieved_graph_triples": []}
+            return {
+                "question": question, "answer": answer, "mode": mode,
+                "retrieved_documents": [], "retrieved_entities": [], "retrieved_graph_triples": []
+            }
 
         data = data_res["data"]
-        doc_passages = []
-        for idx, chunk in enumerate(data["chunks"]):
-            ref_id = f"[{idx + 1}]"
-            doc_passages.append(f"Chunk {ref_id} ({chunk['metadata'].get('document', 'Doc')}): {chunk['content']}")
-
-        entity_passages = [f"- Entity {e['entity_name']} ({e['entity_type']}): {e['description']}" for e in data["entities"]]
-        triple_passages = [f"- ({r['src_id']}) --[{r['relation_type']} (weight={r['weight']})]--> ({r['tgt_id']}): {r['description']}" for r in data["relationships"]]
+        doc_passages = [
+            f"Chunk [{idx + 1}] ({chunk['metadata'].get('document', 'Doc')}): {chunk['content']}"
+            for idx, chunk in enumerate(data["chunks"])
+        ]
+        entity_passages = [
+            f"- Entity {e['entity_name']} ({e['entity_type']}): {e['description']}"
+            for e in data["entities"]
+        ]
+        # Negated relations are rendered explicitly. Stored as a positive
+        # predicate with a flag, they would otherwise read to the model as an
+        # assertion that the relation holds.
+        triple_passages = [
+            f"- ({r['src_id']}) --[{'NOT ' if r.get('negated') else ''}{r['relation_type']}"
+            f" (weight={r['weight']})]--> ({r['tgt_id']}): {r['description']}"
+            for r in data["relationships"]
+        ]
 
         doc_context = _truncate_by_tokens(doc_passages, p.max_total_tokens // 2) if doc_passages else "None"
         entity_context = _truncate_by_tokens(entity_passages, p.max_entity_tokens) if entity_passages else "None"
         graph_context = _truncate_by_tokens(triple_passages, p.max_relation_tokens) if triple_passages else "None"
 
-        ref_list_str = "\n".join([f"- [{idx + 1}] {chunk['metadata'].get('document', 'Document Chunk ' + str(chunk['chunk_id']))}" for idx, chunk in enumerate(data["chunks"])])
+        ref_list_str = "\n".join([
+            f"- [{idx + 1}] {chunk['metadata'].get('document', 'Document Chunk ' + str(chunk['chunk_id']))}"
+            for idx, chunk in enumerate(data["chunks"])
+        ])
 
         prompt = f"""---Role---
 You are an expert AI assistant synthesizing information from a Knowledge Base operating in '{mode}' retrieval mode.
@@ -299,7 +459,8 @@ Reference Document List:
 ---Instructions---
 1. Answer the question directly using facts from the context.
 2. If citing specific document chunks, refer to them using reference IDs like [1], [2].
-3. Format your response cleanly using Markdown.
+3. If the retrieved context does not answer the question, say so plainly instead of guessing.
+4. Format your response cleanly using Markdown.
 """
 
         messages = [{"role": "system", "content": "You are a helpful Knowledge Graph RAG assistant."}]
@@ -319,6 +480,9 @@ Reference Document List:
             "keywords": data_res["metadata"]["keywords"],
             "retrieved_documents": data["chunks"],
             "retrieved_entities": [e["entity_name"] for e in data["entities"]],
-            "retrieved_graph_triples": [f"({r['src_id']}) --[{r['relation_type']}]--> ({r['tgt_id']})" for r in data["relationships"]],
+            "retrieved_graph_triples": [
+                f"({r['src_id']}) --[{r['relation_type']}]--> ({r['tgt_id']})"
+                for r in data["relationships"]
+            ],
             "references": data["references"]
         }

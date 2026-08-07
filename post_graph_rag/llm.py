@@ -1,12 +1,31 @@
 """LLM and Embedding service wrapper for OpenAI-compatible endpoints."""
-import json
+import asyncio
+import hashlib
 import logging
-from typing import List, Dict, Any, Optional, Type
+from typing import Any, AsyncIterator, Dict, List, Optional, Type
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from post_graph_rag.config import RAGConfig
+from post_graph_rag.errors import EmbeddingError, LLMError
 
 logger = logging.getLogger(__name__)
+
+# Conditions worth retrying or failing over to another model, rather than
+# aborting: rate limits, exhausted credits, and upstream server errors.
+RETRYABLE_STATUS = {402, 408, 409, 425, 429, 500, 502, 503, 504}
+RETRYABLE_MARKERS = (
+    "run out of credits", "rate limit", "overloaded", "timeout", "timed out",
+    "temporarily unavailable", "service unavailable", "capacity",
+)
+
+
+def _is_retryable(exc: Exception) -> bool:
+    status = getattr(exc, "status_code", None) or getattr(getattr(exc, "response", None), "status_code", None)
+    if status in RETRYABLE_STATUS:
+        return True
+    text = str(exc).lower()
+    return any(marker in text for marker in RETRYABLE_MARKERS)
+
 
 class LLMService:
     def __init__(self, config: RAGConfig):
@@ -16,56 +35,145 @@ class LLMService:
             api_key=config.api_key
         )
 
+    # -------------------------------------------------------------- embeddings
+
     async def get_embedding(self, text: str) -> List[float]:
-        """Generate embedding vector for a given text string."""
-        try:
+        """Generate an embedding vector for a text.
+
+        Raises on failure unless ``config.allow_embedding_fallback`` is set. A
+        fallback vector shares a table with real embeddings but lives in an
+        unrelated geometry, so distances between the two are meaningless — silently
+        substituting one corrupts the index rather than degrading it.
+        """
+        async def attempt(_model: str):
+            # Embedding models are not interchangeable across vector spaces, so
+            # only the configured one is retried — never failed over.
             response = await self.client.embeddings.create(
                 input=text,
                 model=self.config.embedding_model
             )
             return response.data[0].embedding
+
+        try:
+            vec = await self._retry_same(attempt, "Embedding")
         except Exception as e:
-            logger.error(f"Error fetching embedding from {self.config.api_base}: {e}")
-            logger.warning("Using local deterministic hash vector fallback for embedding.")
+            if not self.config.allow_embedding_fallback:
+                raise EmbeddingError(
+                    f"Embedding request to {self.config.api_base} "
+                    f"(model={self.config.embedding_model}) failed: {e}. "
+                    f"Set RAGConfig.allow_embedding_fallback=True to use local/deterministic "
+                    f"vectors instead, but note they are not comparable with API embeddings."
+                ) from e
+            logger.warning("Embedding API failed (%s); using local fallback vector.", e)
             return self._generate_local_fallback_embedding(text, self.config.embedding_dim)
 
-    def _generate_local_fallback_embedding(self, text: str, dim: int) -> List[float]:
-        """Generate a local fallback vector when remote embedding API access fails.
-        
-        Attempts local transformer models (fastembed / sentence-transformers) if available,
-        otherwise generates a deterministic term-frequency SHA-256 unit vector.
+        if len(vec) != self.config.embedding_dim:
+            raise EmbeddingError(
+                f"Embedding model '{self.config.embedding_model}' returned {len(vec)} "
+                f"dimensions but RAGConfig.embedding_dim is {self.config.embedding_dim}. "
+                f"The vector column will reject this write."
+            )
+        return vec
+
+    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
+        """Embed several texts in one request.
+
+        Indexing a chunk needs one embedding per extracted entity. Issued one at
+        a time those round trips dominate indexing latency, and the OpenAI
+        embeddings endpoint accepts a batch natively.
         """
-        # Option 1: FastEmbed local CPU model
+        if not texts:
+            return []
+
+        async def attempt(_model: str):
+            response = await self.client.embeddings.create(
+                input=texts,
+                model=self.config.embedding_model
+            )
+            # The API may return results out of order; index is authoritative.
+            ordered = sorted(response.data, key=lambda d: d.index)
+            return [d.embedding for d in ordered]
+
+        try:
+            vecs = await self._retry_same(attempt, "Batch embedding")
+        except Exception as e:
+            if not self.config.allow_embedding_fallback:
+                raise EmbeddingError(
+                    f"Batch embedding request to {self.config.api_base} "
+                    f"(model={self.config.embedding_model}, n={len(texts)}) failed: {e}"
+                ) from e
+            logger.warning("Batch embedding failed (%s); using local fallback vectors.", e)
+            return [self._generate_local_fallback_embedding(t, self.config.embedding_dim) for t in texts]
+
+        if len(vecs) != len(texts):
+            raise EmbeddingError(
+                f"Embedding model returned {len(vecs)} vectors for {len(texts)} inputs."
+            )
+        for vec in vecs:
+            if len(vec) != self.config.embedding_dim:
+                raise EmbeddingError(
+                    f"Embedding model '{self.config.embedding_model}' returned {len(vec)} "
+                    f"dimensions but RAGConfig.embedding_dim is {self.config.embedding_dim}."
+                )
+        return vecs
+
+    def _generate_local_fallback_embedding(self, text: str, dim: int) -> List[float]:
+        """Produce a fallback vector when the embedding API is unavailable.
+
+        Tries local transformer models first, then falls back to a deterministic
+        term-hash unit vector. Determinism is load-bearing: vectors written at
+        index time must still match at query time in a later process.
+        """
+        for loader in (self._try_fastembed, self._try_sentence_transformers):
+            vec = loader(text)
+            if vec is None:
+                continue
+            if len(vec) == dim:
+                return vec
+            logger.warning(
+                "Local embedding model returned %d dims, but embedding_dim is %d; skipping.",
+                len(vec), dim
+            )
+
+        return self._term_hash_embedding(text, dim)
+
+    @staticmethod
+    def _try_fastembed(text: str) -> Optional[List[float]]:
         try:
             from fastembed import TextEmbedding
             model = TextEmbedding()
-            vec = list(next(model.embed([text])))
-            if len(vec) == dim:
-                return vec
+            return [float(x) for x in next(model.embed([text]))]
         except Exception:
-            pass
+            return None
 
-        # Option 2: SentenceTransformers local model
+    @staticmethod
+    def _try_sentence_transformers(text: str) -> Optional[List[float]]:
         try:
             from sentence_transformers import SentenceTransformer
             model = SentenceTransformer("all-MiniLM-L6-v2")
-            vec = model.encode(text).tolist()
-            if len(vec) == dim:
-                return vec
+            return [float(x) for x in model.encode(text).tolist()]
         except Exception:
-            pass
+            return None
 
-        # Option 3: Deterministic Term-Hash Normalised Vector
-        import hashlib
+    @staticmethod
+    def _term_hash_embedding(text: str, dim: int) -> List[float]:
+        """Deterministic term-frequency hash vector.
+
+        Uses SHA-256 for the bucket index as well as the magnitude. Python's
+        builtin ``hash()`` is salted per process (PYTHONHASHSEED), so using it
+        here produced a different vector on every run — meaning nothing indexed
+        could ever be retrieved after a restart.
+        """
         words = [w.strip() for w in text.lower().split() if w.strip()]
         vec = [0.0] * dim
-        if not words:
+        if not words or dim <= 0:
             return vec
 
         for word in words:
             digest = hashlib.sha256(word.encode("utf-8")).digest()
+            bucket_seed = int.from_bytes(digest[:8], "big")
             for idx, byte in enumerate(digest):
-                dim_idx = (hash(word) + idx) % dim
+                dim_idx = (bucket_seed + idx) % dim
                 vec[dim_idx] += (byte - 128) / 128.0
 
         norm = sum(x * x for x in vec) ** 0.5
@@ -73,36 +181,129 @@ class LLMService:
             vec = [x / norm for x in vec]
         return vec
 
+    # ------------------------------------------------------------- completions
+
+    async def _retry_same(self, attempt, what: str) -> Any:
+        """Retry a single target with backoff, without switching models."""
+        last: Optional[Exception] = None
+        for tries in range(1, max(1, self.config.max_retries) + 1):
+            try:
+                return await attempt(self.config.embedding_model)
+            except Exception as e:
+                last = e
+                if not _is_retryable(e):
+                    raise
+                logger.warning(
+                    "%s attempt %d/%d failed (%s)", what, tries, self.config.max_retries, str(e)[:160]
+                )
+                if tries < self.config.max_retries:
+                    await asyncio.sleep(self.config.retry_backoff_secs * tries)
+        raise last if last else RuntimeError(f"{what} failed")
+
+    def _model_candidates(self) -> List[str]:
+        """Primary model first, then declared fallbacks, preserving order."""
+        seen, models = set(), []
+        for name in [self.config.model, *self.config.fallback_models]:
+            if name and name not in seen:
+                seen.add(name)
+                models.append(name)
+        return models
+
+    async def _with_failover(self, attempt, what: str) -> Any:
+        """Run ``attempt(model)`` across candidate models with backoff.
+
+        Retries the same model for transient failures, then moves to the next
+        candidate. Non-retryable errors abort immediately so genuine mistakes
+        (bad request, unknown model) are not masked by a long retry loop.
+        """
+        last: Optional[Exception] = None
+        for model in self._model_candidates():
+            for tries in range(1, max(1, self.config.max_retries) + 1):
+                try:
+                    return await attempt(model)
+                except Exception as e:
+                    last = e
+                    if not _is_retryable(e):
+                        raise LLMError(f"{what} failed for model '{model}': {e}") from e
+                    logger.warning(
+                        "%s: model '%s' attempt %d/%d failed (%s)",
+                        what, model, tries, self.config.max_retries, str(e)[:160],
+                    )
+                    if tries < self.config.max_retries:
+                        await asyncio.sleep(self.config.retry_backoff_secs * tries)
+            logger.warning("%s: giving up on model '%s'; trying next candidate.", what, model)
+
+        raise LLMError(
+            f"{what} failed for all models {self._model_candidates()} at "
+            f"{self.config.api_base}: {last}"
+        ) from last
+
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Type[BaseModel]] = None
     ) -> Any:
-        """Call LLM completion endpoint, optionally enforcing Pydantic structured output."""
-        try:
-            if response_format:
-                try:
-                    response = await self.client.beta.chat.completions.parse(
-                        model=self.config.model,
-                        messages=messages,
-                        response_format=response_format
-                    )
-                    return response.choices[0].message.parsed
-                except Exception as pe:
-                    logger.warning(f"Structured output parse failed, falling back to standard completion: {pe}")
+        """Call the LLM completion endpoint, optionally enforcing structured output.
 
+        Retries and fails over across ``fallback_models``. Raises
+        :class:`LLMError` when every candidate is exhausted. Previously this
+        returned ``""`` or a string stitched together from the prompt, which
+        reached the caller looking like a real model answer.
+        """
+        if response_format is not None:
+            async def structured(model: str):
+                response = await self.client.beta.chat.completions.parse(
+                    model=model,
+                    messages=messages,
+                    response_format=response_format
+                )
+                return response.choices[0].message.parsed
+
+            try:
+                parsed = await self._with_failover(structured, "Structured completion")
+                if parsed is not None:
+                    return parsed
+                logger.warning("Structured output returned no parsed value; retrying unstructured.")
+            except Exception as e:
+                logger.warning("Structured output unsupported or exhausted (%s); retrying unstructured.", str(e)[:160])
+
+        async def plain(model: str):
             response = await self.client.chat.completions.create(
-                model=self.config.model,
+                model=model,
                 messages=messages
             )
-            content = response.choices[0].message.content or ""
-            return content
+            return response.choices[0].message.content or ""
+
+        return await self._with_failover(plain, "Chat completion")
+
+    async def chat_completion_stream(
+        self,
+        messages: List[Dict[str, str]]
+    ) -> AsyncIterator[str]:
+        """Stream completion content chunks.
+
+        Referenced by the engine's ``QueryParam(stream=True)`` path, which
+        previously raised AttributeError because this method did not exist.
+        """
+        async def open_stream(model: str):
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=True
+            )
+
+        # Failover applies to opening the stream. Once tokens have been yielded a
+        # retry would duplicate output, so mid-stream failures propagate.
+        stream = await self._with_failover(open_stream, "Streaming chat completion")
+
+        try:
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                content = getattr(chunk.choices[0].delta, "content", None)
+                if content:
+                    yield content
         except Exception as e:
-            logger.error(f"Error calling LLM chat completion ({self.config.model}): {e}")
-            user_msg = next((m.get("content", "") for m in messages if m.get("role") == "user"), "")
-            if "User Question:" in user_msg:
-                lines = [line.strip() for line in user_msg.splitlines() if line.strip().startswith("- ")]
-                if lines:
-                    return "Synthesized Answer based on Knowledge Graph context:\n" + "\n".join(lines)
-                return "Synthesized answer from retrieved graph triples and document context."
-            return ""
+            raise LLMError(
+                f"Streaming chat completion failed mid-stream at {self.config.api_base}: {e}"
+            ) from e
