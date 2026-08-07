@@ -22,6 +22,64 @@ Traditional Vector RAG systems suffer from **"chunk isolation"**—they retrieve
 3. **Structured Document Metadata**: Rich metadata tracking (`source`, `category`, `collection`, `document`, `page`, `paragraph`, `space`).
 4. **Application-Level Space Sub-grouping (`space`)**: Scopes indexing and vector similarity search to application-specific environments (e.g. `production`, `sandbox`, `staging`, `user_workspace`) within `{realm}` tenant partitions.
 
+### Relationship quality
+
+Extracted relations are **context-specific**, drawn from what the text actually
+states:
+
+```
+(Zeus) --[is_king_of]--> (Olympian gods)
+(Zeus) --[son_of]--> (Cronus)
+(Zeus) --[married_to]--> (Hera)
+(Zeus) --[defeated]--> (Titans)
+```
+
+Vague connectors (`relates_to`, `associated_with`, `connected_to`, …), self-loops
+and blank endpoints are rejected at extraction time. A relation that reaches the
+graph always says something specific about the pair it connects, and two entities
+merely appearing near each other never produces an edge.
+
+If the LLM cannot produce usable structure, indexing raises `ExtractionError`.
+Placeholder edges are never invented as a fallback: once written they are
+indistinguishable from genuine extracted structure.
+
+Relations the text explicitly *denies* are stored with the positive predicate and
+`negated: true`, rather than as an inverted predicate like
+`did_not_have_relationship_with`. Traversal and synthesis can then exclude them
+instead of reading them as assertions.
+
+### Entity resolution
+
+Entities are unique per `(realm, space, lower(name))`, enforced by a unique index,
+and are additionally resolved through **aliases**. Extraction records every other
+surface form it sees, so `Babbage`, `Charles Babbage` and `C. Babbage` converge on
+one vertex; the fuller name becomes canonical and the rest become aliases. Pronouns
+and relative references (`he`, `his father`, `the company`) are rejected outright —
+they cannot resolve to a stable vertex.
+
+The same entity mentioned in many documents is one vertex, which is what allows the
+graph to connect chunks that share no vocabulary.
+
+### Chunking and document context
+
+`index_text()` chunks a document (with overlap, so relations spanning a boundary
+survive) and threads a `DocumentContext` through the chunks — title, source, and
+the canonical entity names found so far. Without it, every chunk after the first is
+extracted blind and its pronouns become junk vertices.
+
+Bring your own splitter by passing `chunker=` to `GraphRAG`, or use
+`index_document()` directly with your own `DocumentContext`.
+
+```python
+rag = GraphRAG(config, chunker=my_splitter)
+await rag.index_text(long_text, metadata=DocumentMetadata(document="babbage.txt"))
+```
+
+### Repeated relations
+
+The same triple extracted from several chunks is one edge whose `weight`
+increments, not several edges. Weight then breaks ties when ranking relations.
+
 ---
 
 ## 🏗️ Architecture Workflow
@@ -71,7 +129,18 @@ uv add post-graph-rag
 ```
 
 ### PostgreSQL Requirements
-Ensure PostgreSQL is running with the `pgvector` extension installed:
+
+`pgvector` is **required**, not optional. Without it the vertex tables are created
+without embedding columns and every similarity search silently returns nothing.
+`initialize()` raises `SchemaError` if it is missing rather than degrading.
+
+```bash
+# macOS
+brew install pgvector
+
+# Debian/Ubuntu (match your server version)
+sudo apt install postgresql-17-pgvector
+```
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -91,12 +160,13 @@ async def main():
     # 1. Configure GraphRAG engine
     config = RAGConfig(
         api_base="http://localhost:4000/v1",       # OpenAI-compatible router endpoint
-        api_key="BEVZ-6L81-OZ8Y",                 # Master or OpenAI API Key
+        api_key=os.environ["OPENAI_API_KEY"],     # Never hardcode credentials
         model="DeepSeek-V3.2",                    # LLM model for extraction & synthesis
         embedding_model="text-embedding-3-small", # Embedding model
-        embedding_dim=1536,                       # Vector dimensionality
+        embedding_dim=1536,                       # Must match the model's output width
         db_uri="postgresql://user:password@localhost:5432/postgres",
-        realm="enterprise_kb"
+        realm="enterprise_kb",
+        schema_per_realm=True                     # Give each tenant its own schema
     )
 
     rag = GraphRAG(config)
@@ -147,6 +217,7 @@ metadata = DocumentMetadata(
     document="zeus_overview.pdf",              # Title or filename
     page=1,                                    # 1-based page number
     paragraph=2,                               # 1-based paragraph index
+    space="production",                        # Sub-grouping within the realm
     extra={"author": "Homer", "year": -700}    # Custom metadata key-value pairs
 )
 
@@ -165,12 +236,43 @@ await rag.index_document(chunk_text, metadata=metadata)
 | Option | Environment Variable | Default Value | Description |
 | :--- | :--- | :--- | :--- |
 | `api_base` | `OPENAI_API_BASE` | `http://localhost:4000/v1` | Base URL for OpenAI-compatible LLM endpoint |
-| `api_key` | `OPENAI_API_KEY` | `BEVZ-6L81-OZ8Y` | API Key for authorization |
+| `api_key` | `OPENAI_API_KEY` | `EMPTY` | API key. `EMPTY` is the placeholder local servers accept |
 | `model` | `RAG_MODEL` | `DeepSeek-V3.2` | Primary LLM model for triple extraction & synthesis |
 | `embedding_model` | `RAG_EMBEDDING_MODEL` | `text-embedding-3-small` | Model for vector embedding generation |
-| `embedding_dim` | `RAG_EMBEDDING_DIM` | `1536` | Dimensionality of embedding vectors |
-| `db_uri` | `POSTGRES_URI` | `postgresql://crajah@localhost:5432/postgres` | PostgreSQL connection DSN |
+| `embedding_dim` | `RAG_EMBEDDING_DIM` | `1536` | Embedding width. Must match the model, and is fixed once tables exist |
+| `db_uri` | `POSTGRES_URI` | `postgresql://localhost:5432/postgres` | PostgreSQL connection DSN |
 | `realm` | `RAG_REALM` | `default` | Multi-tenant graph namespace |
+| `space` | `RAG_SPACE` | `default` | Sub-grouping within a realm (`production`, `sandbox`, …) |
+| `schema_per_realm` | `RAG_SCHEMA_PER_REALM` | `0` | Give each realm its own PostgreSQL schema. Recommended — see below |
+| `embed_relations` | `RAG_EMBED_RELATIONS` | `0` | Also embed relation edges for semantic relation search (optional) |
+| `allow_embedding_fallback` | `RAG_ALLOW_EMBEDDING_FALLBACK` | `0` | Use local/deterministic vectors when the embedding API fails |
+| `fallback_models` | `RAG_FALLBACK_MODELS` | — | Comma-separated models to fail over to when the primary is rate-limited or out of credits |
+| `max_retries` | `RAG_MAX_RETRIES` | `5` | Attempts per model before moving to the next |
+| `gleaning_passes` | `RAG_GLEANING_PASSES` | `1` | Extra "what did you miss?" extraction passes. `0` halves LLM cost at the price of recall |
+| `extraction_prompt` | — | `None` | Replace the extraction system prompt wholesale |
+| `entity_types` | `RAG_ENTITY_TYPES` | library defaults | Preferred entity type list |
+| `predicate_vocabulary` | `RAG_PREDICATE_VOCABULARY` | — | Preferred predicates; extracted ones are snapped onto this list |
+| `predicate_aliases` | — | `{}` | Explicit synonym map, e.g. `{"collaborated_with": "worked_with"}` |
+| `drop_negated_relations` | `RAG_DROP_NEGATED` | `0` | Discard relations the text says do *not* hold, instead of flagging them |
+| `min_relation_confidence` | `RAG_MIN_RELATION_CONFIDENCE` | `0.0` | Drop relations below this extraction confidence |
+| `chunk_chars` / `chunk_overlap_chars` | `RAG_CHUNK_CHARS` / `RAG_CHUNK_OVERLAP` | `2000` / `200` | Default chunker sizing |
+| `expand_chunks_via_mentions` | `RAG_EXPAND_VIA_MENTIONS` | `1` | Retrieve chunks that mention a matched entity, not only chunks matching the query vector |
+| `context_entity_limit` | `RAG_CONTEXT_ENTITY_LIMIT` | `40` | Canonical names carried forward as extraction context |
+
+Environment variables are read when a `RAGConfig` is constructed, not at import time.
+
+### `schema_per_realm`
+
+Off by default for backwards compatibility, but recommended for new deployments.
+With it off, every realm shares one physical set of tables filtered by a `realm`
+column — so the first realm to create `entities` fixes the embedding column width
+for all of them, and a second realm with a different `embedding_dim` cannot work.
+
+### `allow_embedding_fallback`
+
+Off by default. Fallback vectors are not comparable with API embeddings, so mixing
+them into the same table corrupts retrieval rather than degrading it. With it off,
+an embedding failure raises `EmbeddingError`.
 
 ---
 
@@ -179,10 +281,30 @@ await rag.index_document(chunk_text, metadata=metadata)
 ### `GraphRAG`
 The main orchestrator class for indexing and querying.
 
-- `await initialize()`: Connects to PostgreSQL and creates necessary graph tables (`documents`, `entities`, `relations`, `doc_mentions`).
-- `await index_document(text: str, metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None) -> Dict[str, Any]`: Computes document embeddings, extracts entity/triple structures via LLM, and persists graph nodes/edges into PostgreSQL.
-- `await query(question: str, top_k: int = 5) -> Dict[str, Any]`: Executes hybrid vector similarity search over documents and entities, traverses 1-hop graph relationship edges, and synthesizes a comprehensive answer. Returns dictionary with `question`, `answer`, `retrieved_documents`, `retrieved_entities`, and `retrieved_graph_triples`.
+- `await initialize()`: Connects to PostgreSQL and creates the graph tables (`documents`, `entities`, `relations`, `doc_mentions`). Raises `SchemaError` if pgvector is unavailable or an existing table's embedding width disagrees with `embedding_dim`.
+- `await index_document(text, metadata=None, space=None) -> Dict[str, Any]`: Embeds the chunk, extracts entities/triples via the LLM, resolves entities by name, and writes vertices, `relations` and `doc_mentions` edges. Raises rather than writing placeholder structure if extraction fails. Returns counts plus `document_id` and `metadata`.
+- `await query(question, param=None, top_k=None)`: Retrieves and synthesizes an answer. Returns `question`, `answer`, `mode`, `keywords`, `retrieved_documents`, `retrieved_entities`, `retrieved_graph_triples`, `references`. With `QueryParam(stream=True)` returns an async iterator of content chunks instead.
+- `await query_data(question, param=None) -> Dict[str, Any]`: Structured retrieval with no synthesis — returns `entities`, `relationships`, `chunks`, `references`.
 - `await close()`: Closes database connection pools.
+
+### `QueryParam`
+
+- `mode`: one of `mix`, `local`, `global`, `hybrid`, `naive`, `bypass`. An unknown mode raises `ValueError`.
+- `top_k`, `max_total_tokens`, `max_entity_tokens`, `max_relation_tokens`, `response_type`
+- `stream`: return an async iterator of tokens instead of a dict.
+- `only_need_context`: return retrieval output without calling the LLM.
+- `space`: restrict retrieval to one space; `__all__` queries across all spaces.
+- `conversation_history`, `hl_keywords`, `ll_keywords`: supply keywords to skip extraction.
+
+### Errors
+
+All inherit from `RAGError`, so failures surface instead of degrading into
+irrelevant results:
+
+- `SchemaError` — pgvector missing, or embedding width mismatch.
+- `EmbeddingError` — embedding request failed, or returned the wrong width.
+- `LLMError` — completion or streaming call failed.
+- `ExtractionError` — the LLM returned no usable entities or triples.
 
 ### `DocumentMetadata`
 Data container for structured document metadata.
@@ -193,6 +315,7 @@ Data container for structured document metadata.
 - `document: Optional[str]`: File title or filename.
 - `page: Optional[int]`: 1-based page number.
 - `paragraph: Optional[int]`: 1-based paragraph index.
+- `space: Optional[str]`: Sub-grouping space to index into.
 - `extra: Dict[str, Any]`: Custom user metadata.
 - `to_dict() -> Dict[str, Any]`: Serializes non-None fields to dictionary representation.
 - `from_dict(data: Dict[str, Any]) -> DocumentMetadata`: Deserializes dictionary data.
@@ -200,11 +323,15 @@ Data container for structured document metadata.
 ### `RAGGraphStore`
 Database layer wrapping `post-graph`.
 
-- `add_document(text, embedding, metadata)`: Inserts a document vertex into the `documents` table.
-- `upsert_entity(name, entity_type, description, embedding)`: Upserts an entity vertex into the `entities` table.
-- `add_relation(from_entity, to_entity, relation_type, description)`: Connects entity vertices with a directed relation edge.
-- `search_similar_entities(query_vec, top_k)`: Executes `pgvector` HNSW similarity search over `entities`.
-- `search_similar_documents(query_vec, top_k)`: Executes `pgvector` HNSW similarity search over `documents`.
+- `add_document(text, embedding, metadata, space=None)`: Inserts a document vertex into the `documents` table.
+- `upsert_entity(name, entity_type, description, embedding, space=None)`: Upserts by canonical name within `(realm, space)`, so an entity mentioned in many documents is a single vertex. A bare `Concept` stub never overwrites a richer type or description.
+- `find_entity_by_name(name, space=None)`: Resolve an entity vertex by name.
+- `add_relation(from_entity, to_entity, relation_type, description, space=None, embedding=None)`: Directed relation edge.
+- `add_doc_mention(doc_vertex, entity_vertex, space=None)`: Links a chunk to an entity it mentions.
+- `search_similar_entities(query_vec, top_k, space=None)` / `search_similar_documents(...)`: pgvector HNSW similarity search.
+- `search_similar_relations(query_vec, top_k, space=None)`: Semantic search over relation edges. Returns `[]` unless `embed_relations` is enabled.
+- `get_neighbors(entity_id, space=None)`: 1-hop outgoing relations, scoped to `space`.
+- `get_all_relations(limit, space=None)`: Relations with their endpoint vertices.
 
 ---
 
@@ -220,6 +347,19 @@ Database layer wrapping `post-graph`.
 | `{realm}_doc_mentions` | Edge Table | `from_id`, `to_id`, `relation_type` | Directed edges connecting document chunks to mentioned entities |
 | `{table}_audit` | Audit Table | `audit_id`, `action`, `changed_by`, `changed_at` | Automatic shadow audit logging for all graph mutations |
 | `{table}_data` | History Table | `data_id`, `payload`, `timestamp`, `embedding` | Append-only historical records for vertices and edges |
+
+---
+
+## 🧪 Testing
+
+```bash
+pip install -e ".[test]"
+createdb postgres && psql -d postgres -c "CREATE EXTENSION IF NOT EXISTS vector;"
+POSTGRES_TEST_URI="postgresql://localhost:5432/postgres" pytest
+```
+
+DB-backed tests create a disposable schema per test realm and drop it afterwards.
+They skip automatically when PostgreSQL with pgvector is not reachable.
 
 ---
 

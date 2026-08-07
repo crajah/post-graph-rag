@@ -43,6 +43,29 @@ class DocumentMetadata:
         return cls(**known_args, extra=extra_args)
 
 @dataclass
+class DocumentContext:
+    """Context supplied to extraction alongside a chunk.
+
+    A chunk taken from the middle of a document is full of references that only
+    resolve against what came before it ("he", "the engine", "his father").
+    Extracting it blind produces unresolvable vertices and misattributed
+    relations, so callers pass what is known about the surrounding document.
+    """
+    title: Optional[str] = None          # e.g. "Charles Babbage"
+    source: Optional[str] = None         # e.g. the URL or file path
+    summary: Optional[str] = None        # running summary of preceding chunks
+    known_entities: List[str] = field(default_factory=list)  # canonical names seen so far
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "title": self.title,
+            "source": self.source,
+            "summary": self.summary,
+            "known_entities": self.known_entities,
+        }
+
+
+@dataclass
 class KeywordResult:
     """Dual-level keyword extraction result."""
     high_level_keywords: List[str] = field(default_factory=list)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "post-graph-rag"
-version = "0.3.0"
+version = "1.0.0"
 description = "Graph RAG library leveraging post-graph space sub-grouping and pgvector on PostgreSQL with OpenAI-compatible LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -14,10 +14,18 @@ authors = [
 ]
 keywords = ["graph-rag", "rag", "knowledge-graph", "post-graph", "pgvector", "llm", "openai"]
 dependencies = [
-    "post-graph>=0.4.0",
+    "post-graph>=0.5.0",
     "openai>=1.0.0",
     "pydantic>=2.0.0"
 ]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0", "pytest-asyncio>=0.24"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = [".", "tests"]
 
 [project.urls]
 Homepage = "https://github.com/crajah/post-graph-rag"
