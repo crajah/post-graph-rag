@@ -1,7 +1,8 @@
 """Graph Store implementation wrapping post-graph and pgvector."""
 import json
+from datetime import datetime, timezone
 import logging
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import List, Dict, Any, Set, Tuple, Optional, Union
 from post_graph import AsyncPostGraph, Vertex, Edge, RESERVED_SPACE_ALL
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import SchemaError
@@ -148,6 +149,135 @@ class RAGGraphStore:
             embedding=embedding
         )
 
+    # ------------------------------------------------------- document identity
+
+    async def find_document_chunks(self, doc_key: str, space: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Fetch the stored chunks for a document key, with their content hashes."""
+        target_space = space or self.space
+        table_ref = self.client._get_table_ref("documents", self.realm)
+        rows = await self.client._fetch(
+            f"SELECT id, payload FROM {table_ref} "
+            f"WHERE realm = $1 AND space = $2 AND payload->>'doc_key' = $3 "
+            f"ORDER BY (payload->>'paragraph')::int NULLS LAST, id",
+            self.realm, target_space, doc_key,
+        )
+        out = []
+        for r in rows:
+            payload = r["payload"] if isinstance(r["payload"], dict) else json.loads(r["payload"])
+            out.append({"id": str(r["id"]), "content_hash": payload.get("content_hash"), "payload": payload})
+        return out
+
+    async def delete_document_chunks(self, doc_key: str, space: Optional[str] = None) -> Dict[str, int]:
+        """Remove a document's chunks and their mention edges.
+
+        Entities are never deleted here. One whose last mention disappears is
+        marked dormant instead, so the graph keeps what it learned while no
+        longer presenting it as current.
+        """
+        target_space = space or self.space
+        chunks = await self.find_document_chunks(doc_key, space=target_space)
+        if not chunks:
+            return {"chunks": 0, "mentions": 0, "dormant": 0}
+
+        chunk_ids = [int(c["id"]) for c in chunks]
+        mentions_ref = self.client._get_table_ref("doc_mentions", self.realm)
+        docs_ref = self.client._get_table_ref("documents", self.realm)
+
+        touched = await self.client._fetch(
+            f"SELECT DISTINCT to_id FROM {mentions_ref} WHERE realm = $1 AND from_id = ANY($2::bigint[])",
+            self.realm, chunk_ids,
+        )
+        removed = await self.client._fetch(
+            f"DELETE FROM {mentions_ref} WHERE realm = $1 AND from_id = ANY($2::bigint[]) RETURNING id",
+            self.realm, chunk_ids,
+        )
+        await self.client._execute(
+            f"DELETE FROM {docs_ref} WHERE realm = $1 AND id = ANY($2::bigint[])",
+            self.realm, chunk_ids,
+        )
+
+        withdrawn = await self._withdraw_relation_sources(chunk_ids, space=target_space)
+        dormant = await self.refresh_dormancy(
+            [str(t["to_id"]) for t in touched], space=target_space
+        )
+        return {"chunks": len(chunk_ids), "mentions": len(removed),
+                "dormant": dormant, "relations_withdrawn": withdrawn}
+
+    async def _withdraw_relation_sources(self, chunk_ids: List[int], space: Optional[str] = None) -> int:
+        """Remove deleted chunks from relation provenance and recompute weight.
+
+        A relation left with no contributing chunk is marked dormant rather than
+        deleted, matching how orphaned entities are handled: the assertion was
+        genuinely made once, and the audit trail is meant to keep it.
+        """
+        target_space = space or self.space
+        rels_ref = self.client._get_table_ref("relations", self.realm)
+        wanted = {str(c) for c in chunk_ids}
+        rows = await self.client._fetch(
+            f"SELECT id, payload FROM {rels_ref} WHERE realm = $1 AND space = $2",
+            self.realm, target_space,
+        )
+        touched = 0
+        for row in rows:
+            payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+            sources = [s for s in (payload.get("sources") or [])]
+            remaining = [s for s in sources if s not in wanted]
+            if len(remaining) == len(sources):
+                continue
+            payload["sources"] = remaining
+            payload["weight"] = max(1, len(remaining))
+            if remaining:
+                payload.pop("dormant_since", None)
+            else:
+                payload["dormant_since"] = datetime.now(timezone.utc).isoformat()
+            await self.client._execute(
+                f"UPDATE {rels_ref} SET payload = $1::jsonb WHERE realm = $2 AND id = $3",
+                json.dumps(payload), self.realm, int(row["id"]),
+            )
+            touched += 1
+        return touched
+
+    async def refresh_dormancy(self, entity_ids: List[str], space: Optional[str] = None) -> int:
+        """Mark entities with no remaining mentions dormant, and revive the rest.
+
+        Dormancy tracks *document mentions* only. It is deliberately independent
+        of relation supersession: a superseded relation still evidences that its
+        entities exist, so it must never push an entity dormant.
+        """
+        if not entity_ids:
+            return 0
+        target_space = space or self.space
+        ents_ref = self.client._get_table_ref("entities", self.realm)
+        mentions_ref = self.client._get_table_ref("doc_mentions", self.realm)
+
+        rows = await self.client._fetch(
+            f"SELECT e.id, e.payload, "
+            f"       (SELECT count(*) FROM {mentions_ref} m "
+            f"        WHERE m.realm = e.realm AND m.to_id = e.id) AS mentions "
+            f"FROM {ents_ref} e WHERE e.realm = $1 AND e.space = $2 AND e.id = ANY($3::bigint[])",
+            self.realm, target_space, [int(e) for e in entity_ids],
+        )
+
+        marked = 0
+        for row in rows:
+            payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+            has_mentions = int(row["mentions"]) > 0
+            was_dormant = payload.get("dormant_since") is not None
+
+            if has_mentions and was_dormant:
+                payload.pop("dormant_since", None)          # revived by a new mention
+            elif not has_mentions and not was_dormant:
+                payload["dormant_since"] = datetime.now(timezone.utc).isoformat()
+                marked += 1
+            else:
+                continue
+
+            await self.client._execute(
+                f"UPDATE {ents_ref} SET payload = $1::jsonb WHERE realm = $2 AND id = $3",
+                json.dumps(payload), self.realm, int(row["id"]),
+            )
+        return marked
+
     # ---------------------------------------------------------------- entities
 
     async def find_entity_by_name(self, name: str, space: Optional[str] = None) -> Optional[Vertex]:
@@ -292,6 +422,9 @@ class RAGGraphStore:
         embedding: Optional[List[float]] = None,
         negated: bool = False,
         confidence: float = 1.0,
+        valid_from: Optional[str] = None,
+        valid_to: Optional[str] = None,
+        source_chunk: Optional[str] = None,
     ) -> Edge:
         """Upsert a relationship edge between two entity vertices.
 
@@ -309,12 +442,32 @@ class RAGGraphStore:
 
         if existing is not None:
             prev = existing.payload or {}
+            # Weight counts the DISTINCT chunks that asserted this relation, not
+            # the number of times it was written. Incrementing blindly meant
+            # re-indexing a document made its claims look independently
+            # corroborated.
+            prior_sources = set(prev.get("sources") or [])
+            if source_chunk:
+                sources = sorted(prior_sources | {source_chunk})
+                weight = max(1, len(sources))
+            else:
+                # No provenance supplied (direct store use): fall back to counting
+                # observations, which is the only signal available.
+                sources = sorted(prior_sources)
+                weight = int(prev.get("weight", 1)) + 1
             payload = {
                 "description": description or prev.get("description", ""),
-                "weight": int(prev.get("weight", 1)) + 1,
+                "sources": sources,
+                "weight": weight,
                 "negated": bool(prev.get("negated", False)) and negated,
                 "confidence": max(float(prev.get("confidence", 0.0)), float(confidence)),
+                # A stated period, once known, is kept; re-observing the relation
+                # without a period must not erase it.
+                "valid_from": valid_from or prev.get("valid_from"),
+                "valid_to": valid_to or prev.get("valid_to"),
             }
+            if prev.get("superseded_by") is not None:
+                payload["superseded_by"] = prev["superseded_by"]
             return await self.client.upsert_edge(
                 "relations",
                 realm=self.realm,
@@ -330,9 +483,12 @@ class RAGGraphStore:
 
         payload = {
             "description": description or "",
+            "sources": [source_chunk] if source_chunk else [],
             "weight": 1,
             "negated": bool(negated),
             "confidence": float(confidence),
+            "valid_from": valid_from,
+            "valid_to": valid_to,
         }
         return await self.client.add_edge(
             "relations",
@@ -357,6 +513,60 @@ class RAGGraphStore:
         return await self.client.vector_search_edges(
             "relations", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
         )
+
+    async def supersede_conflicting(
+        self,
+        from_id: str,
+        to_id: str,
+        new_predicate: str,
+        new_edge_id: str,
+        exclusive_groups: List[Set[str]],
+        space: Optional[str] = None,
+    ) -> List[str]:
+        """Close earlier relations that the new one contradicts.
+
+        Two predicates in the same exclusive group cannot both hold between the
+        same pair — "friend_of" and "enemy_of" are not simultaneously true. Left
+        alone, both edges reach retrieval as current facts and the answer becomes
+        "they are friends and also enemies".
+
+        Resolution is by document order, not by dates: the newer assertion wins.
+        That deliberately avoids depending on the model to state a period, which
+        it does only when the text happens to say so.
+
+        Superseded edges are marked, never deleted — the history is the point.
+        """
+        predicate = (new_predicate or "").strip().lower()
+        conflicts = {
+            p for group in exclusive_groups
+            if predicate in {g.lower() for g in group}
+            for p in {g.lower() for g in group}
+        } - {predicate}
+        if not conflicts:
+            return []
+
+        target_space = space or self.space
+        table_ref = self.client._get_table_ref("relations", self.realm)
+        rows = await self.client._fetch(
+            f"SELECT id, relation_type, payload FROM {table_ref} "
+            f"WHERE realm = $1 AND space = $2 AND from_id = $3 AND to_id = $4 "
+            f"AND lower(relation_type) = ANY($5::text[]) AND id <> $6",
+            self.realm, target_space, int(from_id), int(to_id),
+            sorted(conflicts), int(new_edge_id),
+        )
+
+        superseded = []
+        for row in rows:
+            payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+            if payload.get("superseded_by") == str(new_edge_id):
+                continue
+            payload["superseded_by"] = str(new_edge_id)
+            await self.client._execute(
+                f"UPDATE {table_ref} SET payload = $1::jsonb WHERE realm = $2 AND id = $3",
+                json.dumps(payload), self.realm, int(row["id"]),
+            )
+            superseded.append(str(row["id"]))
+        return superseded
 
     async def add_doc_mention(self, doc_vertex: Vertex, entity_vertex: Vertex, space: Optional[str] = None) -> Optional[Edge]:
         """Link a document chunk to an entity it mentions, at most once.
@@ -467,6 +677,8 @@ class RAGGraphStore:
         entities = []
         for r in ent_rows:
             p = payload(r)
+            if self.config.exclude_dormant_entities and p.get("dormant_since"):
+                continue
             entities.append({
                 "id": str(r["id"]), "name": p.get("name"), "type": p.get("type"),
                 "description": p.get("description"), "aliases": p.get("aliases") or [],
@@ -479,6 +691,8 @@ class RAGGraphStore:
                 "id": str(r["id"]), "from_id": str(r["from_id"]), "to_id": str(r["to_id"]),
                 "predicate": r["relation_type"], "description": p.get("description", ""),
                 "weight": p.get("weight", 1), "negated": bool(p.get("negated", False)),
+                "superseded_by": p.get("superseded_by"),
+                "valid_from": p.get("valid_from"), "valid_to": p.get("valid_to"),
             })
         return entities, relations
 
@@ -522,6 +736,9 @@ class RAGGraphStore:
             "rating": rating,
             "findings": findings or [],
             "size": len(entity_ids or []),
+            # Communities are derived data. Recording when they were built lets
+            # retrieval warn that a report predates the graph it describes.
+            "built_at": datetime.now(timezone.utc).isoformat(),
         }
         vertex = await self.client.add_vertex(
             "communities",
@@ -551,6 +768,40 @@ class RAGGraphStore:
             "communities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
         )
 
+    async def latest_graph_write(self, space: Optional[str] = None) -> Optional[str]:
+        """Most recent write to entities or relations, for staleness checks."""
+        target_space = space or self.space
+        args: List[Any] = [self.realm]
+        clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            clause = " AND space = $2"
+        ents = self.client._get_table_ref("entities", self.realm)
+        rels = self.client._get_table_ref("relations", self.realm)
+        rows = await self.client._fetch(
+            f"SELECT max(t) AS latest FROM ("
+            f"  SELECT max(greatest(created_at, updated_at)) t FROM {ents} WHERE realm = $1{clause}"
+            f"  UNION ALL"
+            f"  SELECT max(greatest(created_at, updated_at)) t FROM {rels} WHERE realm = $1{clause}"
+            f") x", *args
+        )
+        latest = rows[0]["latest"] if rows else None
+        return latest.isoformat() if latest else None
+
+    async def oldest_community_build(self, space: Optional[str] = None) -> Optional[str]:
+        """Earliest ``built_at`` among stored community reports."""
+        target_space = space or self.space
+        comm = self.client._get_table_ref("communities", self.realm)
+        args: List[Any] = [self.realm]
+        clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            clause = " AND space = $2"
+        rows = await self.client._fetch(
+            f"SELECT min(payload->>'built_at') AS built FROM {comm} WHERE realm = $1{clause}", *args
+        )
+        return rows[0]["built"] if rows else None
+
     async def count_communities(self, space: Optional[str] = None) -> int:
         target_space = space or self.space
         comm_ref = self.client._get_table_ref("communities", self.realm)
@@ -567,10 +818,21 @@ class RAGGraphStore:
     # --------------------------------------------------------------- retrieval
 
     async def search_similar_entities(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Vertex, float]]:
-        """Vector similarity search over entity vertices, optionally scoped by space."""
-        return await self.client.vector_search(
-            "entities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+        """Vector similarity search over entity vertices, optionally scoped by space.
+
+        Dormant entities — those whose last mentioning document was removed — are
+        dropped. pgvector cannot filter on a JSONB field, so this over-fetches and
+        post-filters rather than pushing the predicate into the query.
+        """
+        if not self.config.exclude_dormant_entities:
+            return await self.client.vector_search(
+                "entities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+            )
+        hits = await self.client.vector_search(
+            "entities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k * 3
         )
+        live = [(v, d) for v, d in hits if not (v.payload or {}).get("dormant_since")]
+        return live[:top_k]
 
     async def search_similar_documents(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Vertex, float]]:
         """Vector similarity search over document vertices, optionally scoped by space."""

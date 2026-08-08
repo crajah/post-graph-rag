@@ -230,6 +230,202 @@ Choose **post-graph-rag** for a denser graph, queryable relation types, and
 transactional PostgreSQL storage with tenant isolation and audit history — at
 roughly half the indexing throughput.
 
+That comparison uses encyclopedic prose. The two sections below repeat it on
+corpora whose facts change — a novel sequence and a decade of annual filings —
+where supersession and as-of retrieval have no LightRAG counterpart, and where
+extraction behaves quite differently by register.
+
+## Temporal comparison on a corpus that changes
+
+`temporal_eval.py` indexes a corpus whose facts genuinely change. The bundled
+example is the d'Artagnan trilogy — three novels following the same characters
+across roughly forty years, during which alliances reverse.
+
+```bash
+python evaluation/fetch_corpus.py --series dumas --out evaluation/dumas
+python evaluation/temporal_eval.py --corpus evaluation/dumas --realm dumas_kb \
+    --model MiniMax-M2.7 --max-chunks 0 --max-concurrent-chunks 6
+```
+
+Books carry a numeric filename prefix so a plain sort gives publication order,
+which is what supersession resolves from.
+
+Head to head against LightRAG — same three books (~645k chars), same model
+(MiniMax-M2.7), same embeddings, publication order, run **sequentially** so the
+wall-clock figures are uncontended:
+
+| | post-graph-rag | LightRAG 1.5.6 |
+| :--- | ---: | ---: |
+| Indexing time | 33.2 min | **24.3 min** |
+| Entities | **1,377** | 1,246 |
+| Relations | **3,976** | 1,447 |
+| Relations per entity | **2.9** | 1.2 |
+| Distinct edge labels | 2,287 | 1,923 |
+| Labels ÷ relations | **58%** | 133% |
+| Entities carrying aliases | **729** | not modelled |
+| Relations with stated validity | **83** | not modelled |
+| **Relationships superseded** | **13** | **0** — unsupported |
+
+**Supersession fires on real narrative prose.** Thirteen relationships were
+closed by a later book, including several the trilogy is built on: an `ally_of`
+edge between d'Artagnan and Aramis closed once a later volume recasts them as
+opponents, and Rochefort's `friend_of` link to the Cardinal closed as his
+allegiance shifts. All resolved from publication order alone — the extractor
+supplied no dates for those pairs.
+
+Density is the precondition. An earlier run sampling ~5% of each novel fired
+**zero** supersessions, because no entity pair was characterised twice. Sampling
+evenly but sparsely does not help; the same pair must actually recur.
+
+**Edge labelling inverts here.** LightRAG reaches 133% — more than one unique
+label per relation, meaning on average every edge carries its own label. Long
+narrative prose produces far more varied phrasing than encyclopedic text, so the
+gap between free-text keywords and normalised predicates widens.
+
+**A caveat on entity resolution.** Fiction with heavy honorific variation is
+harder than Wikipedia: `M. d'Artagnan the younger`, `Monsieur d'Artagnan` and
+`D'Artagnan` remain distinct vertices, and `The Son of Henry IV` is a periphrasis
+for Louis XIII. 729 entities do carry aliases, so the mechanism works — it is not
+exhaustive on this register.
+
+**On router stability.** The successful LightRAG run absorbed 261 HTTP 402
+responses through retry. On a router that rotates API keys, 402 is transient
+rather than terminal, and a generous retry budget matters more than a fallback
+model list — an earlier attempt with only 5 retries died partway through.
+
+## Temporal comparison on financial filings
+
+`fetch_sec.py` downloads annual filings from SEC EDGAR. Annual reports are an
+unusually direct temporal corpus: the same line items recur every year while
+their significance inverts, and the filings say so in prose rather than in a
+dated field.
+
+```bash
+python evaluation/fetch_sec.py --company boeing --out evaluation/sec_boeing
+python evaluation/temporal_eval.py --corpus evaluation/sec_boeing \
+    --realm boeing_kb --preset finance --model MiniMax-M2.7 \
+    --max-chunks 0 --max-concurrent-chunks 6 --synthesise
+```
+
+Five Boeing 10-K filings, Management's Discussion and Analysis only, 586,775
+characters. MD&A carries the mandated discussion of cash-flow drivers and
+programme charges; the head of a filing is business description and risk
+factors, which barely change between years. Fiscal years span four operational
+cycles rather than being sampled evenly, so relationships genuinely reverse:
+
+| Order | Filing | Cycle |
+| ---: | :--- | :--- |
+| 1 | FY2006 | record deliveries, strong margins |
+| 2 | FY2012 | 787 supply chain and battery crisis |
+| 3 | FY2018 | record revenue and free cash flow |
+| 4 | FY2020 | 737 MAX grounding, negative cash flow |
+| 5 | FY2024 | quality crisis and FAA production caps |
+
+Term distribution tracks the arc: `737 max` peaks at 59 occurrences in FY2020,
+`grounding` at 19, `faa` climbs to 10 by FY2024, `deferred production` appears in
+all five.
+
+Head to head, same model (MiniMax-M2.7), same embeddings, same chunk sizing,
+whole documents:
+
+| | post-graph-rag | LightRAG 1.5.6 |
+| :--- | ---: | ---: |
+| Entities | **3,078** | 2,832 |
+| Relations | **4,830** | 3,147 |
+| Relations per entity | **1.6** | 1.1 |
+| Distinct edge labels | **2,203** | 2,413 |
+| Labels ÷ relations | **46%** | 77% |
+| Relations with stated validity | **845** | not modelled |
+| **Relationships superseded** | **8** | **0** — unsupported |
+
+Indexing time is deliberately absent: both runs shared a router with other work,
+so no wall-clock figure here is uncontended. The Dumas table above was run
+sequentially and its timings do stand.
+
+### Financial prose is the adversarial case
+
+Every earlier corpus is narrative, where entities are naturally canonical —
+people, places, works. Filings are not. The model nominalises, minting
+filing-specific compound entities that can never recur:
+
+    Boeing Commercial Airplanes revenue increase
+    Boeing Company Q4 2005 net loss
+    737 programme production impacts
+
+This fragments retrieval, because a query for "cash flow" is spread across dozens
+of hyper-specific vertices instead of landing on a few well-populated ones. It
+also starves supersession, which only fires when the same entity pair is
+characterised twice.
+
+Constraining entity granularity in the extraction prompt — emit the stable entity
+that could be named again in a different document, and put the movement in the
+relation description — raised supersession from 5 to 8 and lifted retrieval
+recall between 2x and 9x. `%boeing%` vertices fell from 54 to 37.
+
+Two narrower guards matter on this register and are now enforced in the
+extractor: entity names are capped in length, because a filing occasionally
+returns a whole table row as a name and the unique index backing entity
+resolution rejects it; and bare quantities (`$18.4 billion`, `$1,326`) are
+refused as vertices, since a figure is the value of a relation rather than a
+thing that holds relations.
+
+### Retrieval recall drives answer quality
+
+Relations retrieved per question, before and after the granularity fix:
+
+| Question | before | after |
+| :--- | ---: | ---: |
+| Deferred production costs arc | 9 | 8 |
+| What turned cash flow negative | 2 | **13** |
+| 737 ↔ cash flow over time | 5 | **44** |
+| FAA role across filings | 19 | **31** |
+
+Before the fix, the two questions that retrieved fewest relations were answered
+"not directly addressed" — a retrieval failure rather than a generation failure,
+and a straightforward loss against LightRAG, which answered both substantively.
+After the fix all four answer, and the 737 question produces an era-by-era
+trajectory.
+
+On the headline test — *trace how deferred production costs evolve from a minor
+line item to the central driver of cash burn* — both systems answer, but
+differently. LightRAG returns a correct and **timeless** accounting definition.
+post-graph-rag returns the trajectory, because the retrieved relations carry
+periods. As-of filtering behaves accordingly: relation counts grow 22 → 24 → 25
+across 2006 → 2024, and
+
+    (777X deferred production costs) --[reduced_by]--> (777X program)  [2020-12-31..open]
+
+surfaces only at `as_of=2024`.
+
+### Vocabulary adherence has a longer tail here
+
+The `finance` preset supplies 32 predicates and 8 exclusivity groups. Every group
+member was emitted, so the vocabulary works:
+
+    generates_cash_flow  80     consumes_cash      8
+    increases_revenue    52     reduces_revenue   56
+    incurs_charge        49     reports_loss      47
+    improves_margin      12     erodes_margin      6
+    certifies             4     grounds            3
+
+But labels sit at 46% of relation count rather than the ~11% reached on
+biography. Filings discuss an enormously wider range of topics than a
+Wikipedia article, and a 32-term vocabulary covers the reversals without covering
+the tail. Expect to extend the vocabulary per domain rather than to inherit one.
+
+### Two harness settings that silently invalidate the comparison
+
+`compare_lightrag.py` truncates each document to 20,000 characters by default,
+which reduced this 586k corpus to 100k in an early run. Pass `MAX_CHARS=0`. It
+also carries a fallback model list, which swaps models mid-run; pass
+`RAG_FALLBACK_MODELS=` to hold one model, matching post-graph-rag.
+
+```bash
+CORPUS=evaluation/sec_boeing MAX_CHARS=0 EVAL_QUESTIONS=finance \
+RAG_MODEL=MiniMax-M2.7 RAG_FALLBACK_MODELS= \
+    python evaluation/compare_lightrag.py
+```
+
 ## What the analysis reports
 
 1. **Corpus** — chunks, entities, relations, mentions.

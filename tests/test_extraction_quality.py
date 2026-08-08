@@ -4,6 +4,7 @@ import pytest
 from post_graph_rag import RAGConfig
 from post_graph_rag.chunking import paragraph_chunker
 from post_graph_rag.extractor import (
+    MAX_ENTITY_NAME_CHARS,
     Entity, ExtractionResult, GraphExtractor, Triple,
     is_phrase_not_entity, is_pronominal, normalise_predicate,
 )
@@ -276,3 +277,50 @@ def test_paragraph_chunker_skips_headings_and_stubs():
     assert len(chunks) == 1
     assert "== History ==" not in chunks[0]
     assert "short" not in chunks[0].split("\n")
+
+
+def test_oversized_name_rejected_before_it_reaches_the_index():
+    """A whole table row handed back as an entity must not reach the database.
+
+    Entity resolution relies on a unique btree index over the name, and Postgres
+    rejects index keys beyond ~2704 bytes — a real SEC filing run aborted this
+    way. The guard belongs in extraction, not in error handling at the store.
+    """
+    row = "Deferred production costs " + "and unamortized tooling " * 200
+    assert len(row) > 2704
+    assert is_phrase_not_entity(row) is True
+    assert is_phrase_not_entity("Deferred Production Costs") is False
+
+
+def test_oversized_alias_dropped_but_entity_kept():
+    """One runaway alias should cost the alias, not the entity."""
+    result = ExtractionResult(
+        entities=[Entity(name="Boeing", type="Org", description="",
+                         aliases=["BA", "x" * (MAX_ENTITY_NAME_CHARS + 1)])],
+        triples=[],
+    )
+    cleaned = _extractor()._validate(result)
+    assert [e.name for e in cleaned.entities] == ["Boeing"]
+    assert cleaned.entities[0].aliases == ["BA"]
+
+
+@pytest.mark.parametrize("figure", [
+    "$1,326", "$18.4 billion", "$177", "98", "40%", "(1,204)", "$ 2.5 million", "12.7 percent",
+])
+def test_bare_quantities_are_not_entities(figure):
+    """Figures fragment the graph and block supersession.
+
+    Every annual filing reports different numbers, so a relation whose object is
+    a figure never recurs as the same pair of vertices — and supersession only
+    fires on a repeated pair. Observed on real 10-Ks: "Boeing -> $1,326".
+    """
+    assert is_phrase_not_entity(figure) is True
+
+
+@pytest.mark.parametrize("name", [
+    "717 aircraft", "$177 tax benefit", "737 MAX", "Boeing Company",
+    "3M", "Section 401(k)",
+])
+def test_names_containing_figures_are_kept(name):
+    """The guard must stay narrow: a figure inside a name is not a bare figure."""
+    assert is_phrase_not_entity(name) is False

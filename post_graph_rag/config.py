@@ -1,7 +1,7 @@
 """Configuration dataclass for post-graph-rag."""
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 # Placeholder accepted by local OpenAI-compatible servers (vLLM, LiteLLM, Ollama)
 # that do not authenticate. Real deployments set OPENAI_API_KEY.
@@ -25,6 +25,12 @@ class RAGConfig:
     model: str = field(default_factory=lambda: _env("RAG_MODEL", "DeepSeek-V3.2"))
     embedding_model: str = field(default_factory=lambda: _env("RAG_EMBEDDING_MODEL", "text-embedding-3-small"))
     embedding_dim: int = field(default_factory=lambda: int(_env("RAG_EMBEDDING_DIM", "1536")))
+    # Sent explicitly because the OpenAI SDK otherwise negotiates 'base64' on its
+    # own, and gateways fronting non-OpenAI providers (litellm -> Vertex AI) reject
+    # the parameter outright, failing every embedding call. 'float' is the API
+    # default and the portable choice; set None to let the SDK decide.
+    embedding_encoding_format: Optional[str] = field(
+        default_factory=lambda: _env("RAG_EMBEDDING_ENCODING_FORMAT", "float") or None)
     db_uri: str = field(default_factory=lambda: _env("POSTGRES_URI", "postgresql://localhost:5432/postgres"))
     realm: str = field(default_factory=lambda: _env("RAG_REALM", "default"))
     space: str = field(default_factory=lambda: _env("RAG_SPACE", "default"))
@@ -113,6 +119,42 @@ class RAGConfig:
     # supporting passages across documents.
     expand_chunks_via_mentions: bool = field(
         default_factory=lambda: _env("RAG_EXPAND_VIA_MENTIONS", "1").lower() in ("1", "true", "yes")
+    )
+
+    # ------------------------------------------------------------- temporal
+    # Predicates that cannot hold simultaneously between the same pair. When a
+    # newer assertion lands in the same group, the older one is closed rather
+    # than stored alongside it — otherwise "Alice friend_of Bob" and "Alice
+    # enemy_of Bob" both read as currently true.
+    # Example: [{"friend_of", "enemy_of"}, {"employed_by", "former_employer"}]
+    # Resolution needs no dates from the model, only document order.
+    exclusive_predicate_groups: List[Set[str]] = field(default_factory=list)
+
+    # Include relations that a later assertion has superseded. Off by default:
+    # the history is kept, but a superseded fact should not be presented as
+    # current unless explicitly asked for.
+    include_superseded: bool = field(
+        default_factory=lambda: _env("RAG_INCLUDE_SUPERSEDED", "0").lower() in ("1", "true", "yes")
+    )
+
+    # Extract validity intervals when the text states them. Relations without a
+    # stated period carry no validity and are treated as always valid, so a
+    # corpus that never mentions dates behaves exactly as it does without this.
+    extract_validity: bool = field(
+        default_factory=lambda: _env("RAG_EXTRACT_VALIDITY", "1").lower() in ("1", "true", "yes")
+    )
+
+    # Re-indexing a document whose content is unchanged is a no-op. Turn off to
+    # force re-extraction, e.g. after changing the extraction prompt.
+    skip_unchanged_documents: bool = field(
+        default_factory=lambda: _env("RAG_SKIP_UNCHANGED", "1").lower() in ("1", "true", "yes")
+    )
+
+    # Entities whose last mentioning document is removed are marked dormant
+    # rather than deleted, and excluded from retrieval and community rebuilds.
+    # Deleting them would discard history that the audit trail is designed to keep.
+    exclude_dormant_entities: bool = field(
+        default_factory=lambda: _env("RAG_EXCLUDE_DORMANT", "1").lower() in ("1", "true", "yes")
     )
 
     # --------------------------------------------------------- communities

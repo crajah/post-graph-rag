@@ -24,6 +24,49 @@ DEFAULT_ARTICLES = [
 
 API = "https://en.wikipedia.org/w/api.php"
 
+# A temporal corpus: three novels following the same characters across roughly
+# forty years, during which alliances genuinely reverse. Public domain.
+GUTENBERG_SERIES = {
+    "dumas": [
+        # (order, title, Gutenberg id, in-story period)
+        (1, "The Three Musketeers", 1257, "1625"),
+        (2, "Twenty Years After", 1259, "1648"),
+        (3, "The Vicomte de Bragelonne", 2759, "1660"),
+    ],
+}
+GUTENBERG_URL = "https://www.gutenberg.org/cache/epub/{id}/pg{id}.txt"
+
+
+def strip_gutenberg_boilerplate(text: str) -> str:
+    """Drop the Project Gutenberg header and licence footer."""
+    start = text.find("*** START OF")
+    if start != -1:
+        start = text.find("\n", start) + 1
+    else:
+        start = 0
+    end = text.find("*** END OF")
+    return text[start: end if end != -1 else len(text)].strip()
+
+
+def fetch_series(name: str, out_dir: str, max_chars: int) -> int:
+    """Download a Gutenberg series, named so publication order sorts correctly."""
+    total = 0
+    for order, title, book_id, period in GUTENBERG_SERIES[name]:
+        url = GUTENBERG_URL.format(id=book_id)
+        req = urllib.request.Request(url, headers={"User-Agent": "post-graph-rag-eval/1.0"})
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+        body = strip_gutenberg_boilerplate(raw)[:max_chars]
+        # The numeric prefix keeps chronological order under a plain sort, which
+        # is what supersession relies on: the later book must be indexed last.
+        slug = f"{order:02d}_{title.replace(' ', '_')}_{period}.txt"
+        path = os.path.join(out_dir, slug)
+        with open(path, "w") as f:
+            f.write(body)
+        total += len(body)
+        print(f"  {order}. {title} ({period}): {len(body):,} chars -> {path}")
+    return total
+
 
 def fetch(title: str) -> tuple:
     params = {
@@ -46,9 +89,18 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--articles", nargs="+", default=DEFAULT_ARTICLES, help="Wikipedia article titles")
     ap.add_argument("--out", default="evaluation/corpus", help="Output directory")
+    ap.add_argument("--series", choices=sorted(GUTENBERG_SERIES),
+                    help="Fetch a Gutenberg novel series instead of Wikipedia articles")
+    ap.add_argument("--max-chars", type=int, default=200_000,
+                    help="Per-book truncation for series downloads")
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
+
+    if args.series:
+        total = fetch_series(args.series, args.out, args.max_chars)
+        print(f"\n{total:,} chars total in {args.out}")
+        return
     total = 0
     for title in args.articles:
         resolved, text = fetch(title)
