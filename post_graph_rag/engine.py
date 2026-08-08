@@ -1,6 +1,8 @@
+import asyncio
 import inspect
+import math
 import logging
-from typing import Callable, List, Dict, Any, Optional, Tuple, Union
+from typing import Callable, List, Dict, Any, Optional, Sequence, Tuple, Union
 from post_graph import Vertex
 from post_graph_rag.chunking import make_paragraph_chunker
 from post_graph_rag.communities import default_detector, group_by_community
@@ -102,28 +104,120 @@ class GraphRAG:
         metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None,
         space: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Chunk a whole document and index each chunk with running context.
+        """Chunk a whole document and index the chunks.
 
-        Each chunk is extracted with the document title and the canonical entity
-        names found so far, so references that only resolve against earlier text
-        ("he", "the engine") attach to the right entity instead of becoming
-        vertices of their own.
+        Chunks are processed in batches of ``max_concurrent_chunks``. Within a
+        batch the LLM and embedding calls run concurrently, which is where nearly
+        all the wall-clock time goes; graph writes are then applied in order.
+
+        Coreference context is threaded at batch granularity: a chunk sees the
+        canonical entity names discovered by every earlier batch, but not by its
+        own batch-mates. Set ``max_concurrent_chunks=1`` to recover strict
+        per-chunk context at the cost of speed.
         """
         meta_obj = metadata if isinstance(metadata, DocumentMetadata) else DocumentMetadata.from_dict(metadata or {})
         chunks = self.chunker(text)
         context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
+        batch_size = max(1, self.config.max_concurrent_chunks)
 
-        results = []
-        for idx, chunk in enumerate(chunks, 1):
-            chunk_meta = DocumentMetadata.from_dict({**meta_obj.to_dict(), "paragraph": idx})
-            res = await self.index_document(chunk, metadata=chunk_meta, space=space, context=context)
-            results.append(res)
-            # Feed this chunk's canonical names forward as context.
-            for name in res["entities"]:
-                if name not in context.known_entities:
-                    context.known_entities.append(name)
+        results: List[Dict[str, Any]] = []
+        skipped: List[BaseException] = []
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start:start + batch_size]
+            metas = [
+                DocumentMetadata.from_dict({**meta_obj.to_dict(), "paragraph": start + offset + 1})
+                for offset in range(len(batch))
+            ]
+            # Snapshot the context so every chunk in the batch sees the same one.
+            snapshot = DocumentContext(
+                title=context.title, source=context.source, summary=context.summary,
+                known_entities=list(context.known_entities),
+            )
+            prepared, failures = await self._prepare_batch([
+                (chunk, m, space, snapshot) for chunk, m in zip(batch, metas)
+            ])
+            skipped.extend(failures)
+            written = []
+            for item in prepared:
+                written.append(await self._write_document(item))
+            results.extend(written)
+
+            for res in written:
+                for name in res["entities"]:
+                    if name not in context.known_entities:
+                        context.known_entities.append(name)
             del context.known_entities[: max(0, len(context.known_entities) - self.config.context_entity_limit)]
+
+        self._assert_any_progress(results, skipped, len(chunks))
         return results
+
+    async def index_documents(
+        self,
+        chunks: Sequence[Tuple[str, Optional[Union[Dict[str, Any], DocumentMetadata]]]],
+        space: Optional[str] = None,
+        context: Optional[DocumentContext] = None,
+    ) -> List[Dict[str, Any]]:
+        """Index pre-chunked text concurrently.
+
+        For callers who do their own chunking but still want the parallelism.
+        """
+        batch_size = max(1, self.config.max_concurrent_chunks)
+        results: List[Dict[str, Any]] = []
+        skipped: List[BaseException] = []
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start:start + batch_size]
+            prepared, failures = await self._prepare_batch([
+                (text, meta, space, context) for text, meta in batch
+            ])
+            skipped.extend(failures)
+            for item in prepared:
+                results.append(await self._write_document(item))
+
+        self._assert_any_progress(results, skipped, len(chunks))
+        return results
+
+    @staticmethod
+    def _assert_any_progress(
+        results: List[Dict[str, Any]], skipped: List[BaseException], total: int
+    ) -> None:
+        """Refuse to report success when nothing was indexed.
+
+        Skipping a bad chunk is recovery; skipping every chunk is an outage, and
+        returning an empty list for it would be indistinguishable from indexing
+        an empty document.
+        """
+        if skipped:
+            logger.warning("Indexed %d/%d chunks; %d skipped.", len(results), total, len(skipped))
+        if total and not results and skipped:
+            raise skipped[0]
+
+    async def _prepare_batch(
+        self, jobs: Sequence[Tuple[Any, Any, Any, Any]]
+    ) -> Tuple[List[Dict[str, Any]], List[BaseException]]:
+        """Prepare a batch of chunks concurrently, isolating failures.
+
+        A chunk that fails extraction must not take its batch-mates with it.
+        Sequential indexing lost only the offending chunk, and concurrency should
+        not weaken that.
+
+        Failures are returned rather than swallowed, so the caller can decide
+        whether a partial result is acceptable. Silently returning an empty list
+        would let a total outage look like a successful run of an empty corpus.
+        """
+        outcomes = await asyncio.gather(
+            *[self._prepare_document(text, meta, space, ctx) for text, meta, space, ctx in jobs],
+            return_exceptions=True,
+        )
+        prepared, failures = [], []
+        for outcome in outcomes:
+            if isinstance(outcome, BaseException):
+                logger.warning(
+                    "Skipping chunk (%s): %s", type(outcome).__name__, str(outcome)[:200]
+                )
+                failures.append(outcome)
+                continue
+            prepared.append(outcome)
+        return prepared, failures
 
     async def index_document(
         self,
@@ -133,26 +227,83 @@ class GraphRAG:
         context: Optional[DocumentContext] = None,
     ) -> Dict[str, Any]:
         """Index one chunk: extract entities/triples, embed, and populate the graph."""
+        prepared = await self._prepare_document(text, metadata, space, context)
+        return await self._write_document(prepared)
+
+    async def _prepare_document(
+        self,
+        text: str,
+        metadata: Optional[Union[Dict[str, Any], DocumentMetadata]],
+        space: Optional[str],
+        context: Optional[DocumentContext],
+    ) -> Dict[str, Any]:
+        """Do the network-bound work for one chunk. Touches no database state.
+
+        Kept free of writes so it can run concurrently without racing on entity
+        resolution.
+        """
         meta_obj = metadata if isinstance(metadata, DocumentMetadata) else DocumentMetadata.from_dict(metadata or {})
         target_space = space or meta_obj.space or self.config.space
 
         if context is None and (meta_obj.document or meta_obj.source):
             context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
 
-        doc_emb = await self.llm.get_embedding(text)
-        doc_vertex = await self.store.add_document(text, doc_emb, meta_obj, space=target_space)
+        # The chunk embedding and the extraction are independent.
+        doc_emb, extraction = await asyncio.gather(
+            self.llm.get_embedding(text),
+            self.extractor.extract_from_text(text, context=context),
+        )
 
-        extraction: ExtractionResult = await self.extractor.extract_from_text(text, context=context)
-
-        # One batched request instead of one round trip per entity.
         entity_texts = [
             f"{e.name} ({e.type}): {e.description}" + (f" Also known as: {', '.join(e.aliases)}." if e.aliases else "")
             for e in extraction.entities
         ]
-        entity_embs = await self.llm.get_embeddings(entity_texts)
+
+        # Triple endpoints the extractor did not return as full entities.
+        known = {e.name.lower() for e in extraction.entities}
+        for e in extraction.entities:
+            known.update(a.lower() for a in e.aliases)
+        missing: List[str] = []
+        for triple in extraction.triples:
+            for endpoint in (triple.subject, triple.object):
+                if endpoint.lower() not in known and endpoint not in missing:
+                    missing.append(endpoint)
+
+        rel_texts = [
+            f"{t.subject} {t.predicate} {t.object}. {t.description or ''}".strip()
+            for t in extraction.triples
+        ] if (self.config.embed_relations and extraction.triples) else []
+
+        entity_embs, stub_embs, rel_embs = await asyncio.gather(
+            self.llm.get_embeddings(entity_texts),
+            self.llm.get_embeddings(missing),
+            self.llm.get_embeddings(rel_texts),
+        )
+
+        return {
+            "text": text, "meta": meta_obj, "space": target_space,
+            "doc_emb": doc_emb, "extraction": extraction,
+            "entity_embs": entity_embs, "missing": missing, "stub_embs": stub_embs,
+            "rel_embs": list(rel_embs) or [None] * len(extraction.triples),
+        }
+
+    async def _write_document(self, prepared: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply one prepared chunk to the graph.
+
+        Runs serially with respect to other chunks. Entity resolution is a
+        read-modify-write against a uniqueness index, so concurrent writers would
+        race and could split an entity that should have merged.
+        """
+        meta_obj: DocumentMetadata = prepared["meta"]
+        target_space: str = prepared["space"]
+        extraction: ExtractionResult = prepared["extraction"]
+
+        doc_vertex = await self.store.add_document(
+            prepared["text"], prepared["doc_emb"], meta_obj, space=target_space
+        )
 
         entity_vertex_map: Dict[str, Vertex] = {}
-        for entity, emb in zip(extraction.entities, entity_embs):
+        for entity, emb in zip(extraction.entities, prepared["entity_embs"]):
             e_vertex = await self.store.upsert_entity(
                 name=entity.name,
                 entity_type=entity.type,
@@ -165,31 +316,18 @@ class GraphRAG:
             for alias in entity.aliases:
                 entity_vertex_map.setdefault(alias.lower(), e_vertex)
 
-        # Triple endpoints the extractor did not return as full entities.
-        missing = []
-        for triple in extraction.triples:
-            for endpoint in (triple.subject, triple.object):
-                if endpoint.lower() not in entity_vertex_map and endpoint not in missing:
-                    missing.append(endpoint)
-        if missing:
-            stub_embs = await self.llm.get_embeddings(missing)
-            for name, emb in zip(missing, stub_embs):
+        for name, emb in zip(prepared["missing"], prepared["stub_embs"]):
+            if name.lower() not in entity_vertex_map:
                 entity_vertex_map[name.lower()] = await self.store.upsert_entity(
                     name, "Concept", "", emb, space=target_space
                 )
 
-        rel_embs: List[Optional[List[float]]] = [None] * len(extraction.triples)
-        if self.config.embed_relations and extraction.triples:
-            rel_texts = [
-                f"{t.subject} {t.predicate} {t.object}. {t.description or ''}".strip()
-                for t in extraction.triples
-            ]
-            rel_embs = list(await self.llm.get_embeddings(rel_texts))
-
         added_relations = []
-        for triple, rel_emb in zip(extraction.triples, rel_embs):
-            subj_vertex = entity_vertex_map[triple.subject.lower()]
-            obj_vertex = entity_vertex_map[triple.object.lower()]
+        for triple, rel_emb in zip(extraction.triples, prepared["rel_embs"]):
+            subj_vertex = entity_vertex_map.get(triple.subject.lower())
+            obj_vertex = entity_vertex_map.get(triple.object.lower())
+            if subj_vertex is None or obj_vertex is None:
+                continue
             edge = await self.store.add_relation(
                 subj_vertex, obj_vertex, triple.predicate, triple.description,
                 space=target_space, embedding=rel_emb,
@@ -265,6 +403,7 @@ class GraphRAG:
             rels_by_member.setdefault(r["from_id"], []).append(r)
 
         built, skipped = 0, 0
+        first_failure: Optional[BaseException] = None
         used_titles: Dict[str, int] = {}
         for community_id, member_ids in capped:
             members = set(member_ids)
@@ -298,7 +437,13 @@ class GraphRAG:
             except RAGError as e:
                 # One unusable report should not abandon the whole build.
                 logger.warning("Skipping community %s: %s", community_id, e)
+                first_failure = first_failure or e
                 skipped += 1
+
+        # Same rule as indexing: skipping some communities is recovery, skipping
+        # every one is an outage and must not be reported as a completed build.
+        if capped and built == 0 and first_failure is not None:
+            raise first_failure
 
         return {
             "communities": built,
@@ -454,10 +599,15 @@ class GraphRAG:
         Returns an empty list when no communities have been built, so global mode
         degrades to relation ranking rather than failing.
         """
+        # Over-fetch, then re-rank: the nearest report by cosine is not
+        # necessarily the one that best answers a broad question.
+        candidates = max(p.top_k, p.top_k * max(1, self.config.community_candidate_multiplier))
         try:
-            hits = await self.store.search_similar_communities(query_vec, top_k=p.top_k, space=space)
+            hits = await self.store.search_similar_communities(query_vec, top_k=candidates, space=space)
         except Exception as e:
             logger.warning("Community search failed (%s); continuing without reports.", e)
+            return []
+        if not hits:
             return []
 
         out = []
@@ -468,13 +618,43 @@ class GraphRAG:
                 "title": payload.get("title"),
                 "summary": payload.get("summary"),
                 "findings": payload.get("findings") or [],
-                "rating": payload.get("rating", 5.0),
-                "size": payload.get("size", 0),
-                "distance": distance,
+                "rating": float(payload.get("rating") or 0.0),
+                "size": int(payload.get("size") or 0),
+                "distance": float(distance),
             })
-        # Most relevant first, then most important.
-        out.sort(key=lambda c: (c["distance"], -float(c.get("rating") or 0)))
-        return out
+
+        return self._rank_communities(out, p.top_k)
+
+    def _rank_communities(self, communities: List[Dict[str, Any]], top_k: int) -> List[Dict[str, Any]]:
+        """Blend similarity with the report's importance and size.
+
+        A narrow cluster's summary can sit closer to a short, broad query than a
+        central cluster's simply because it covers less ground. Ranking on
+        similarity alone therefore answers "what are the main themes?" from a
+        niche corner of the graph.
+
+        Each signal is scored on its own absolute scale rather than min-max
+        normalised across the candidates. Min-max is wrong here: over a handful
+        of candidates it stretches a 0.04 cosine gap into the full range, so a
+        negligible similarity edge dominates every other signal. Absolute scaling
+        keeps a decisive similarity margin decisive and a trivial one trivial.
+        """
+        w_sim = self.config.community_weight_similarity
+        w_imp = self.config.community_weight_importance
+        w_size = self.config.community_weight_size
+
+        largest = max((c["size"] for c in communities), default=0)
+        size_scale = math.log1p(largest) or 1.0
+
+        for c in communities:
+            similarity = 1.0 - c["distance"]           # cosine distance -> similarity
+            importance = min(max(c["rating"], 0.0), 10.0) / 10.0
+            # Log-scaled: an 80-entity community is not 20x as central as a 4-entity one.
+            breadth = math.log1p(c["size"]) / size_scale
+            c["score"] = round(w_sim * similarity + w_imp * importance + w_size * breadth, 6)
+
+        communities.sort(key=lambda c: (-c["score"], c["distance"]))
+        return communities[:top_k]
 
     async def _global_relations(self, p: QueryParam, query_vec: List[float], space: str) -> List[Dict[str, Any]]:
         """Collect graph-wide relations for 'global'/'hybrid' modes.

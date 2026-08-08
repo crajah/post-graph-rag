@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import logging
+import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Type
 from openai import AsyncOpenAI
 from pydantic import BaseModel
@@ -16,6 +17,12 @@ RETRYABLE_STATUS = {402, 408, 409, 425, 429, 500, 502, 503, 504}
 RETRYABLE_MARKERS = (
     "run out of credits", "rate limit", "overloaded", "timeout", "timed out",
     "temporarily unavailable", "service unavailable", "capacity",
+    # Transport-level failures. Concurrent indexing can momentarily exhaust a
+    # local router's connection pool, which surfaces as a bare connection error
+    # rather than an HTTP status.
+    "connection error", "connection reset", "connection aborted",
+    "connection refused", "server disconnected", "remote end closed",
+    "temporary failure in name resolution", "broken pipe",
 )
 
 
@@ -183,9 +190,14 @@ class LLMService:
 
     # ------------------------------------------------------------- completions
 
+    def _deadline(self) -> float:
+        """Monotonic instant after which a call stops retrying."""
+        return time.monotonic() + max(0.0, self.config.retry_deadline_secs)
+
     async def _retry_same(self, attempt, what: str) -> Any:
         """Retry a single target with backoff, without switching models."""
         last: Optional[Exception] = None
+        deadline = self._deadline()
         for tries in range(1, max(1, self.config.max_retries) + 1):
             try:
                 return await attempt(self.config.embedding_model)
@@ -196,6 +208,9 @@ class LLMService:
                 logger.warning(
                     "%s attempt %d/%d failed (%s)", what, tries, self.config.max_retries, str(e)[:160]
                 )
+                if time.monotonic() >= deadline:
+                    logger.warning("%s: retry deadline reached; giving up.", what)
+                    break
                 if tries < self.config.max_retries:
                     await asyncio.sleep(self.config.retry_backoff_secs * tries)
         raise last if last else RuntimeError(f"{what} failed")
@@ -217,6 +232,7 @@ class LLMService:
         (bad request, unknown model) are not masked by a long retry loop.
         """
         last: Optional[Exception] = None
+        deadline = self._deadline()
         for model in self._model_candidates():
             for tries in range(1, max(1, self.config.max_retries) + 1):
                 try:
@@ -229,6 +245,13 @@ class LLMService:
                         "%s: model '%s' attempt %d/%d failed (%s)",
                         what, model, tries, self.config.max_retries, str(e)[:160],
                     )
+                    # A sustained outage should surface fast rather than burning
+                    # retries x models x backoff on every single call.
+                    if time.monotonic() >= deadline:
+                        raise LLMError(
+                            f"{what} exceeded the {self.config.retry_deadline_secs}s retry "
+                            f"deadline at {self.config.api_base}: {e}"
+                        ) from e
                     if tries < self.config.max_retries:
                         await asyncio.sleep(self.config.retry_backoff_secs * tries)
             logger.warning("%s: giving up on model '%s'; trying next candidate.", what, model)
