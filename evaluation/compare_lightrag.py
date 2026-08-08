@@ -32,19 +32,40 @@ from openai import AsyncOpenAI
 BASE = os.getenv("OPENAI_API_BASE", "http://localhost:4000/v1")
 KEY = os.getenv("OPENAI_API_KEY", "EMPTY")
 MODEL = os.getenv("RAG_MODEL", "MiniMax-M2.7")
-EMB_MODEL = "text-embedding-3-small"
-EMB_DIM = 1536
+EMB_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "text-embedding-3-small")
+EMB_DIM = int(os.getenv("RAG_EMBEDDING_DIM", "1536"))
+# Stated explicitly for the same reason post-graph-rag states it: the OpenAI SDK
+# otherwise negotiates 'base64', which gateways fronting non-OpenAI providers
+# (litellm -> Vertex AI) reject outright, failing every embedding call.
+EMB_ENCODING_FORMAT = os.getenv("RAG_EMBEDDING_ENCODING_FORMAT", "float")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CORPUS = os.getenv("CORPUS", os.path.join(HERE, "corpus"))
 WORKDIR = os.getenv("LIGHTRAG_WORKDIR", os.path.join(HERE, "lightrag_work"))
-MAX_CHARS = int(os.getenv("MAX_CHARS", "20000"))  # matches 10 chunks x 2000 chars
+MAX_CHARS = int(os.getenv("MAX_CHARS", "20000"))  # matches 10 chunks x 2000 chars; 0 = whole document
 
-QUESTIONS = [
+# Overridable so the same harness serves both the Wikipedia corpus and the
+# temporal (Dumas) one, where the interesting questions are about change.
+DEFAULT_QUESTIONS = [
     "What was the relationship between Ada Lovelace and Charles Babbage?",
     "How does the Analytical Engine differ from the Difference Engine?",
     "What are the main themes across these documents?",
 ]
+TEMPORAL_QUESTIONS = [
+    "What is the relationship between d'Artagnan and Athos?",
+    "Who are the enemies of d'Artagnan?",
+    "How do the loyalties of the musketeers change over time?",
+]
+# Annual filings ask a different kind of question: not "who is related to whom"
+# but "how did this line item change meaning between filings".
+FINANCE_QUESTIONS = [
+    "How did deferred production costs change from a minor line item to a driver of cash burn?",
+    "What caused Boeing's cash flow to turn negative?",
+    "How did the relationship between the 737 programme and Boeing's cash flow change over time?",
+    "What role did the FAA play across these filings?",
+]
+QUESTION_SETS = {"temporal": TEMPORAL_QUESTIONS, "finance": FINANCE_QUESTIONS}
+QUESTIONS = QUESTION_SETS.get(os.getenv("EVAL_QUESTIONS", ""), DEFAULT_QUESTIONS)
 
 
 # The router exhausts one provider's credits mid-run. post-graph-rag has retry
@@ -53,7 +74,7 @@ QUESTIONS = [
 FALLBACKS = [m for m in os.getenv(
     "RAG_FALLBACK_MODELS", "gemma-4-31B-it,DeepSeek-V3.2,gpt-oss-120b,DeepSeek-V3.1"
 ).split(",") if m]
-MAX_RETRIES = 5
+MAX_RETRIES = int(os.getenv('LR_MAX_RETRIES', '10'))
 RETRYABLE = ("402", "429", "500", "502", "503", "504", "run out of credits",
              "rate limit", "overloaded", "timeout")
 
@@ -88,7 +109,9 @@ async def embed_func(texts):
     last = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            resp = await client.embeddings.create(model=EMB_MODEL, input=texts)
+            resp = await client.embeddings.create(
+                model=EMB_MODEL, input=texts,
+                encoding_format=EMB_ENCODING_FORMAT)  # type: ignore[arg-type]
             return np.array([d.embedding for d in sorted(resp.data, key=lambda x: x.index)])
         except Exception as e:
             last = e
@@ -116,8 +139,9 @@ async def main():
     await initialize_pipeline_status()
 
     docs, names = [], []
-    for path in sorted(glob.glob(f"{CORPUS}/*.txt")):
-        docs.append(open(path).read()[:MAX_CHARS])
+    for path in sorted(glob.glob(f"{CORPUS}/*.txt")):   # numeric prefix = publication order
+        text = open(path).read()
+        docs.append(text[:MAX_CHARS] if MAX_CHARS else text)
         names.append(os.path.basename(path))
     print(f"Indexing {len(docs)} documents ({sum(len(d) for d in docs):,} chars) with {MODEL}", flush=True)
 

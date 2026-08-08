@@ -223,3 +223,6 @@ __marimo__/
 evaluation/corpus/
 evaluation/lightrag_work/
 evaluation/lightrag_stats.json
+evaluation/dumas/
+reports/
+evaluation/sec_boeing/

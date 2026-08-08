@@ -1,4 +1,5 @@
 """Data models for post-graph-rag including DocumentMetadata, QueryParam, and KeywordResult."""
+import hashlib
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 
@@ -15,6 +16,13 @@ class DocumentMetadata:
     page: Optional[int] = None          # e.g., Page number (1-based)
     paragraph: Optional[int] = None     # e.g., Paragraph index (1-based)
     space: Optional[str] = None         # e.g., Sub-grouping space ("production", "sandbox")
+
+    # Identity, used to recognise a document across re-indexing runs. Both are
+    # normally set by the engine, but are first-class fields rather than `extra`
+    # entries so callers can read and compare them directly.
+    doc_key: Optional[str] = None       # Stable document identity (source, else title)
+    content_hash: Optional[str] = None  # Digest of this chunk's text; differs iff the text changed
+
     extra: Dict[str, Any] = field(default_factory=dict) # Any additional custom key-value pairs
 
     def to_dict(self) -> Dict[str, Any]:
@@ -27,6 +35,8 @@ class DocumentMetadata:
             "page": self.page,
             "paragraph": self.paragraph,
             "space": self.space,
+            "doc_key": self.doc_key,
+            "content_hash": self.content_hash,
         }
         if self.extra:
             res.update(self.extra)
@@ -37,7 +47,8 @@ class DocumentMetadata:
         """Reconstruct DocumentMetadata from dictionary data."""
         if not data:
             return cls()
-        known_keys = {"source", "category", "collection", "document", "page", "paragraph", "space"}
+        known_keys = {"source", "category", "collection", "document", "page", "paragraph",
+                      "space", "doc_key", "content_hash"}
         known_args = {k: data[k] for k in known_keys if k in data}
         extra_args = {k: v for k, v in data.items() if k not in known_keys}
         return cls(**known_args, extra=extra_args)
@@ -77,6 +88,21 @@ class KeywordResult:
             "low_level": self.low_level_keywords
         }
 
+def document_key(source: Optional[str], document: Optional[str]) -> str:
+    """Stable identity for a document across re-indexing runs.
+
+    Prefers the source (a URL or path, which survives renaming) and falls back to
+    the title. Without a stable key, re-indexing appends a second copy instead of
+    replacing the first.
+    """
+    return (source or document or "").strip() or "unkeyed"
+
+
+def content_hash(text: str) -> str:
+    """Digest used to tell an unchanged chunk from an edited one."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:32]
+
+
 @dataclass
 class QueryParam:
     """Configuration parameters controlling RAG retrieval and synthesis behavior."""
@@ -89,6 +115,8 @@ class QueryParam:
     stream: bool = False                        # Stream response chunks if True
     only_need_context: bool = False             # Return raw context without synthesis if True
     space: Optional[str] = None                 # Optional space filter ("production", "sandbox")
+    as_of: Optional[str] = None                 # Only relations valid at this date ("1625", "1625-06-12")
+    include_superseded: Optional[bool] = None   # Include relations a later assertion replaced
     conversation_history: List[Dict[str, str]] = field(default_factory=list) # Multi-turn chat history
     hl_keywords: List[str] = field(default_factory=list) # Custom high-level search terms
     ll_keywords: List[str] = field(default_factory=list) # Custom low-level search terms

@@ -44,6 +44,17 @@ class LLMService:
 
     # -------------------------------------------------------------- embeddings
 
+    def _encoding_format_kwargs(self) -> Dict[str, Any]:
+        """Pin the wire format for embeddings, or defer to the SDK when unset.
+
+        Left alone, the OpenAI SDK negotiates 'base64' by itself. Gateways that
+        front non-OpenAI providers reject the parameter outright rather than
+        ignoring it — litellm in front of Vertex AI fails every embedding call
+        with UnsupportedParamsError — so the portable move is to state 'float'.
+        """
+        fmt = self.config.embedding_encoding_format
+        return {"encoding_format": fmt} if fmt else {}
+
     async def get_embedding(self, text: str) -> List[float]:
         """Generate an embedding vector for a text.
 
@@ -57,7 +68,8 @@ class LLMService:
             # only the configured one is retried — never failed over.
             response = await self.client.embeddings.create(
                 input=text,
-                model=self.config.embedding_model
+                model=self.config.embedding_model,
+                **self._encoding_format_kwargs(),  # type: ignore[arg-type]
             )
             return response.data[0].embedding
 
@@ -95,7 +107,8 @@ class LLMService:
         async def attempt(_model: str):
             response = await self.client.embeddings.create(
                 input=texts,
-                model=self.config.embedding_model
+                model=self.config.embedding_model,
+                **self._encoding_format_kwargs(),  # type: ignore[arg-type]
             )
             # The API may return results out of order; index is authoritative.
             ordered = sorted(response.data, key=lambda d: d.index)

@@ -89,3 +89,21 @@ async def test_chat_completion_stream_exists_and_raises_on_failure():
     with pytest.raises(LLMError):
         async for _ in svc.chat_completion_stream([{"role": "user", "content": "hi"}]):
             pass
+
+
+def test_encoding_format_is_pinned_by_default():
+    """Gateways fronting non-OpenAI providers reject the SDK's negotiated base64.
+
+    litellm in front of Vertex AI answers every embedding call with
+    UnsupportedParamsError, which skipped every chunk of a real run and left an
+    empty graph. Stating 'float' — the API default — keeps it portable.
+    """
+    svc = LLMService(RAGConfig(api_base="http://localhost:9/v1", api_key="k", embedding_dim=16))
+    assert svc._encoding_format_kwargs() == {"encoding_format": "float"}
+
+
+def test_encoding_format_can_be_left_to_the_sdk():
+    """Setting it empty restores SDK negotiation for endpoints that prefer base64."""
+    config = RAGConfig(api_base="http://localhost:9/v1", api_key="k", embedding_dim=16)
+    config.embedding_encoding_format = None
+    assert LLMService(config)._encoding_format_kwargs() == {}

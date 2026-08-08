@@ -9,9 +9,11 @@ from post_graph_rag.communities import default_detector, group_by_community
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import RAGError
 from post_graph_rag.reporting import CommunityReporter, report_to_text
-from post_graph_rag.models import DocumentContext, DocumentMetadata, QueryParam
+from post_graph_rag.models import (
+    DocumentContext, DocumentMetadata, QueryParam, content_hash, document_key,
+)
 from post_graph_rag.llm import LLMService
-from post_graph_rag.extractor import GraphExtractor, ExtractionResult
+from post_graph_rag.extractor import GraphExtractor, ExtractionResult, date_sort_key
 from post_graph_rag.graph_store import RAGGraphStore
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,24 @@ def _accepts_resolution(detector: Callable) -> bool:
         return "resolution" in inspect.signature(detector).parameters
     except (TypeError, ValueError):
         return False
+
+
+def _valid_at(valid_from: Optional[str], valid_to: Optional[str], as_of: str) -> bool:
+    """Whether a relation holds at ``as_of``.
+
+    Undated relations match every date. A corpus that never states periods is
+    therefore unaffected by as-of filtering, which is the required behaviour:
+    silence about when a fact held means it held throughout, not that it held
+    nowhere.
+    """
+    if valid_from is None and valid_to is None:
+        return True
+    at = date_sort_key(as_of)
+    if valid_from and date_sort_key(valid_from) > at:
+        return False
+    if valid_to and date_sort_key(valid_to) < at:
+        return False
+    return True
 
 
 def _truncate_by_tokens(text_items: List[str], max_tokens: int) -> str:
@@ -76,6 +96,7 @@ class GraphRAG:
             min_confidence=self.config.min_relation_confidence,
             drop_negated=self.config.drop_negated_relations,
             reject_possessive_entities=self.config.reject_possessive_entities,
+            extract_validity=self.config.extract_validity,
         )
         self.chunker = chunker or make_paragraph_chunker(
             chunk_chars=self.config.chunk_chars,
@@ -119,6 +140,25 @@ class GraphRAG:
         chunks = self.chunker(text)
         context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
         batch_size = max(1, self.config.max_concurrent_chunks)
+
+        # Re-indexing replaces rather than appends. Without this a refresh
+        # duplicates every chunk and inflates relation weight, so a document seen
+        # twice reads as independently corroborated.
+        key = document_key(meta_obj.source, meta_obj.document)
+        existing = await self.store.find_document_chunks(key, space=space or meta_obj.space or self.config.space)
+        if existing:
+            incoming = [content_hash(c) for c in chunks]
+            unchanged = [e["content_hash"] for e in existing] == incoming
+            if unchanged and self.config.skip_unchanged_documents:
+                logger.info("Document %r unchanged (%d chunks); skipping re-index.", key, len(chunks))
+                return []
+            removed = await self.store.delete_document_chunks(
+                key, space=space or meta_obj.space or self.config.space
+            )
+            logger.info(
+                "Re-indexing %r: replaced %d chunks, %d mentions, %d entities now dormant.",
+                key, removed["chunks"], removed["mentions"], removed["dormant"],
+            )
 
         results: List[Dict[str, Any]] = []
         skipped: List[BaseException] = []
@@ -298,8 +338,13 @@ class GraphRAG:
         target_space: str = prepared["space"]
         extraction: ExtractionResult = prepared["extraction"]
 
+        # Identity travels with the chunk so a later re-index can find and
+        # replace it rather than appending a second copy.
+        stamped = DocumentMetadata.from_dict(meta_obj.to_dict())
+        stamped.doc_key = meta_obj.doc_key or document_key(meta_obj.source, meta_obj.document)
+        stamped.content_hash = content_hash(prepared["text"])
         doc_vertex = await self.store.add_document(
-            prepared["text"], prepared["doc_emb"], meta_obj, space=target_space
+            prepared["text"], prepared["doc_emb"], stamped, space=target_space
         )
 
         entity_vertex_map: Dict[str, Vertex] = {}
@@ -322,7 +367,7 @@ class GraphRAG:
                     name, "Concept", "", emb, space=target_space
                 )
 
-        added_relations = []
+        added_relations, superseded = [], []
         for triple, rel_emb in zip(extraction.triples, prepared["rel_embs"]):
             subj_vertex = entity_vertex_map.get(triple.subject.lower())
             obj_vertex = entity_vertex_map.get(triple.object.lower())
@@ -332,8 +377,15 @@ class GraphRAG:
                 subj_vertex, obj_vertex, triple.predicate, triple.description,
                 space=target_space, embedding=rel_emb,
                 negated=triple.negated, confidence=triple.confidence,
+                valid_from=triple.valid_from, valid_to=triple.valid_to,
+                source_chunk=doc_vertex.id,
             )
             added_relations.append(edge)
+            if self.config.exclusive_predicate_groups:
+                superseded.extend(await self.store.supersede_conflicting(
+                    subj_vertex.id, obj_vertex.id, triple.predicate, edge.id,
+                    self.config.exclusive_predicate_groups, space=target_space,
+                ))
 
         # Link the chunk to every entity it mentions, populating doc_mentions.
         mentioned = {v.id: v for v in entity_vertex_map.values()}
@@ -342,11 +394,15 @@ class GraphRAG:
             if await self.store.add_doc_mention(doc_vertex, e_vertex, space=target_space):
                 mentions += 1
 
+        if mentioned:
+            await self.store.refresh_dormancy(list(mentioned), space=target_space)
+
         return {
             "document_id": doc_vertex.id,
             "entities_extracted": len(extraction.entities),
             "triples_extracted": len(extraction.triples),
             "relations_added": len(added_relations),
+            "relations_superseded": len(superseded),
             "mentions_added": mentions,
             "negated_relations": sum(1 for t in extraction.triples if t.negated),
             "entities": [e.name for e in extraction.entities],
@@ -547,7 +603,7 @@ class GraphRAG:
             # exist they carry the corpus-level answer and relations are support.
             graph_triples.extend(await self._global_relations(p, query_vec, target_space))
 
-        graph_triples = self._dedupe_triples(graph_triples)
+        graph_triples = self._filter_temporal(self._dedupe_triples(graph_triples), p)
 
         formatted_entities = [{
             "entity_name": v.payload.get("name"),
@@ -623,7 +679,26 @@ class GraphRAG:
                 "distance": float(distance),
             })
 
-        return self._rank_communities(out, p.top_k)
+        ranked = self._rank_communities(out, p.top_k)
+        await self._warn_if_communities_stale(space)
+        return ranked
+
+    async def _warn_if_communities_stale(self, space: str) -> None:
+        """Warn when community reports predate the graph they summarise.
+
+        Communities are derived data; indexing after a build leaves them
+        describing a graph that no longer exists.
+        """
+        try:
+            built = await self.store.oldest_community_build(space=space)
+            written = await self.store.latest_graph_write(space=space)
+        except Exception:
+            return
+        if built and written and written > built:
+            logger.warning(
+                "Community reports were built at %s but the graph was written at %s; "
+                "run build_communities() to refresh them.", built, written,
+            )
 
     def _rank_communities(self, communities: List[Dict[str, Any]], top_k: int) -> List[Dict[str, Any]]:
         """Blend similarity with the report's importance and size.
@@ -685,6 +760,7 @@ class GraphRAG:
     @staticmethod
     def _format_triple(edge: Any, from_v: Vertex, to_v: Vertex) -> Dict[str, Any]:
         payload = edge.payload or {}
+        asserted = getattr(edge, "updated_at", None) or getattr(edge, "created_at", None)
         return {
             "src_id": from_v.payload.get("name", from_v.id),
             "tgt_id": to_v.payload.get("name", to_v.id),
@@ -693,7 +769,37 @@ class GraphRAG:
             "weight": payload.get("weight", 1),
             "negated": bool(payload.get("negated", False)),
             "confidence": float(payload.get("confidence", 1.0)),
+            "valid_from": payload.get("valid_from"),
+            "valid_to": payload.get("valid_to"),
+            "superseded_by": payload.get("superseded_by"),
+            "asserted_at": asserted.isoformat() if asserted else None,
         }
+
+    def _filter_temporal(self, triples: List[Dict[str, Any]], p: QueryParam) -> List[Dict[str, Any]]:
+        """Apply supersession and as-of filtering, newest assertion first.
+
+        A relation with no stated validity matches every ``as_of`` date. That is
+        the whole point of leaving validity absent: the corpus said nothing about
+        when the fact held, so it is treated as holding throughout rather than
+        being filtered away.
+        """
+        include_superseded = (
+            p.include_superseded if p.include_superseded is not None
+            else self.config.include_superseded
+        )
+
+        kept = []
+        for t in triples:
+            if t.get("superseded_by") and not include_superseded:
+                continue
+            if p.as_of and not _valid_at(t.get("valid_from"), t.get("valid_to"), p.as_of):
+                continue
+            kept.append(t)
+
+        # Most recently asserted first, so a later contradicting fact leads the
+        # context even when supersession did not apply.
+        kept.sort(key=lambda t: (t.get("asserted_at") or "", t.get("weight", 1)), reverse=True)
+        return kept
 
     @staticmethod
     def _rank_by_keywords(triples: List[Dict[str, Any]], keywords: List[str], limit: int) -> List[Dict[str, Any]]:

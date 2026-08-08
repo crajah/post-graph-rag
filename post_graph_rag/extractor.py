@@ -59,11 +59,42 @@ CONJUNCTION_ENTITY = re.compile(
 POSSESSIVE_COMMON_NOUN = re.compile(r"^[A-Z][\w.\-]*(?: [A-Z][\w.\-]*)*'s [a-z]")
 
 
+# Entity resolution depends on a unique btree index over the entity name, and
+# Postgres refuses any index key beyond ~2704 bytes. Long before that limit a
+# "name" has stopped being one: dense corpora such as SEC filings occasionally
+# hand back an entire table row or sentence as an entity. Rejecting those keeps
+# the graph clean and keeps a single bad extraction from aborting a whole run.
+MAX_ENTITY_NAME_CHARS = 200
+
+# A bare quantity is a measurement, not a thing that can hold relationships.
+# Financial filings provoke this constantly: "$18.4 billion" and "$1,326" arrive
+# as entity names, and because every filing reports different figures they
+# fragment the graph — the same claim never recurs as the same pair of vertices,
+# so nothing can supersede anything. Deliberately narrow: it matches only names
+# that are *entirely* a figure, leaving "717 aircraft" and "$177 tax benefit"
+# alone, since those name a real subject the text goes on to talk about.
+# The abbreviated scale suffixes (k/m/bn) are only safe to strip when a currency
+# symbol marks the string as money: bare "3M" is as likely to be the company.
+BARE_QUANTITY = re.compile(
+    r"""^[-+(]?\s*
+        (?:
+            [$€£¥]\s*\d[\d,.\s]*\s*(?:k|m|bn|million|billion|trillion)?
+          | \d[\d,.\s]*\s*(?:%|percent|bps|million|billion|trillion)?\s*[$€£¥]?
+        )
+        \s*\)?$""",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
 def is_phrase_not_entity(name: str, reject_possessive: bool = False) -> bool:
     """True for compound phrases that name a relationship rather than an entity."""
     n = (name or "").strip()
     if not n:
         return False
+    if len(n) > MAX_ENTITY_NAME_CHARS:
+        return True
+    if BARE_QUANTITY.match(n):
+        return True
     if CONJUNCTION_ENTITY.match(n):
         return True
     return bool(reject_possessive and POSSESSIVE_COMMON_NOUN.match(n))
@@ -91,6 +122,20 @@ class Triple(BaseModel):
     confidence: float = Field(
         default=1.0,
         description="0.0-1.0 confidence that the text actually asserts this relation",
+    )
+    valid_from: Optional[str] = Field(
+        default=None,
+        description=(
+            "When the relation STARTED, only if the text states it. ISO-8601 or a bare "
+            "year ('1625', '1625-06'). Leave null when the text gives no start."
+        ),
+    )
+    valid_to: Optional[str] = Field(
+        default=None,
+        description=(
+            "When the relation ENDED, only if the text states it. ISO-8601 or a bare "
+            "year. Leave null when the relation is open-ended or no end is stated."
+        ),
     )
 
 
@@ -123,6 +168,21 @@ GUIDELINES FOR ENTITIES:
   Emit them separately and connect them with a triple.
 - NEVER emit a possessive role phrase as an entity ("Babbage's father", "Babbage's design").
   Name the referent if the text gives it, otherwise omit it.
+- Emit the STABLE entity that could be named again in a DIFFERENT document about the
+  same subject. Never bundle an entity together with a change, measurement, period,
+  outcome or event into a single name.
+    WRONG: 'Boeing Commercial Airplanes revenue increase', 'Q4 2005 net loss',
+           '737 programme production impacts', 'Lovelace's 1843 translation work'
+    RIGHT: 'Boeing Commercial Airplanes', 'net loss', '737 programme', 'Ada Lovelace'
+  Put the movement, period and magnitude in the TRIPLE and its description instead:
+  ('Boeing Commercial Airplanes')-[increases_revenue]->('Revenue'), described as
+  "revenues rose 15 percent in 2006".
+  TEST BEFORE EMITTING: would this exact name plausibly appear in another document
+  on this subject? If it names a one-off event, figure or period-specific movement,
+  it is not an entity — it is a relation.
+- NEVER emit a bare figure, amount or date as an entity ('$18.4 billion', '2.5%',
+  '$1,326'). A quantity is the VALUE of a relation, not a thing that holds relations;
+  it belongs in the relation description.
 - Type: {type_guidance}
 - Description: Brief summary of the entity's role in THIS text.
 
@@ -140,6 +200,7 @@ GUIDELINES FOR TRIPLES:
 - confidence: 1.0 when the text asserts the relation plainly, lower when it is hedged,
   speculative, or attributed to disputed sources.
 - Description: the supporting detail from the text for this relation.
+{validity_guidance}
 
 OUTPUT REQUIREMENTS:
 Return your response formatted strictly according to the required schema.
@@ -174,6 +235,44 @@ def normalise_predicate(predicate: str) -> str:
     return p
 
 
+def _clean_date(value: Optional[str]) -> Optional[str]:
+    """Normalise a stated date to ISO-8601-ish text, or None.
+
+    Accepts a bare year, year-month, or full date. Anything vaguer ("later",
+    "in his youth") is discarded rather than coerced: a wrong date is worse than
+    no date, because no date already means "always valid".
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() in {"null", "none", "unknown", "n/a", "-"}:
+        return None
+    match = re.match(r"^(-?\d{1,4})(?:-(\d{1,2}))?(?:-(\d{1,2}))?$", text)
+    if not match:
+        return None
+    year, month, day = match.group(1), match.group(2), match.group(3)
+    out = f"{int(year):04d}"
+    if month:
+        out += f"-{int(month):02d}"
+        if day:
+            out += f"-{int(day):02d}"
+    return out
+
+
+def date_sort_key(value: Optional[str]) -> str:
+    """Pad a partial date so string comparison orders it correctly.
+
+    '1625' must compare below '1625-06-01', so a bare year becomes '1625-01-01'.
+    """
+    if not value:
+        return ""
+    parts = value.split("-")
+    year = parts[0]
+    month = parts[1] if len(parts) > 1 else "01"
+    day = parts[2] if len(parts) > 2 else "01"
+    return f"{year}-{month}-{day}"
+
+
 def is_pronominal(name: str) -> bool:
     """True for pronouns and relative references that cannot resolve to a vertex."""
     n = (name or "").strip().lower()
@@ -200,6 +299,7 @@ class GraphExtractor:
         min_confidence: float = 0.0,
         drop_negated: bool = False,
         reject_possessive_entities: bool = False,
+        extract_validity: bool = True,
     ):
         self.llm_service = llm_service
         self._system_prompt = system_prompt
@@ -213,6 +313,7 @@ class GraphExtractor:
         self.min_confidence = min_confidence
         self.drop_negated = drop_negated
         self.reject_possessive_entities = reject_possessive_entities
+        self.extract_validity = extract_validity
 
     # ------------------------------------------------------------------ prompt
 
@@ -238,8 +339,23 @@ class GraphExtractor:
                 "  Reuse the same predicate wording for the same kind of relation across the whole text."
             )
 
+        if self.extract_validity:
+            validity_guidance = (
+                "- valid_from / valid_to: fill these ONLY when the text states when the\n"
+                "  relation began or ended ('from 1625', 'until his death in 1673',\n"
+                "  'between 1628 and 1630'). Use ISO-8601 or a bare year.\n"
+                "  Leave BOTH null when the text gives no period. Never guess, never infer\n"
+                "  a date from context, and never use the document's own date as a default.\n"
+                "  A relation with no stated period is treated as always valid, which is the\n"
+                "  correct reading — do not invent one to fill the field."
+            )
+        else:
+            validity_guidance = "- Do not populate valid_from or valid_to."
+
         return BASE_SYSTEM_PROMPT.format(
-            type_guidance=type_guidance, predicate_guidance=predicate_guidance
+            type_guidance=type_guidance,
+            predicate_guidance=predicate_guidance,
+            validity_guidance=validity_guidance,
         )
 
     @staticmethod
@@ -357,8 +473,16 @@ class GraphExtractor:
         triples: Dict[tuple, Triple] = {}
         for t in [*base.triples, *extra.triples]:
             key = (t.subject.strip().lower(), normalise_predicate(t.predicate), t.object.strip().lower())
-            if key not in triples:
+            prior = triples.get(key)
+            if prior is None:
                 triples[key] = t
+                continue
+            # Keep whichever pass supplied a stated period; a gleaning pass often
+            # surfaces the dates the first pass omitted.
+            if prior.valid_from is None and t.valid_from is not None:
+                prior.valid_from = t.valid_from
+            if prior.valid_to is None and t.valid_to is not None:
+                prior.valid_to = t.valid_to
 
         return ExtractionResult(entities=list(entities.values()), triples=list(triples.values()))
 
@@ -400,7 +524,9 @@ class GraphExtractor:
                     dropped_names.add(name.lower())
                     logger.debug("Dropping non-entity name: %s", name)
                 continue
-            aliases = [a.strip() for a in e.aliases if a and a.strip() and not is_pronominal(a)]
+            aliases = [a.strip() for a in e.aliases
+                       if a and a.strip() and not is_pronominal(a)
+                       and len(a.strip()) <= MAX_ENTITY_NAME_CHARS]
             aliases = [a for a in dict.fromkeys(aliases) if a.lower() != name.lower()]
             entities.append(Entity(name=name, type=e.type or "Concept",
                                    description=e.description or "", aliases=aliases))
@@ -434,6 +560,11 @@ class GraphExtractor:
                 subject=subject, predicate=predicate, object=obj,
                 description=t.description, negated=bool(t.negated),
                 confidence=float(t.confidence),
+                # Absent validity stays absent. A relation with no stated period
+                # is always valid, and inventing a period here would silently
+                # narrow it.
+                valid_from=_clean_date(t.valid_from) if self.extract_validity else None,
+                valid_to=_clean_date(t.valid_to) if self.extract_validity else None,
             ))
 
         if not entities and not triples:
