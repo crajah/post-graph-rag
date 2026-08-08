@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "post-graph-rag"
-version = "1.1.0"
+version = "1.1.1"
 description = "Graph RAG library leveraging post-graph space sub-grouping and pgvector on PostgreSQL with OpenAI-compatible LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -16,14 +16,16 @@ keywords = ["graph-rag", "rag", "knowledge-graph", "post-graph", "pgvector", "ll
 dependencies = [
     "post-graph>=0.5.0",
     "openai>=1.0.0",
-    "pydantic>=2.0.0"
+    "pydantic>=2.0.0",
+    # Leiden clustering for community detection. The library falls back to label
+    # propagation without these, but the partitions are markedly worse, so it
+    # ships by default rather than as an opt-in.
+    "igraph>=0.11",
+    "leidenalg>=0.10"
 ]
 
 [project.optional-dependencies]
 test = ["pytest>=8.0", "pytest-asyncio>=0.24"]
-# Leiden clustering for community detection. Without it the library falls back to
-# label propagation, which works but produces less balanced communities.
-communities = ["igraph>=0.11", "leidenalg>=0.10"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

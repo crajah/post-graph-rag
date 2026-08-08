@@ -71,7 +71,6 @@ Corpus-level questions are answered from summaries of clustered subgraphs, not
 from retrieved passages. Run after indexing:
 
 ```bash
-pip install "post-graph-rag[communities]"      # Leiden; falls back without it
 python evaluation/build_communities.py --realm wiki_kb --resolution 2.0 --synthesise
 python evaluation/build_communities.py --ask "What themes connect these documents?"
 ```
@@ -82,8 +81,9 @@ and summarises the 12 largest.
 **Partition balance depends heavily on the detector.** The largest community holds
 35% of the graph under label propagation, 21% under Leiden at resolution 1.0, and
 17% at resolution 2.0. A community covering a third of the graph is not a theme,
-it is a summary of everything — install the `communities` extra unless you have a
-reason not to.
+it is a summary of everything — which is why Leiden ships as a core dependency
+rather than an opt-in. The label-propagation fallback remains for environments
+where the native `igraph` build is unavailable.
 
 **Report quality depends heavily on the model.** Same graph, same clustering, two
 models:

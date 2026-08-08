@@ -100,10 +100,14 @@ Communities are derived data: `build_communities()` replaces the previous
 clustering for the space rather than accumulating stale clusters. Global mode
 degrades to relation ranking when none have been built, so it never hard-fails.
 
-Detection uses Leiden when `igraph` and `leidenalg` are installed, otherwise a
-deterministic label-propagation fallback with no extra dependency. Determinism
-matters here — a randomised partition would produce a different graph on every
-indexing run. Supply your own with `community_detector=`:
+Detection uses Leiden (`igraph` + `leidenalg`, installed by default), falling back
+to deterministic label propagation if the native build is unavailable. Both are
+deterministic — a randomised partition would produce a different graph on every
+indexing run. Leiden is the default because partition balance matters: on the
+evaluation corpus the largest community holds 35% of the graph under label
+propagation against 17% under Leiden, and a community spanning a third of the
+graph summarises everything rather than a theme. Supply your own with
+`community_detector=`:
 
 ```python
 rag = GraphRAG(config, community_detector=my_detector)   # (nodes, edges) -> {node: community_id}
