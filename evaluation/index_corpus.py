@@ -2,8 +2,8 @@
 """Index a multi-document corpus and report indexing throughput.
 
     python evaluation/index_corpus.py
-    python evaluation/index_corpus.py --max-chunks 5 --model DeepSeek-V3.2 \
-        --fallback-models Meta-Llama-3.3-70B-Instruct MiniMax-M2.7
+    python evaluation/index_corpus.py --max-chunks 5 --model MiniMax-M2.7 \
+        --fallback-models gemma-4-31B-it DeepSeek-V3.2 gpt-oss-120b DeepSeek-V3.1
 
 Every knob is a flag or environment variable; nothing about the corpus or the
 model line-up is baked in.
@@ -140,7 +140,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--corpus", default="evaluation/corpus")
     ap.add_argument("--realm", default=os.getenv("RAG_EVAL_REALM", "wiki_kb"))
-    ap.add_argument("--model", default=os.getenv("RAG_MODEL", "DeepSeek-V3.2"))
+    ap.add_argument("--model", default=os.getenv("RAG_MODEL", "MiniMax-M2.7"))
     ap.add_argument("--fallback-models", nargs="*", default=[
         m for m in os.getenv("RAG_FALLBACK_MODELS", "").split(",") if m])
     ap.add_argument("--max-retries", type=int, default=int(os.getenv("RAG_MAX_RETRIES", "5")))

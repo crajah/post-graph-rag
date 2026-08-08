@@ -9,7 +9,7 @@ from post_graph_rag.models import DocumentMetadata
 
 logger = logging.getLogger(__name__)
 
-VERTEX_TABLES = ("documents", "entities")
+VERTEX_TABLES = ("documents", "entities", "communities")
 
 
 class RAGGraphStore:
@@ -62,6 +62,12 @@ class RAGGraphStore:
             await self.client.create_edge_table(
                 "doc_mentions",
                 from_vertex_table="documents",
+                to_vertex_table="entities",
+                realm=self.realm
+            )
+            await self.client.create_edge_table(
+                "community_members",
+                from_vertex_table="communities",
                 to_vertex_table="entities",
                 realm=self.realm
             )
@@ -427,6 +433,136 @@ class RAGGraphStore:
                 table_name="documents", _client=self.client,
             ))
         return out
+
+    # ------------------------------------------------------------- communities
+
+    async def graph_snapshot(self, space: Optional[str] = None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Fetch the entity graph for clustering.
+
+        Returns (entities, relations) as plain dicts. Negated relations are
+        included but flagged, so a detector can weight them and a report can say
+        the relation is denied rather than asserted.
+        """
+        target_space = space or self.space
+        ents_ref = self.client._get_table_ref("entities", self.realm)
+        rels_ref = self.client._get_table_ref("relations", self.realm)
+
+        args: List[Any] = [self.realm]
+        space_clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            space_clause = " AND space = $2"
+
+        ent_rows = await self.client._fetch(
+            f"SELECT id, payload FROM {ents_ref} WHERE realm = $1{space_clause}", *args
+        )
+        rel_rows = await self.client._fetch(
+            f"SELECT id, from_id, to_id, relation_type, payload FROM {rels_ref} "
+            f"WHERE realm = $1{space_clause}", *args
+        )
+
+        def payload(row):
+            return row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+
+        entities = []
+        for r in ent_rows:
+            p = payload(r)
+            entities.append({
+                "id": str(r["id"]), "name": p.get("name"), "type": p.get("type"),
+                "description": p.get("description"), "aliases": p.get("aliases") or [],
+            })
+
+        relations = []
+        for r in rel_rows:
+            p = payload(r)
+            relations.append({
+                "id": str(r["id"]), "from_id": str(r["from_id"]), "to_id": str(r["to_id"]),
+                "predicate": r["relation_type"], "description": p.get("description", ""),
+                "weight": p.get("weight", 1), "negated": bool(p.get("negated", False)),
+            })
+        return entities, relations
+
+    async def clear_communities(self, space: Optional[str] = None) -> int:
+        """Delete existing communities for a space.
+
+        Communities are derived data: re-running detection replaces them rather
+        than accumulating stale clusters alongside fresh ones.
+        """
+        target_space = space or self.space
+        comm_ref = self.client._get_table_ref("communities", self.realm)
+        args: List[Any] = [self.realm]
+        space_clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            space_clause = " AND space = $2"
+        rows = await self.client._fetch(
+            f"DELETE FROM {comm_ref} WHERE realm = $1{space_clause} RETURNING id", *args
+        )
+        return len(rows)
+
+    async def add_community(
+        self,
+        key: str,
+        title: str,
+        summary: str,
+        embedding: List[float],
+        level: int = 0,
+        rating: float = 5.0,
+        findings: Optional[List[Dict[str, Any]]] = None,
+        entity_ids: Optional[List[str]] = None,
+        space: Optional[str] = None,
+    ) -> Vertex:
+        """Store a community report as an embedded vertex, linked to its members."""
+        target_space = space or self.space
+        payload = {
+            "key": key,
+            "title": title,
+            "summary": summary,
+            "level": level,
+            "rating": rating,
+            "findings": findings or [],
+            "size": len(entity_ids or []),
+        }
+        vertex = await self.client.add_vertex(
+            "communities",
+            realm=self.realm,
+            space=target_space,
+            payload=payload,
+            embedding=embedding,
+        )
+        for entity_id in entity_ids or []:
+            await self.client.add_edge(
+                "community_members",
+                realm=self.realm,
+                space=target_space,
+                from_id=vertex.id,
+                to_id=entity_id,
+                relation_type="includes",
+                payload={},
+                check_cycle=False,
+            )
+        return vertex
+
+    async def search_similar_communities(
+        self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None
+    ) -> List[Tuple[Vertex, float]]:
+        """Vector similarity search over community reports."""
+        return await self.client.vector_search(
+            "communities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+        )
+
+    async def count_communities(self, space: Optional[str] = None) -> int:
+        target_space = space or self.space
+        comm_ref = self.client._get_table_ref("communities", self.realm)
+        args: List[Any] = [self.realm]
+        space_clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            space_clause = " AND space = $2"
+        rows = await self.client._fetch(
+            f"SELECT count(*) AS n FROM {comm_ref} WHERE realm = $1{space_clause}", *args
+        )
+        return int(rows[0]["n"]) if rows else 0
 
     # --------------------------------------------------------------- retrieval
 
