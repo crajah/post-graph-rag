@@ -74,6 +74,7 @@ async def run(args):
         chunk_overlap_chars=args.chunk_overlap,
         predicate_vocabulary=args.predicate_vocabulary,
         predicate_aliases=args.predicate_aliases,
+        max_concurrent_chunks=args.max_concurrent_chunks,
     )
     rag = GraphRAG(config)
     await rag.store.connect()
@@ -97,29 +98,34 @@ async def run(args):
         # against earlier text attach to the right entity.
         context = DocumentContext(title=title, source=source)
 
-        for i, ch in enumerate(chunks, 1):
+        batch = max(1, args.max_concurrent_chunks)
+        for start in range(0, len(chunks), batch):
+            window = chunks[start:start + batch]
             t0 = time.time()
             try:
-                res = await rag.index_document(ch, metadata=DocumentMetadata(
-                    source=source,
-                    category=args.category,
-                    collection=args.collection,
-                    document=f"{title}.txt",
-                    paragraph=i,
-                ), context=context)
+                results = await rag.index_documents(
+                    [(ch, DocumentMetadata(source=source, category=args.category,
+                                           collection=args.collection,
+                                           document=f"{title}.txt",
+                                           paragraph=start + off + 1))
+                     for off, ch in enumerate(window)],
+                    context=context,
+                )
                 dt = time.time() - t0
-                stats.append({"doc": title, "chunk": i, "secs": dt,
-                              "entities": res["entities_extracted"],
-                              "triples": res["triples_extracted"]})
-                print(f"  [{i:2}/{len(chunks)}] {res['entities_extracted']:2}e "
-                      f"{res['triples_extracted']:2}t  {dt:5.1f}s", flush=True)
-                for name in res["entities"]:
-                    if name not in context.known_entities:
-                        context.known_entities.append(name)
+                for off, res in enumerate(results):
+                    stats.append({"doc": title, "chunk": start + off + 1, "secs": dt / len(window),
+                                  "entities": res["entities_extracted"],
+                                  "triples": res["triples_extracted"]})
+                    for name in res["entities"]:
+                        if name not in context.known_entities:
+                            context.known_entities.append(name)
                 del context.known_entities[: max(0, len(context.known_entities) - config.context_entity_limit)]
+                print(f"  [{start + len(window):2}/{len(chunks)}] batch of {len(window)}: "
+                      f"{sum(r['entities_extracted'] for r in results):3}e "
+                      f"{sum(r['triples_extracted'] for r in results):3}t  {dt:5.1f}s", flush=True)
             except RAGError as e:
-                print(f"  [{i:2}/{len(chunks)}] FAILED {type(e).__name__}: {str(e)[:110]}", flush=True)
-                stats.append({"doc": title, "chunk": i, "error": type(e).__name__})
+                print(f"  [{start:2}/{len(chunks)}] BATCH FAILED {type(e).__name__}: {str(e)[:110]}", flush=True)
+                stats.append({"doc": title, "chunk": start, "error": type(e).__name__})
 
     ok = [s for s in stats if "secs" in s]
     elapsed = time.time() - t_all
@@ -148,6 +154,7 @@ def main():
     ap.add_argument("--embedding-dim", type=int, default=int(os.getenv("RAG_EMBEDDING_DIM", "1536")))
     ap.add_argument("--chunk-chars", type=int, default=2000)
     ap.add_argument("--chunk-overlap", type=int, default=200)
+    ap.add_argument("--max-concurrent-chunks", type=int, default=int(os.getenv("RAG_MAX_CONCURRENT_CHUNKS","4")))
     ap.add_argument("--gleaning-passes", type=int, default=int(os.getenv("RAG_GLEANING_PASSES", "1")))
     ap.add_argument("--predicate-vocabulary", nargs="*", default=[
         p for p in os.getenv("RAG_PREDICATE_VOCABULARY", "").split(",") if p])

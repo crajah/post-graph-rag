@@ -19,7 +19,7 @@ from post_graph_rag.extractor import GraphExtractor, Entity, Triple, ExtractionR
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.engine import GraphRAG
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 __all__ = [
     "RAGConfig",
     "RAGError",

@@ -41,6 +41,14 @@ class RAGConfig:
     # Attempts per model before moving to the next one.
     max_retries: int = field(default_factory=lambda: int(_env("RAG_MAX_RETRIES", "5")))
     retry_backoff_secs: float = field(default_factory=lambda: float(_env("RAG_RETRY_BACKOFF", "2.0")))
+    # Wall-clock ceiling for a single call including all retries and failovers.
+    # Without it, retries x models x backoff means a sustained outage burns
+    # enormous time per call before giving up — a 12-community build spent 38
+    # minutes retrying to produce nothing. Retrying is for transient blips; a
+    # sustained outage should surface quickly.
+    retry_deadline_secs: float = field(
+        default_factory=lambda: float(_env("RAG_RETRY_DEADLINE", "120"))
+    )
 
     # ----------------------------------------------------------- extraction
     # Extra passes asking the model what it missed. Single-pass extraction
@@ -87,6 +95,16 @@ class RAGConfig:
     chunk_chars: int = field(default_factory=lambda: int(_env("RAG_CHUNK_CHARS", "2000")))
     chunk_overlap_chars: int = field(default_factory=lambda: int(_env("RAG_CHUNK_OVERLAP", "200")))
 
+    # Chunks whose LLM and embedding calls run concurrently. Indexing is almost
+    # entirely network-bound, so this is the dominant lever on wall-clock time.
+    # Chunks are processed in batches of this size: within a batch they run in
+    # parallel, and each batch sees the entities discovered by earlier batches,
+    # so coreference context is threaded at batch granularity rather than lost.
+    # Set to 1 for strict sequential indexing and per-chunk context.
+    max_concurrent_chunks: int = field(
+        default_factory=lambda: int(_env("RAG_MAX_CONCURRENT_CHUNKS", "4"))
+    )
+
     # Cap on canonical entity names passed back into extraction as context.
     context_entity_limit: int = field(default_factory=lambda: int(_env("RAG_CONTEXT_ENTITY_LIMIT", "40")))
 
@@ -109,6 +127,26 @@ class RAGConfig:
     max_communities: int = field(default_factory=lambda: int(_env("RAG_MAX_COMMUNITIES", "64")))
     # Override the community report prompt.
     community_report_prompt: Optional[str] = None
+
+    # How community reports are ranked for global retrieval. Pure similarity
+    # lets a small, tightly-worded niche cluster outrank the central theme on a
+    # broad question ("what are the main themes?"), because a narrow cluster's
+    # summary can sit closer to a short query than a broad one's. Blending in
+    # the report's own importance rating and its size corrects for that.
+    # Weights are relative; set importance and size to 0.0 for pure similarity.
+    community_weight_similarity: float = field(
+        default_factory=lambda: float(_env("RAG_COMMUNITY_W_SIMILARITY", "1.0"))
+    )
+    community_weight_importance: float = field(
+        default_factory=lambda: float(_env("RAG_COMMUNITY_W_IMPORTANCE", "0.25"))
+    )
+    community_weight_size: float = field(
+        default_factory=lambda: float(_env("RAG_COMMUNITY_W_SIZE", "0.15"))
+    )
+    # Candidates fetched before re-ranking, as a multiple of top_k.
+    community_candidate_multiplier: int = field(
+        default_factory=lambda: int(_env("RAG_COMMUNITY_CANDIDATE_MULTIPLIER", "3"))
+    )
     # Weight assigned to a denied relation when clustering. Negated relations
     # still connect their endpoints topically, but less strongly.
     negated_relation_weight: float = field(

@@ -211,13 +211,59 @@ async def test_min_size_skips_small_communities(rag_factory):
 
 
 @pytest.mark.asyncio
-async def test_unusable_report_skips_rather_than_aborting(rag_factory):
+async def test_total_report_failure_raises(rag_factory):
+    """Skipping some communities is recovery; skipping every one is an outage.
+
+    Observed live: a 12-community build reported 'summarised 0, skipped 12' as a
+    successful result after 38 minutes of retries against a failing endpoint.
+    """
     rag = await rag_factory(extraction=CLUSTER_A)
     rag.reporter = _reporter(fail=True)
     await rag.index_document("Babbage designed engines.")
+    with pytest.raises(Exception):
+        await rag.build_communities()
+
+
+CLUSTER_B = ExtractionResult(
+    entities=[
+        Entity(name="Marie Curie", type="Person", description="physicist"),
+        Entity(name="Radium", type="Concept", description="element"),
+        Entity(name="Polonium", type="Concept", description="element"),
+    ],
+    triples=[
+        Triple(subject="Marie Curie", predicate="discovered", object="Radium"),
+        Triple(subject="Marie Curie", predicate="discovered", object="Polonium"),
+        Triple(subject="Radium", predicate="related_element", object="Polonium"),
+    ],
+)
+
+
+@pytest.mark.asyncio
+async def test_unusable_report_skips_rather_than_aborting(rag_factory):
+    """One bad report must not abandon the build, as long as others succeed.
+
+    Needs two disconnected clusters: with a single community, a failed report
+    means nothing was built at all, which correctly raises instead.
+    """
+    rag = await rag_factory(extraction=CLUSTER_A)
+    await rag.index_document("Babbage designed engines.")
+    rag.llm._extraction = CLUSTER_B
+    await rag.index_document("Curie discovered radium.")
+
+    calls = {"n": 0}
+    good = _reporter(REPORT)
+
+    class Flaky:
+        async def summarise(self, entities, relations):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise ExtractionError("first one is unusable")
+            return await good.summarise(entities, relations)
+
+    rag.reporter = Flaky()
     res = await rag.build_communities()
-    assert res["communities"] == 0
-    assert res["skipped"] >= 1
+    assert res["skipped"] == 1
+    assert res["communities"] >= 1, "a survivable failure aborted the whole build"
 
 
 def test_colliding_titles_are_disambiguated():

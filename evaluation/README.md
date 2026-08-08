@@ -15,9 +15,7 @@ export OPENAI_API_BASE="http://localhost:4000/v1"
 export OPENAI_API_KEY="..."
 
 python evaluation/fetch_corpus.py
-python evaluation/index_corpus.py --max-chunks 10 \
-    --model MiniMax-M2.7 \
-    --fallback-models gemma-4-31B-it DeepSeek-V3.2 gpt-oss-120b DeepSeek-V3.1
+python evaluation/index_corpus.py --max-chunks 10 --model MiniMax-M2.7
 python evaluation/analyse_graph.py
 ```
 
@@ -38,10 +36,15 @@ recreates it each run unless `--no-reset` is passed. Drop it with:
 DROP SCHEMA IF EXISTS wiki_kb CASCADE;
 ```
 
-Providers that exhaust credits mid-run are the normal case on shared routers;
-`--fallback-models` and `--max-retries` let a long run ride through them. List the
-fallbacks in descending quality order, so degradation is graceful — the chain is
-tried left to right and the first model with credit wins.
+Providers that exhaust credits mid-run are the normal case on shared routers.
+Prefer **one model plus retries** — routers usually recover within seconds, and
+`--max-retries` rides that out without silently degrading extraction quality.
+`--fallback-models` exists for a genuinely prolonged outage where finishing
+matters more than quality; list them in descending quality order.
+
+`RAG_RETRY_DEADLINE` caps the wall-clock a single call may spend retrying. Without
+it a sustained outage costs retries x models x backoff on *every* call — a
+12-community build once spent 38 minutes producing nothing.
 
 ### Predicate vocabulary
 
@@ -108,6 +111,124 @@ python evaluation/index_corpus.py --realm run_a --model MiniMax-M2.7
 python evaluation/index_corpus.py --realm run_b --model gemma-4-31B-it
 python evaluation/compare_realms.py run_a run_b
 ```
+
+## Comparison against LightRAG
+
+`compare_lightrag.py` indexes the same corpus with LightRAG so the two libraries
+can be compared directly. LightRAG is not a dependency — install it separately.
+
+Both libraries indexed the same four articles with the same model
+(MiniMax-M2.7), the same embedding model (`text-embedding-3-small`, 1536 dims),
+one gleaning pass, and equivalent chunk sizing (~2000 chars with ~200 overlap).
+post-graph-rag ran with `max_concurrent_chunks=6`.
+
+| | post-graph-rag (concurrent) | LightRAG 1.5.6 |
+| :--- | ---: | ---: |
+| **Throughput** | | |
+| Characters indexed | 66,345 | 75,751 |
+| Indexing time | 3.7 min | **2.0 min** |
+| Characters per minute | 17,900 | **37,900** |
+| **Graph density** | | |
+| Entities | **523** | 450 |
+| Relations | **671** | 421 |
+| Entities per 10k chars | **78.8** | 59.4 |
+| Relations per 10k chars | **101.1** | 55.6 |
+| Orphan entities | 24 | not exposed |
+| **Edge labelling** | | |
+| Distinct edge labels | **380** | 460 |
+| Labels ÷ relations | **57%** | 109% |
+| With a controlled vocabulary | **11%** | not supported |
+| **Retrieval** | | |
+| Query latency, mix / global | **8.2s / 3.1s** | 10.1s / 6.1s |
+
+### Throughput
+
+LightRAG is about **2.1x faster** per character. That is down from 6.4x: before
+concurrency post-graph-rag processed chunks strictly sequentially and took
+12.7 minutes on this corpus.
+
+The residual gap is architectural rather than incidental. post-graph-rag
+parallelises the network-bound work *within* a document and then applies graph
+writes in order, because entity resolution is a read-modify-write against a
+uniqueness index and concurrent writers would split entities that should merge.
+LightRAG parallelises across documents as well, and its graph store is an
+in-process NetworkX object rather than a transactional database, so it has no
+equivalent constraint to respect.
+
+That is a fair trade rather than a defect: the write serialisation is what makes
+`Babbage` and `Charles Babbage` reliably converge on one vertex under
+concurrency. Raising `max_concurrent_chunks` beyond 6 recovers some of the
+difference, at the cost of coarser coreference context — chunks in the same batch
+cannot see each other's entities.
+
+### Graph density
+
+post-graph-rag extracts roughly **33% more entities and 82% more relations per
+unit of text**. The gap is widest on relations, which is where gleaning pays off:
+a second pass asking what was missed materially raises relation recall.
+
+Note the character counts differ — LightRAG indexed 14% more text, because
+post-graph-rag's chunker discards section headings and short fragments. The
+per-10k-character rows are the comparable ones.
+
+### Edge labelling
+
+This is the sharpest structural difference, and the one most likely to decide the
+choice.
+
+LightRAG's edge `keywords` are free text: 460 distinct labels across 421
+relations, so *more than one label per edge on average*, with entries such as
+"social contact" and "claimed influence". They describe an edge in prose but
+cannot be queried as a relation type — `WHERE relation_type = 'worked_with'` has
+no meaning against them.
+
+post-graph-rag normalises predicates (case, separators, tense auxiliaries) and
+optionally snaps them onto a controlled vocabulary. Unconstrained it sits at 57%;
+with the `biography` preset it drops to **11%** — 44 labels over 417 relations,
+with a real head to the distribution (`located_in` 38, `worked_with` 36,
+`studied` 34). If you intend to traverse or filter by relation type, that
+difference is decisive. If you only ever retrieve by similarity, it matters much
+less.
+
+### Retrieval
+
+Answer quality is comparable. Both produce well-structured, accurate answers to
+factual and comparative questions; post-graph-rag is faster at query time and
+adds inline citations.
+
+The libraries differ in how corpus-level questions are answered.
+post-graph-rag's `global` mode ranks community reports by a blend of similarity,
+importance and size. An earlier version ranked on similarity alone and drifted to
+a niche cluster (steampunk alternate histories) on "what are the main themes?",
+where LightRAG stayed on the central theme — a narrow cluster's summary can sit
+closer to a short query than a broad one's precisely because it covers less
+ground.
+
+### Operational differences
+
+**Storage.** post-graph-rag persists to PostgreSQL through post-graph, with
+realm/space multi-tenancy, audit tables and append-only history. LightRAG
+defaults to file-backed NetworkX plus nano-vectordb, with pluggable backends
+(PostgreSQL, Neo4j, Milvus, Qdrant) available.
+
+**Resilience.** On a router that exhausts provider credits mid-run, LightRAG's
+first attempt failed 3 of 4 documents; the comparison only completed after adding
+retry and failover to the harness. post-graph-rag has that built in, bounded by
+`retry_deadline_secs` so a sustained outage surfaces quickly instead of burning
+retries on every call.
+
+**Failure semantics.** post-graph-rag skips an individual bad chunk but raises if
+every chunk fails, so a total outage cannot be mistaken for successfully indexing
+an empty corpus.
+
+### Summary
+
+Choose **LightRAG** for raw indexing throughput, or when a file-backed store is
+enough and you retrieve purely by similarity.
+
+Choose **post-graph-rag** for a denser graph, queryable relation types, and
+transactional PostgreSQL storage with tenant isolation and audit history — at
+roughly half the indexing throughput.
 
 ## What the analysis reports
 

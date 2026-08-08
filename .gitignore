@@ -221,3 +221,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 evaluation/corpus/
+evaluation/lightrag_work/
+evaluation/lightrag_stats.json
