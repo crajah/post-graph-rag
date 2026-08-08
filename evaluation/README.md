@@ -16,8 +16,8 @@ export OPENAI_API_KEY="..."
 
 python evaluation/fetch_corpus.py
 python evaluation/index_corpus.py --max-chunks 10 \
-    --model DeepSeek-V3.2 \
-    --fallback-models Meta-Llama-3.3-70B-Instruct MiniMax-M2.7
+    --model MiniMax-M2.7 \
+    --fallback-models gemma-4-31B-it DeepSeek-V3.2 gpt-oss-120b DeepSeek-V3.1
 python evaluation/analyse_graph.py
 ```
 
@@ -39,7 +39,9 @@ DROP SCHEMA IF EXISTS wiki_kb CASCADE;
 ```
 
 Providers that exhaust credits mid-run are the normal case on shared routers;
-`--fallback-models` and `--max-retries` let a long run ride through them.
+`--fallback-models` and `--max-retries` let a long run ride through them. List the
+fallbacks in descending quality order, so degradation is graceful — the chain is
+tried left to right and the first model with credit wins.
 
 ### Predicate vocabulary
 
@@ -63,6 +65,50 @@ The vocabulary steers the model and snaps morphological variants (`design` →
 relation. Inverse relations get their own canonical predicate — mapping
 `educated_by` onto `taught` would silently reverse its direction.
 
+## Community summarisation
+
+Corpus-level questions are answered from summaries of clustered subgraphs, not
+from retrieved passages. Run after indexing:
+
+```bash
+pip install "post-graph-rag[communities]"      # Leiden; falls back without it
+python evaluation/build_communities.py --realm wiki_kb --resolution 2.0 --synthesise
+python evaluation/build_communities.py --ask "What themes connect these documents?"
+```
+
+On the reference corpus (428 entities, 449 relations) this detects 28 communities
+and summarises the 12 largest.
+
+**Partition balance depends heavily on the detector.** The largest community holds
+35% of the graph under label propagation, 21% under Leiden at resolution 1.0, and
+17% at resolution 2.0. A community covering a third of the graph is not a theme,
+it is a summary of everything — install the `communities` extra unless you have a
+reason not to.
+
+**Report quality depends heavily on the model.** Same graph, same clustering, two
+models:
+
+| | Llama-3.3-70B | DeepSeek-V3.2 |
+| :--- | :--- | :--- |
+| Time | 20s | 56s |
+| Distinct `rating` values | 1 (every community 8.0) | 4, spanning 6.0–9.0 |
+| Duplicate titles | yes (2 identical) | none |
+| Findings | generic ("Babbage's Work on Computers") | specific ("Allan G. Bromley's scholarship directly enabled physical reconstruction") |
+
+The `rating` field is only meaningful with a model that discriminates. Check it
+varies on yours before ranking by it.
+
+## Comparing runs
+
+Index the same corpus into different realms, changing one variable, then diff the
+resulting graphs:
+
+```bash
+python evaluation/index_corpus.py --realm run_a --model MiniMax-M2.7
+python evaluation/index_corpus.py --realm run_b --model gemma-4-31B-it
+python evaluation/compare_realms.py run_a run_b
+```
+
 ## What the analysis reports
 
 1. **Corpus** — chunks, entities, relations, mentions.
@@ -81,7 +127,11 @@ relation. Inverse relations get their own canonical predicate — mapping
 ## Reference runs
 
 Four articles, ~127k characters, 10 chunks each at 2000 chars,
-`text-embedding-3-small`, Llama-3.3-70B with fallbacks.
+`text-embedding-3-small`.
+
+### Effect of each feature
+
+Llama-3.3-70B throughout, so the columns isolate the features rather than the model:
 
 | | baseline | + gleaning & aliases | + vocabulary |
 | :--- | ---: | ---: | ---: |
@@ -96,6 +146,51 @@ Four articles, ~127k characters, 10 chunks each at 2000 chars,
 | Pronoun entities | 2 | 0 | 0 |
 
 Reproduce the third column with `--gleaning-passes 1 --vocabulary-preset biography`.
+
+### Effect of the model
+
+Identical settings (gleaning 1, `biography` vocabulary, Leiden at resolution 2.0),
+identical corpus, 40/40 chunks each — only the primary model differs:
+
+| | Llama-3.3-70B | DeepSeek-V3.2 | MiniMax-M2.7 | gemma-4-31B |
+| :--- | ---: | ---: | ---: | ---: |
+| Indexing time | **4.8 min** | 12.5 min | 12.7 min | 11.9 min |
+| Entities | 428 | 447 | **488** | 299 |
+| Relations | 449 | 599 | **705** | 417 |
+| Entities carrying aliases | 47 | 139 | **268** | 120 |
+| Negated relations captured | 0 | **21** | 7 | 14 |
+| Relations corroborated (weight > 1) | 16 | 35 | 28 | **44** |
+| Orphan entities | 69 | 41 | **26** | 31 |
+| Distinct predicates | 240 | 279 | 395 | **44** |
+| Single-use predicates | 74% | 67% | 74% | **25%** |
+| Relations on vocabulary | 44% | 41% | 33% | **94%** |
+| Community `rating` spread | 1 value | 3 (7–9) | 3 (7–9) | **6 (4–10)** |
+
+There is no single winner — the models split into two useful shapes.
+
+**MiniMax-M2.7 builds the richest graph**: most entities, most relations, and 268
+entities carrying aliases (5.7x Llama), which is what drives its low orphan count.
+Its community reports are the most insightful — findings like "ENIAC designers
+worked independently without knowledge of Babbage's analytical engine" rather than
+restatements of the cluster label.
+
+**gemma-4-31B builds the most queryable graph**: 44 distinct predicates at 94%
+vocabulary adherence, against 33–44% for everything else. Its top predicates carry
+real mass — `located_in`(38), `worked_with`(36), `studied`(34) — where MiniMax's
+heaviest predicate appears only 19 times. It also produced the most corroborated
+edges (44) and by far the best community `rating` discrimination (6 distinct values
+spanning 4–10). The cost is recall: it stores 40% fewer relations than MiniMax,
+because it snaps aggressively onto the vocabulary rather than preserving
+distinctions.
+
+Pick on what you need: **MiniMax if you will query by similarity and traversal,
+gemma if you will query by relation type.** Llama-3.3-70B is dominated on every
+axis and is only worth using as a last-resort fallback.
+
+A separate lesson: features that depend on the model doing something subtle fail
+silently on weak models. Aliases only merge if the model emits them, and Llama
+never once used the `negated` field on this corpus — silently collapsing "X worked
+with Y" and "X never met Y" into the same edge.
 
 Cross-document linkage works throughout: `Charles Babbage` and `Analytical Engine`
 are each reached from all three articles that mention them, and a question about

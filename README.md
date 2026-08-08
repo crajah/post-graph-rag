@@ -75,6 +75,40 @@ rag = GraphRAG(config, chunker=my_splitter)
 await rag.index_text(long_text, metadata=DocumentMetadata(document="babbage.txt"))
 ```
 
+### Community summarisation
+
+Corpus-level questions — "what are the main themes here?" — cannot be answered by
+retrieving passages, because no single passage contains the answer. After indexing,
+cluster the entity graph and summarise each cluster:
+
+```python
+await rag.index_text(doc_a, metadata=DocumentMetadata(document="a.txt"))
+await rag.index_text(doc_b, metadata=DocumentMetadata(document="b.txt"))
+
+await rag.build_communities()          # clusters + one LLM report per community
+
+res = await rag.query("What are the main themes?", param=QueryParam(mode="global"))
+print(res["retrieved_communities"])
+```
+
+Each report is stored as a vertex in `communities` **with its own embedding**, so
+`global` and `hybrid` retrieval find themes by similarity rather than by
+enumerating relations. Membership is recorded as `community_members` edges back to
+the entities, so a report is always traceable to the subgraph it came from.
+
+Communities are derived data: `build_communities()` replaces the previous
+clustering for the space rather than accumulating stale clusters. Global mode
+degrades to relation ranking when none have been built, so it never hard-fails.
+
+Detection uses Leiden when `igraph` and `leidenalg` are installed, otherwise a
+deterministic label-propagation fallback with no extra dependency. Determinism
+matters here — a randomised partition would produce a different graph on every
+indexing run. Supply your own with `community_detector=`:
+
+```python
+rag = GraphRAG(config, community_detector=my_detector)   # (nodes, edges) -> {node: community_id}
+```
+
 ### Repeated relations
 
 The same triple extracted from several chunks is one edge whose `weight`
@@ -258,6 +292,11 @@ await rag.index_document(chunk_text, metadata=metadata)
 | `chunk_chars` / `chunk_overlap_chars` | `RAG_CHUNK_CHARS` / `RAG_CHUNK_OVERLAP` | `2000` / `200` | Default chunker sizing |
 | `expand_chunks_via_mentions` | `RAG_EXPAND_VIA_MENTIONS` | `1` | Retrieve chunks that mention a matched entity, not only chunks matching the query vector |
 | `context_entity_limit` | `RAG_CONTEXT_ENTITY_LIMIT` | `40` | Canonical names carried forward as extraction context |
+| `community_min_size` | `RAG_COMMUNITY_MIN_SIZE` | `3` | Smallest cluster worth summarising |
+| `community_resolution` | `RAG_COMMUNITY_RESOLUTION` | `1.0` | Higher yields more, smaller communities (Leiden only) |
+| `max_communities` | `RAG_MAX_COMMUNITIES` | `64` | Cap per build; each community costs one LLM call |
+| `community_report_prompt` | — | `None` | Replace the community report prompt |
+| `negated_relation_weight` | `RAG_NEGATED_RELATION_WEIGHT` | `0.3` | Clustering weight for denied relations |
 
 Environment variables are read when a `RAGConfig` is constructed, not at import time.
 

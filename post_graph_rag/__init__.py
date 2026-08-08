@@ -9,13 +9,17 @@ from post_graph_rag.errors import (
     ExtractionError,
 )
 from post_graph_rag.chunking import Chunker, make_paragraph_chunker, paragraph_chunker
+from post_graph_rag.communities import (
+    CommunityDetector, default_detector, group_by_community, label_propagation,
+)
+from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
 from post_graph_rag.models import DocumentContext, DocumentMetadata, QueryParam, KeywordResult
 from post_graph_rag.llm import LLMService
 from post_graph_rag.extractor import GraphExtractor, Entity, Triple, ExtractionResult
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.engine import GraphRAG
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "RAGConfig",
     "RAGError",
@@ -30,6 +34,13 @@ __all__ = [
     "Chunker",
     "paragraph_chunker",
     "make_paragraph_chunker",
+    "CommunityDetector",
+    "default_detector",
+    "label_propagation",
+    "group_by_community",
+    "CommunityReport",
+    "CommunityReporter",
+    "Finding",
     "LLMService",
     "GraphExtractor",
     "Entity",

@@ -97,6 +97,24 @@ class RAGConfig:
         default_factory=lambda: _env("RAG_EXPAND_VIA_MENTIONS", "1").lower() in ("1", "true", "yes")
     )
 
+    # --------------------------------------------------------- communities
+    # Corpus-level questions ("what are the main themes?") are answered from
+    # summaries of clustered subgraphs, not from individual passages.
+    # Smallest cluster worth summarising. Pairs and singletons produce reports
+    # that say nothing their members' own descriptions do not.
+    community_min_size: int = field(default_factory=lambda: int(_env("RAG_COMMUNITY_MIN_SIZE", "3")))
+    # Higher values yield more, smaller communities (Leiden only).
+    community_resolution: float = field(default_factory=lambda: float(_env("RAG_COMMUNITY_RESOLUTION", "1.0")))
+    # Cap on communities summarised per build; each costs one LLM call.
+    max_communities: int = field(default_factory=lambda: int(_env("RAG_MAX_COMMUNITIES", "64")))
+    # Override the community report prompt.
+    community_report_prompt: Optional[str] = None
+    # Weight assigned to a denied relation when clustering. Negated relations
+    # still connect their endpoints topically, but less strongly.
+    negated_relation_weight: float = field(
+        default_factory=lambda: float(_env("RAG_NEGATED_RELATION_WEIGHT", "0.3"))
+    )
+
     # Give each realm its own PostgreSQL schema instead of sharing one set of
     # tables filtered by a realm column. Off by default for backwards
     # compatibility, but recommended: with shared tables the first realm to

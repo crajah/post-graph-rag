@@ -1,8 +1,12 @@
+import inspect
 import logging
 from typing import Callable, List, Dict, Any, Optional, Tuple, Union
 from post_graph import Vertex
 from post_graph_rag.chunking import make_paragraph_chunker
+from post_graph_rag.communities import default_detector, group_by_community
 from post_graph_rag.config import RAGConfig
+from post_graph_rag.errors import RAGError
+from post_graph_rag.reporting import CommunityReporter, report_to_text
 from post_graph_rag.models import DocumentContext, DocumentMetadata, QueryParam
 from post_graph_rag.llm import LLMService
 from post_graph_rag.extractor import GraphExtractor, ExtractionResult
@@ -15,6 +19,18 @@ RETRIEVAL_MODES = ("mix", "local", "global", "hybrid", "naive", "bypass")
 ENTITY_MODES = ("mix", "local", "hybrid")
 DOCUMENT_MODES = ("mix", "local", "hybrid", "naive")
 GLOBAL_MODES = ("global", "hybrid")
+
+
+def _accepts_resolution(detector: Callable) -> bool:
+    """Whether a community detector takes a ``resolution`` argument.
+
+    Custom detectors are free to omit it; only resolution-based algorithms such
+    as Leiden use one.
+    """
+    try:
+        return "resolution" in inspect.signature(detector).parameters
+    except (TypeError, ValueError):
+        return False
 
 
 def _truncate_by_tokens(text_items: List[str], max_tokens: int) -> str:
@@ -43,6 +59,8 @@ class GraphRAG:
         llm: Optional[LLMService] = None,
         extractor: Optional[GraphExtractor] = None,
         chunker: Optional[Callable[[str], List[str]]] = None,
+        community_detector: Optional[Callable[..., Dict[str, int]]] = None,
+        reporter: Optional[CommunityReporter] = None,
     ):
         self.config = config or RAGConfig()
         self.llm = llm or LLMService(self.config)
@@ -60,6 +78,10 @@ class GraphRAG:
         self.chunker = chunker or make_paragraph_chunker(
             chunk_chars=self.config.chunk_chars,
             overlap_chars=self.config.chunk_overlap_chars,
+        )
+        self.community_detector = community_detector or default_detector
+        self.reporter = reporter or CommunityReporter(
+            self.llm, system_prompt=self.config.community_report_prompt
         )
         self.store = RAGGraphStore(self.config)
 
@@ -193,6 +215,122 @@ class GraphRAG:
             "metadata": meta_obj.to_dict()
         }
 
+    # ------------------------------------------------------------- communities
+
+    async def build_communities(self, space: Optional[str] = None) -> Dict[str, Any]:
+        """Cluster the entity graph and summarise each cluster.
+
+        Run this after indexing. Corpus-level questions are answered from these
+        summaries: no single passage contains the answer to "what are the main
+        themes here?", so retrieving passages cannot produce one.
+
+        Communities are derived data and are rebuilt wholesale, replacing any
+        previous clustering for the space.
+        """
+        target_space = space or self.config.space
+        entities, relations = await self.store.graph_snapshot(space=target_space)
+        if not entities:
+            return {"communities": 0, "entities": 0, "skipped": 0, "reason": "no entities"}
+
+        by_id = {e["id"]: e for e in entities}
+        edges = [
+            (
+                r["from_id"], r["to_id"],
+                float(r.get("weight", 1)) * (self.config.negated_relation_weight if r["negated"] else 1.0),
+            )
+            for r in relations
+            if r["from_id"] in by_id and r["to_id"] in by_id
+        ]
+
+        assignment = self.community_detector(
+            [e["id"] for e in entities], edges, resolution=self.config.community_resolution
+        ) if _accepts_resolution(self.community_detector) else self.community_detector(
+            [e["id"] for e in entities], edges
+        )
+
+        groups = group_by_community(assignment, min_size=self.config.community_min_size)
+        # Largest first, so a truncated build still covers the most significant clusters.
+        ordered = sorted(groups.items(), key=lambda kv: -len(kv[1]))
+        capped = ordered[: self.config.max_communities]
+        if len(ordered) > len(capped):
+            logger.warning(
+                "Detected %d communities; summarising the %d largest (max_communities).",
+                len(ordered), len(capped),
+            )
+
+        await self.store.clear_communities(space=target_space)
+
+        rels_by_member: Dict[str, List[Dict[str, Any]]] = {}
+        for r in relations:
+            rels_by_member.setdefault(r["from_id"], []).append(r)
+
+        built, skipped = 0, 0
+        used_titles: Dict[str, int] = {}
+        for community_id, member_ids in capped:
+            members = set(member_ids)
+            member_entities = [by_id[m] for m in member_ids if m in by_id]
+            member_relations = [
+                {
+                    "src": by_id[r["from_id"]]["name"], "tgt": by_id[r["to_id"]]["name"],
+                    "predicate": r["predicate"], "description": r["description"],
+                    "weight": r["weight"], "negated": r["negated"],
+                }
+                for m in member_ids
+                for r in rels_by_member.get(m, [])
+                if r["to_id"] in members
+            ]
+
+            try:
+                report = await self.reporter.summarise(member_entities, member_relations)
+                text = report_to_text(report)
+                embedding = await self.llm.get_embedding(text)
+                await self.store.add_community(
+                    key=f"c{community_id}",
+                    title=self._disambiguate_title(report.title, member_entities, used_titles),
+                    summary=report.summary,
+                    embedding=embedding,
+                    rating=report.rating,
+                    findings=[f.model_dump() for f in report.findings],
+                    entity_ids=member_ids,
+                    space=target_space,
+                )
+                built += 1
+            except RAGError as e:
+                # One unusable report should not abandon the whole build.
+                logger.warning("Skipping community %s: %s", community_id, e)
+                skipped += 1
+
+        return {
+            "communities": built,
+            "skipped": skipped,
+            "detected": len(ordered),
+            "entities": len(entities),
+            "relations": len(relations),
+        }
+
+    @staticmethod
+    def _disambiguate_title(
+        title: str, members: List[Dict[str, Any]], used: Dict[str, int]
+    ) -> str:
+        """Make community titles unique within a build.
+
+        Reports are generated independently, so two distinct clusters can be
+        handed the same title. Retrieval then shows the same label twice with no
+        way to tell which subgraph is which.
+        """
+        base = (title or "Community").strip()
+        seen = used.get(base, 0)
+        used[base] = seen + 1
+        if seen == 0:
+            return base
+
+        # Qualify with a member that is not already named in the title.
+        for entity in members:
+            name = str(entity.get("name") or "")
+            if name and name.lower() not in base.lower():
+                return f"{base} ({name})"
+        return f"{base} #{seen + 1}"
+
     # --------------------------------------------------------------- retrieval
 
     async def query_data(self, question: str, param: Optional[QueryParam] = None) -> Dict[str, Any]:
@@ -207,7 +345,7 @@ class GraphRAG:
             return {
                 "status": "success",
                 "message": "Direct query (bypass mode)",
-                "data": {"entities": [], "relationships": [], "chunks": [], "references": []},
+                "data": {"entities": [], "relationships": [], "chunks": [], "references": [], "communities": []},
                 "metadata": {"query_mode": mode, "keywords": {"high_level": [], "low_level": []}}
             }
 
@@ -257,7 +395,11 @@ class GraphRAG:
                 )
                 similar_docs.extend((v, 1.0) for v in extra)
 
+        communities: List[Dict[str, Any]] = []
         if mode in GLOBAL_MODES:
+            communities = await self._retrieve_communities(query_vec, p, target_space)
+            # Relations remain useful alongside reports, but when communities
+            # exist they carry the corpus-level answer and relations are support.
             graph_triples.extend(await self._global_relations(p, query_vec, target_space))
 
         graph_triples = self._dedupe_triples(graph_triples)
@@ -286,7 +428,8 @@ class GraphRAG:
                 "entities": formatted_entities,
                 "relationships": graph_triples,
                 "chunks": formatted_chunks,
-                "references": references
+                "references": references,
+                "communities": communities
             },
             "metadata": {
                 "query_mode": mode,
@@ -297,10 +440,41 @@ class GraphRAG:
                 "processing_info": {
                     "total_entities_found": len(similar_entities),
                     "total_relations_found": len(graph_triples),
-                    "final_chunks_count": len(similar_docs)
+                    "final_chunks_count": len(similar_docs),
+                    "communities_found": len(communities)
                 }
             }
         }
+
+    async def _retrieve_communities(
+        self, query_vec: List[float], p: QueryParam, space: str
+    ) -> List[Dict[str, Any]]:
+        """Retrieve community reports relevant to the question.
+
+        Returns an empty list when no communities have been built, so global mode
+        degrades to relation ranking rather than failing.
+        """
+        try:
+            hits = await self.store.search_similar_communities(query_vec, top_k=p.top_k, space=space)
+        except Exception as e:
+            logger.warning("Community search failed (%s); continuing without reports.", e)
+            return []
+
+        out = []
+        for vertex, distance in hits:
+            payload = vertex.payload or {}
+            out.append({
+                "community_id": vertex.id,
+                "title": payload.get("title"),
+                "summary": payload.get("summary"),
+                "findings": payload.get("findings") or [],
+                "rating": payload.get("rating", 5.0),
+                "size": payload.get("size", 0),
+                "distance": distance,
+            })
+        # Most relevant first, then most important.
+        out.sort(key=lambda c: (c["distance"], -float(c.get("rating") or 0)))
+        return out
 
     async def _global_relations(self, p: QueryParam, query_vec: List[float], space: str) -> List[Dict[str, Any]]:
         """Collect graph-wide relations for 'global'/'hybrid' modes.
@@ -426,6 +600,22 @@ class GraphRAG:
             for r in data["relationships"]
         ]
 
+        # Community reports carry corpus-level structure that no single passage
+        # holds, so they lead the context when present.
+        community_passages = []
+        for c in data.get("communities", []):
+            findings = " ".join(
+                f"{f.get('summary', '')}: {f.get('explanation', '')}" for f in (c.get("findings") or [])
+            )
+            community_passages.append(
+                f"- {c.get('title')} (importance {c.get('rating')}, {c.get('size')} entities): "
+                f"{c.get('summary')} {findings}".strip()
+            )
+        community_context = (
+            _truncate_by_tokens(community_passages, p.max_total_tokens // 3)
+            if community_passages else "None"
+        )
+
         doc_context = _truncate_by_tokens(doc_passages, p.max_total_tokens // 2) if doc_passages else "None"
         entity_context = _truncate_by_tokens(entity_passages, p.max_entity_tokens) if entity_passages else "None"
         graph_context = _truncate_by_tokens(triple_passages, p.max_relation_tokens) if triple_passages else "None"
@@ -440,6 +630,9 @@ You are an expert AI assistant synthesizing information from a Knowledge Base op
 Your answer should be formatted in: {p.response_type}.
 
 ---Retrieved Context---
+
+Knowledge Base Themes (summaries of clustered subgraphs):
+{community_context}
 
 Retrieved Document Passages:
 {doc_context}
@@ -484,5 +677,6 @@ Reference Document List:
                 f"({r['src_id']}) --[{r['relation_type']}]--> ({r['tgt_id']})"
                 for r in data["relationships"]
             ],
+            "retrieved_communities": [c["title"] for c in data.get("communities", [])],
             "references": data["references"]
         }
