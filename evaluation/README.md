@@ -46,6 +46,44 @@ matters more than quality; list them in descending quality order.
 it a sustained outage costs retries x models x backoff on *every* call — a
 12-community build once spent 38 minutes producing nothing.
 
+### Embedding models behind a gateway
+
+Pointing the harness at a non-OpenAI provider — Vertex AI, Bedrock and friends,
+usually via a proxy such as litellm — needs one setting. The OpenAI SDK
+negotiates `encoding_format="base64"` on its own when the caller says nothing,
+and gateways that front another provider tend to reject the parameter outright
+rather than ignore it, which fails *every* embedding call:
+
+```
+litellm.UnsupportedParamsError: vertex_ai does not support parameters:
+{'encoding_format': 'base64'}
+```
+
+`RAGConfig.embedding_encoding_format` states it explicitly and defaults to
+`float`, the API default and the portable choice. Set it to `None` to restore SDK
+negotiation for an endpoint that prefers base64. `compare_lightrag.py` honours
+`RAG_EMBEDDING_ENCODING_FORMAT` for the same reason.
+
+Note the failure mode rather than the fix: every chunk is skipped, the run
+completes, and the graph is empty. Each document reports `FAILED EmbeddingError`
+and the summary reads `entities=0` — so it is visible, but only if the output is
+read. Check the entity count before trusting a fast run.
+
+Embedding dimensions matter too. `--embedding-dim` must match what the model
+actually returns, and the vector column is fixed at realm-creation time, so
+changing embedding model means a new realm rather than a re-index. Gateways may
+also reduce a model's native width, so probe rather than assume:
+
+```bash
+curl -s $OPENAI_API_BASE/embeddings -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"your-embedding-model","input":"probe","encoding_format":"float"}' \
+  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["data"][0]["embedding"]))'
+```
+
+Worth checking before a long run: pgvector's HNSW index caps at 2000 dimensions,
+so a model wider than that needs the index dropped or the width reduced.
+
 ### Predicate vocabulary
 
 Left unconstrained, extraction produces a predicate per relation — expressive, but
