@@ -1,3 +1,10 @@
 post-graph>=0.5.0
 openai>=1.0.0
 pydantic>=2.0.0
+
+# Leiden clustering for community detection. The library falls back to label
+# propagation without these, but the partitions are markedly worse — on the
+# evaluation corpus the largest community holds 35% of the graph under label
+# propagation against 17% under Leiden.
+igraph>=0.11
+leidenalg>=0.10
