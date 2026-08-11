@@ -1,0 +1,7 @@
+,post-graph-rag,LightRAG 1.5.6
+Entities,"3,078","2,832"
+Relations,"4,830","3,147"
+Relations per entity,1.6,1.1
+Labels ÷ relations,46%,77%
+Relations with stated validity,845,not modelled
+Relationships superseded,8,0 — unsupported

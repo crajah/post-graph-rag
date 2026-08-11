@@ -1,0 +1,6 @@
+,Llama-3.3-70B,DeepSeek-V3.2,MiniMax-M2.7,gemma-4-31B
+Relations,449,599,705,417
+Entities carrying aliases,47,139,268,120
+Negated relations captured,0,21,7,14
+Distinct predicates,240,279,395,44
+Relations on vocabulary,44%,41%,33%,94%

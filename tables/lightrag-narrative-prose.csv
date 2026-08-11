@@ -1,0 +1,9 @@
+,post-graph-rag,LightRAG 1.5.6
+Indexing time,33.2 min,24.3 min
+Entities,"1,377","1,246"
+Relations,"3,976","1,447"
+Relations per entity,2.9,1.2
+Distinct edge labels,"2,287","1,923"
+Labels ÷ relations,58%,133%
+Entities carrying aliases,729,not modelled
+Relationships superseded,13,0 — unsupported
