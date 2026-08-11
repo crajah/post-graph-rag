@@ -364,3 +364,56 @@ async def test_relations_carry_assertion_time_and_sort_newest_first(rag_factory)
     rels = res["data"]["relationships"]
     assert all(r["asserted_at"] for r in rels), "assertion time not surfaced"
     assert rels[0]["relation_type"] == "rivals_with", "newest assertion did not lead"
+
+
+# --------------------------------------------------------------- hop ordering
+
+def _rag_for_ranking():
+    """A GraphRAG whose store is never touched — only ranking is under test."""
+    config = RAGConfig(api_base="http://localhost:9/v1", api_key="k", embedding_dim=16)
+    return GraphRAG(config, llm=FakeLLM(config))
+
+
+def _triple(name, hops, asserted, weight=1, **kw):
+    return {"src_id": "A", "tgt_id": name, "relation_type": "r", "description": "",
+            "weight": weight, "negated": False, "confidence": 1.0,
+            "valid_from": None, "valid_to": None, "superseded_by": None,
+            "asserted_at": asserted, "hops": hops, **kw}
+
+
+def test_nearer_relations_rank_before_distant_ones():
+    """Hop distance must dominate assertion time.
+
+    Assertion time across a corpus is close to arbitrary, so without this a
+    three-hop edge that happened to be indexed last would displace an adjacent
+    one when the relation token budget truncates.
+    """
+    rag = _rag_for_ranking()
+    triples = [
+        _triple("far-but-recent", hops=3, asserted="2026-01-01"),
+        _triple("near-but-old", hops=1, asserted="2020-01-01"),
+        _triple("mid", hops=2, asserted="2025-01-01"),
+    ]
+    ranked = rag._filter_temporal(triples, QueryParam())
+    assert [t["tgt_id"] for t in ranked] == ["near-but-old", "mid", "far-but-recent"]
+
+
+def test_newest_first_still_holds_within_one_hop_level():
+    """Hop ordering must not destroy the newest-first rule it wraps."""
+    rag = _rag_for_ranking()
+    triples = [
+        _triple("older", hops=1, asserted="2020-01-01"),
+        _triple("newer", hops=1, asserted="2024-01-01"),
+    ]
+    ranked = rag._filter_temporal(triples, QueryParam())
+    assert [t["tgt_id"] for t in ranked] == ["newer", "older"]
+
+
+def test_triples_without_hops_are_treated_as_adjacent():
+    """Relations from paths that never recorded a hop must not sort last."""
+    rag = _rag_for_ranking()
+    triples = [_triple("far", hops=2, asserted="2026-01-01")]
+    no_hops = _triple("unknown", hops=1, asserted="2020-01-01")
+    del no_hops["hops"]
+    ranked = rag._filter_temporal(triples + [no_hops], QueryParam())
+    assert ranked[0]["tgt_id"] == "unknown"

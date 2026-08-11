@@ -579,9 +579,25 @@ class GraphRAG:
             )
 
         if mode in ENTITY_MODES:
+            max_hops = p.max_hops if p.max_hops is not None else self.config.max_hops
+            include_superseded = (
+                p.include_superseded if p.include_superseded is not None
+                else self.config.include_superseded
+            )
             for entity_vertex, _dist in similar_entities:
-                for edge, target in await self.store.get_neighbors(entity_vertex.id, space=target_space):
-                    graph_triples.append(self._format_triple(edge, entity_vertex, target))
+                # Supersession and as-of are applied inside the walk as well as
+                # after it. Filtering only the result set would still let a path
+                # travel *through* a closed or out-of-period edge to reach
+                # something that then looks like current context.
+                for edge, source, target, hops in await self.store.get_neighborhood(
+                    entity_vertex.id,
+                    max_hops=max_hops,
+                    space=target_space,
+                    as_of=p.as_of,
+                    include_superseded=include_superseded,
+                    max_edges=self.config.max_relation_edges,
+                ):
+                    graph_triples.append(self._format_triple(edge, source, target, hops))
 
             # Pull in passages that mention the matched entities. A question can
             # match an entity by name while the passage explaining it uses none
@@ -758,7 +774,7 @@ class GraphRAG:
         return self._rank_by_keywords(candidates, p.hl_keywords + p.ll_keywords, limit)
 
     @staticmethod
-    def _format_triple(edge: Any, from_v: Vertex, to_v: Vertex) -> Dict[str, Any]:
+    def _format_triple(edge: Any, from_v: Vertex, to_v: Vertex, hops: int = 1) -> Dict[str, Any]:
         payload = edge.payload or {}
         asserted = getattr(edge, "updated_at", None) or getattr(edge, "created_at", None)
         return {
@@ -773,6 +789,9 @@ class GraphRAG:
             "valid_to": payload.get("valid_to"),
             "superseded_by": payload.get("superseded_by"),
             "asserted_at": asserted.isoformat() if asserted else None,
+            # Distance from the entity the query matched. Ranking puts nearer
+            # relations first, so truncation sheds the most tenuous ones.
+            "hops": hops,
         }
 
     def _filter_temporal(self, triples: List[Dict[str, Any]], p: QueryParam) -> List[Dict[str, Any]]:
@@ -796,9 +815,16 @@ class GraphRAG:
                 continue
             kept.append(t)
 
-        # Most recently asserted first, so a later contradicting fact leads the
-        # context even when supersession did not apply.
+        # Nearest hop first, then most recently asserted, so a later
+        # contradicting fact leads the context even when supersession did not
+        # apply. Hop order dominates because assertion time across a corpus is
+        # close to arbitrary: without it a three-hop edge indexed last would
+        # displace an adjacent one when the token budget truncates.
+        # Two passes rather than one composite key, because the two orders run in
+        # opposite directions and Python's sort is stable: the second pass makes
+        # hop count dominant while preserving newest-first within each hop.
         kept.sort(key=lambda t: (t.get("asserted_at") or "", t.get("weight", 1)), reverse=True)
+        kept.sort(key=lambda t: t.get("hops", 1))
         return kept
 
     @staticmethod
