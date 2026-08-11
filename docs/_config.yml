@@ -1,0 +1,4 @@
+theme: jekyll-theme-primer
+title: post-graph-rag
+description: Graph RAG on PostgreSQL — temporal supersession, community summarisation, queryable relation types
+show_downloads: false
