@@ -1,0 +1,5 @@
+,GraphRAG,LightRAG 1.5.6,post-graph-rag
+Community detection + summaries,Yes,No,Yes
+"Temporal model (validity, supersession)",No,No,Yes
+Controlled predicate vocabulary,No,No,Yes
+Single-datastore (graph + vectors + transactions),No,partial,Yes

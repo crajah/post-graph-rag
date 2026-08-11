@@ -1,0 +1,8 @@
+,post-graph-rag,LightRAG 1.5.6
+Characters indexed,"66,345","75,751"
+Indexing time,3.7 min,2.0 min
+Entities per 10k chars,78.8,59.4
+Relations per 10k chars,101.1,55.6
+Distinct edge labels,380,460
+Labels ÷ relations,57%,109%
+Query latency (mix / global),8.2s / 3.1s,10.1s / 6.1s

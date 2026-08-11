@@ -1,0 +1,4 @@
+Detector,Largest community,Share of graph
+Label propagation,150 entities,35%
+"Leiden, resolution 1.0",93 entities,21%
+"Leiden, resolution 2.0",74 entities,17%
