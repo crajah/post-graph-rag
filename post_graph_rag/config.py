@@ -25,6 +25,12 @@ class RAGConfig:
     model: str = field(default_factory=lambda: _env("RAG_MODEL", "DeepSeek-V3.2"))
     embedding_model: str = field(default_factory=lambda: _env("RAG_EMBEDDING_MODEL", "text-embedding-3-small"))
     embedding_dim: int = field(default_factory=lambda: int(_env("RAG_EMBEDDING_DIM", "1536")))
+    # Hops to walk out from a matched entity during retrieval. 1 answers "what is
+    # said about X"; chain questions need the edges between X's neighbours, which
+    # are never adjacent to X. Above 1, fan-out grows fast on a dense graph, so
+    # max_relation_edges caps what a single entity may contribute.
+    max_hops: int = field(default_factory=lambda: int(_env("RAG_MAX_HOPS", "2")))
+    max_relation_edges: int = field(default_factory=lambda: int(_env("RAG_MAX_RELATION_EDGES", "200")))
     # Sent explicitly because the OpenAI SDK otherwise negotiates 'base64' on its
     # own, and gateways fronting non-OpenAI providers (litellm -> Vertex AI) reject
     # the parameter outright, failing every embedding call. 'float' is the API

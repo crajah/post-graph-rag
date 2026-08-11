@@ -866,6 +866,125 @@ class RAGGraphStore:
             results.append((step.edge, step.neighbor_vertex))
         return results
 
+    async def get_neighborhood(
+        self,
+        entity_id: str,
+        max_hops: int = 1,
+        space: Optional[str] = None,
+        as_of: Optional[str] = None,
+        include_superseded: bool = False,
+        relation_types: Optional[List[str]] = None,
+        max_edges: int = 200,
+    ) -> List[Tuple[Edge, Vertex, Vertex, int]]:
+        """Relations reachable within ``max_hops`` of an entity, with endpoints.
+
+        One hop answers "what is said about X". Chain questions — how a programme
+        came to drive cash burn — need the edges between X's neighbours too, and
+        those are never adjacent to X.
+
+        Filtering happens inside the walk rather than afterwards, so a path is
+        never routed *through* a superseded or out-of-period edge to reach
+        something that would otherwise look current. Filtering the result set
+        instead would leave exactly those laundered paths behind.
+
+        Fan-out is the danger: on a dense graph three hops from one entity
+        reaches tens of thousands of edges, which is noise rather than context.
+        ``max_edges`` caps that, preferring the closest hops.
+        """
+        if max_hops <= 1:
+            source = await self.client.get_vertex("entities", realm=self.realm, vertex_id=entity_id)
+            if source is None:
+                return []
+            return [
+                (edge, source, target, 1)
+                for edge, target in await self.get_neighbors(entity_id, space=space)
+            ]
+
+        target_space = space or self.space
+        rows = await self.client.traverse(
+            realm=self.realm,
+            start_table="entities",
+            start_id=str(entity_id),
+            edge_tables=["relations"],
+            max_depth=max_hops,
+            direction="out",
+            relation_types=relation_types,
+            as_of=as_of,
+            payload_null_keys=None if include_superseded else ["superseded_by"],
+            space=None if target_space == RESERVED_SPACE_ALL else target_space,
+        )
+
+        # Closest hops first, so truncation drops the most tenuous connections.
+        # The hop number travels with each edge: downstream ranking sorts on it,
+        # and without it a distant edge indexed later would displace an adjacent
+        # one purely on assertion time.
+        edge_ids: List[str] = []
+        hop_of: Dict[str, int] = {}
+        for row in sorted(rows, key=lambda r: r["depth"]):
+            for i, eid in enumerate(row.get("edge_ids") or [], start=1):
+                if eid not in hop_of:
+                    hop_of[eid] = i
+                    edge_ids.append(eid)
+            if len(edge_ids) >= max_edges:
+                break
+        edge_ids = edge_ids[:max_edges]
+        loaded = await self.get_relations_by_ids(edge_ids)
+        return [(e, s, t, hop_of.get(e.id, 1)) for e, s, t in loaded]
+
+    async def get_relations_by_ids(self, edge_ids: List[str]) -> List[Tuple[Edge, Vertex, Vertex]]:
+        """Load relations and both endpoint vertices in two queries.
+
+        Traversal returns identifiers; synthesis needs names and descriptions.
+        Fetching each edge and vertex individually would issue thousands of round
+        trips on a wide neighbourhood.
+        """
+        if not edge_ids:
+            return []
+        rel_ref = self.client._get_table_ref("relations", self.realm)
+        ent_ref = self.client._get_table_ref("entities", self.realm)
+        rows = await self.client._fetch(
+            f"SELECT * FROM {rel_ref} WHERE realm = $1 AND id = ANY($2::bigint[])",
+            self.realm, [int(e) for e in edge_ids],
+        )
+        wanted = {r["from_id"] for r in rows} | {r["to_id"] for r in rows}
+        if not wanted:
+            return []
+        ent_rows = await self.client._fetch(
+            f"SELECT * FROM {ent_ref} WHERE realm = $1 AND id = ANY($2::bigint[])",
+            self.realm, list(wanted),
+        )
+        vertices = {r["id"]: self._row_to_vertex(r) for r in ent_rows}
+        out = []
+        for r in rows:
+            src, tgt = vertices.get(r["from_id"]), vertices.get(r["to_id"])
+            if src and tgt:
+                out.append((self._row_to_edge(r), src, tgt))
+        return out
+
+    @staticmethod
+    def _row_to_vertex(row) -> Vertex:
+        payload = row["payload"]
+        return Vertex(
+            id=str(row["id"]), realm=row["realm"], space=row["space"],
+            payload=json.loads(payload) if isinstance(payload, str) else (payload or {}),
+            created_at=row["created_at"], updated_at=row["updated_at"],
+            table_name="entities",
+        )
+
+    @staticmethod
+    def _row_to_edge(row) -> Edge:
+        # updated_at carries the assertion time that ranks contradicting facts
+        # newest-first, so it must survive the round trip from SQL.
+        payload = row["payload"]
+        return Edge(
+            id=str(row["id"]), realm=row["realm"], space=row["space"],
+            from_id=str(row["from_id"]), to_id=str(row["to_id"]),
+            relation_type=row["relation_type"],
+            payload=json.loads(payload) if isinstance(payload, str) else (payload or {}),
+            created_at=row["created_at"], updated_at=row["updated_at"],
+            table_name="relations",
+        )
+
     async def get_all_relations(self, limit: int = 50, space: Optional[str] = None) -> List[Tuple[Edge, Vertex, Vertex]]:
         """Fetch relations with their source and target entity vertices, scoped by space.
 

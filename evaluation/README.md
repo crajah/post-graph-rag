@@ -451,6 +451,56 @@ biography. Filings discuss an enormously wider range of topics than a
 Wikipedia article, and a 32-term vocabulary covers the reversals without covering
 the tail. Expect to extend the vocabulary per domain rather than to inherit one.
 
+### Bounded multi-hop retrieval
+
+One hop answers "what is said about X". Chain questions need the edges *between*
+X's neighbours, which are never adjacent to X. `RAGConfig.max_hops` (or
+`QueryParam(max_hops=...)`) walks further; it defaults to 1, so existing
+behaviour is unchanged until asked for.
+
+Filtering happens inside the walk rather than afterwards — `traverse()` takes
+`relation_types`, `as_of`, `payload_null_keys` and `space` — so a path is never
+routed *through* a superseded or out-of-period edge to reach something that then
+looks current. Filtering only the result set would leave exactly those laundered
+paths behind.
+
+Measured on the Boeing corpus, MiniMax-M2.7, relations retrieved per question and
+how many mention a term from the question:
+
+| Question | 1 hop | 2 hops | 3 hops |
+| :--- | ---: | ---: | ---: |
+| Deferred production costs arc | 7 (100% on-topic) | 30 (47%) | 202 (10%) |
+| What turned cash flow negative | 13 (77%) | 20 (60%) | 59 (39%) |
+| 737 ↔ cash flow over time | 32 (91%) | 125 (48%) | 435 (23%) |
+| FAA role across filings | 31 (74%) | 73 (52%) | 307 (18%) |
+
+**Precision falls steeply while absolute signal rises.** Three hops reaches three
+times as many on-topic relations and ten times as much noise. Recall alone is
+therefore the wrong thing to optimise: reaching more relations is trivial,
+reaching more *relevant* ones is the claim.
+
+**Depth pays where the question is a chain.** *What caused Boeing's cash flow to
+turn negative* is the question 1 hop could not answer — it returned "the
+documents do not contain a direct statement specifically addressing" it. At three
+hops the same query answers directly, with the revenue decline, the 737-9
+grounding and the fixed-price charges connected into one causal account. The
+other three questions answered at every depth.
+
+**Ordering is what makes depth safe.** Relations are ranked nearest-hop first and
+only then newest-first, so when the relation token budget truncates it sheds the
+most tenuous connections rather than whichever edge happened to be indexed last.
+Without that, ranking by assertion time alone let a three-hop edge displace an
+adjacent one — assertion time across a corpus is close to arbitrary. With it, two
+and three hops frequently synthesise identical answers, because the budget keeps
+the same nearest relations either way: deeper costs more but does not degrade.
+
+`max_relation_edges` (default 200) caps what a single matched entity may
+contribute, which matters more than it sounds — three hops from one well-connected
+Boeing entity reaches over 25,000 edges.
+
+Start at 2 for chain-heavy corpora; leave it at 1 when questions are about a
+single entity, where precision is highest and the walk is cheapest.
+
 ### Two harness settings that silently invalidate the comparison
 
 `compare_lightrag.py` truncates each document to 20,000 characters by default,

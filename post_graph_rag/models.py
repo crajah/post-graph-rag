@@ -117,6 +117,7 @@ class QueryParam:
     space: Optional[str] = None                 # Optional space filter ("production", "sandbox")
     as_of: Optional[str] = None                 # Only relations valid at this date ("1625", "1625-06-12")
     include_superseded: Optional[bool] = None   # Include relations a later assertion replaced
+    max_hops: Optional[int] = None              # Hops to walk from a matched entity (None = config default)
     conversation_history: List[Dict[str, str]] = field(default_factory=list) # Multi-turn chat history
     hl_keywords: List[str] = field(default_factory=list) # Custom high-level search terms
     ll_keywords: List[str] = field(default_factory=list) # Custom low-level search terms
