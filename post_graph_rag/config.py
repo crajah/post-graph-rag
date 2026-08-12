@@ -31,6 +31,29 @@ class RAGConfig:
     # max_relation_edges caps what a single entity may contribute.
     max_hops: int = field(default_factory=lambda: int(_env("RAG_MAX_HOPS", "2")))
     max_relation_edges: int = field(default_factory=lambda: int(_env("RAG_MAX_RELATION_EDGES", "200")))
+    # Share of relation slots reserved for relations found by searching relation
+    # embeddings directly, rather than by traversing from a matched entity.
+    # Requires ``embed_relations``.
+    #
+    # This is a quota rather than a merged ranking because pooling both candidate
+    # sets and sorting by one score does not split the difference — the relation
+    # channel takes every slot. Measured: a pooled ranking reproduced the relation
+    # channel's results exactly on all four evaluation questions.
+    #
+    # Higher values scored better on both models measured (mean on-topic share of
+    # the relations reaching the prompt, five Boeing 10-K filings):
+    #
+    #                    quota 0.0   0.5    1.0
+    #   gpt-oss-120b        49%      69%    73%
+    #   MiniMax-M2.7        66%      88%    98%
+    #
+    # 0.5 rather than 1.0 is a hedge, not a measured optimum: that scoring counts
+    # keyword overlap, which correlates with the similarity the relation channel
+    # ranks by, so it flatters higher quotas — and answer quality did not separate
+    # 0.5 from 1.0 on either model. Which channel suits a given question also
+    # varies by corpus and extraction model, so this stays a knob.
+    relation_seed_quota: float = field(
+        default_factory=lambda: float(_env("RAG_RELATION_SEED_QUOTA", "0.5")))
     # Sent explicitly because the OpenAI SDK otherwise negotiates 'base64' on its
     # own, and gateways fronting non-OpenAI providers (litellm -> Vertex AI) reject
     # the parameter outright, failing every embedding call. 'float' is the API

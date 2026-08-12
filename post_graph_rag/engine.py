@@ -568,6 +568,7 @@ class GraphRAG:
         similar_entities: List[Tuple[Vertex, float]] = []
         similar_docs: List[Tuple[Vertex, float]] = []
         graph_triples: List[Dict[str, Any]] = []
+        relation_seeded: List[Dict[str, Any]] = []
 
         if mode in ENTITY_MODES:
             similar_entities = await self.store.search_similar_entities(
@@ -599,6 +600,21 @@ class GraphRAG:
                 ):
                     graph_triples.append(self._format_triple(edge, source, target, hops))
 
+            # Second channel: relations found by searching their own embeddings.
+            # Traversal can only rank what it reached, so a question describing a
+            # relationship whose endpoints are generically named never surfaces
+            # the right edges however well the candidates are ordered. This
+            # searches every relation instead of walking to it.
+            if self.config.embed_relations and self.config.relation_seed_quota > 0:
+                seeded = []
+                for edge, _dist in await self.store.search_similar_relations(
+                    query_vec, top_k=self.config.max_relation_edges, space=target_space
+                ):
+                    src, tgt = await self.store.get_relation_endpoints(edge)
+                    if src is not None and tgt is not None:
+                        seeded.append(self._format_triple(edge, src, tgt, hops=1))
+                relation_seeded = seeded
+
             # Pull in passages that mention the matched entities. A question can
             # match an entity by name while the passage explaining it uses none
             # of the query's wording, including passages in other documents.
@@ -619,7 +635,15 @@ class GraphRAG:
             # exist they carry the corpus-level answer and relations are support.
             graph_triples.extend(await self._global_relations(p, query_vec, target_space))
 
-        graph_triples = self._filter_temporal(self._dedupe_triples(graph_triples), p)
+        # Each channel is filtered and ordered on its own terms — traversal by
+        # hop distance, relation search by similarity — then interleaved to a
+        # quota. Ranking the pool by a single score would hand every slot to the
+        # relation channel and lose what traversal is better at.
+        graph_triples = self._dedupe_triples(self._merge_by_quota(
+            self._filter_temporal(self._dedupe_triples(graph_triples), p),
+            self._filter_temporal(relation_seeded, p, sort=False),
+            self.config.relation_seed_quota,
+        ))
 
         formatted_entities = [{
             "entity_name": v.payload.get("name"),
@@ -794,7 +818,8 @@ class GraphRAG:
             "hops": hops,
         }
 
-    def _filter_temporal(self, triples: List[Dict[str, Any]], p: QueryParam) -> List[Dict[str, Any]]:
+    def _filter_temporal(self, triples: List[Dict[str, Any]], p: QueryParam,
+                         sort: bool = True) -> List[Dict[str, Any]]:
         """Apply supersession and as-of filtering, newest assertion first.
 
         A relation with no stated validity matches every ``as_of`` date. That is
@@ -820,6 +845,11 @@ class GraphRAG:
         # apply. Hop order dominates because assertion time across a corpus is
         # close to arbitrary: without it a three-hop edge indexed last would
         # displace an adjacent one when the token budget truncates.
+        if not sort:
+            # The caller supplied a meaningful order — relation search returns by
+            # similarity — and re-sorting would discard it.
+            return kept
+
         # Two passes rather than one composite key, because the two orders run in
         # opposite directions and Python's sort is stable: the second pass makes
         # hop count dominant while preserving newest-first within each hop.
@@ -847,6 +877,45 @@ class GraphRAG:
             return (overlap, int(t.get("weight", 1)))
 
         return sorted(triples, key=score, reverse=True)[:limit]
+
+    @staticmethod
+    def _merge_by_quota(
+        traversed: List[Dict[str, Any]],
+        seeded: List[Dict[str, Any]],
+        quota: float,
+    ) -> List[Dict[str, Any]]:
+        """Interleave two retrieval channels, reserving a share for the second.
+
+        Ranking the pool by one score instead hands every slot to whichever
+        channel scores higher on that question, discarding what the other found:
+        measured, a pooled ranking reproduced the relation channel's results
+        exactly across four evaluation questions. Interleaving keeps both.
+
+        Which channel suits a given question is not predictable from the question
+        alone — it varies with the corpus and the extraction model. On one graph
+        traversal won on a well-connected entity and the relation channel lost;
+        on another built from the same corpus by a different model, the reverse.
+        Hence a quota rather than a rule for choosing between them.
+
+        Either channel being empty yields the other unchanged, so this is inert
+        when relation embeddings are off.
+        """
+        if not seeded:
+            return traversed
+        if not traversed:
+            return seeded
+        quota = min(max(quota, 0.0), 1.0)
+        out, i, j = [], 0, 0
+        while i < len(traversed) or j < len(seeded):
+            # Emit from whichever channel is under its share of what is out so far.
+            want_seeded = (len(out) + 1) * quota > j
+            if want_seeded and j < len(seeded):
+                out.append(seeded[j]); j += 1
+            elif i < len(traversed):
+                out.append(traversed[i]); i += 1
+            elif j < len(seeded):
+                out.append(seeded[j]); j += 1
+        return out
 
     @staticmethod
     def _dedupe_triples(triples: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
