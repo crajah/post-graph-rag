@@ -417,3 +417,54 @@ def test_triples_without_hops_are_treated_as_adjacent():
     del no_hops["hops"]
     ranked = rag._filter_temporal(triples + [no_hops], QueryParam())
     assert ranked[0]["tgt_id"] == "unknown"
+
+
+# ------------------------------------------------------------ channel quota
+
+def _t(name):
+    return {"src_id": "A", "tgt_id": name, "relation_type": "r"}
+
+
+def test_quota_interleaves_both_channels():
+    """Half the slots go to relation search, half to traversal."""
+    merged = GraphRAG._merge_by_quota(
+        [_t(f"trav{i}") for i in range(4)],
+        [_t(f"seed{i}") for i in range(4)],
+        0.5,
+    )
+    names = [t["tgt_id"] for t in merged]
+    assert sorted(names) == sorted([f"trav{i}" for i in range(4)] + [f"seed{i}" for i in range(4)])
+    # Neither channel may monopolise the front of the list.
+    assert len([n for n in names[:4] if n.startswith("seed")]) == 2
+
+
+def test_quota_zero_keeps_traversal_only_order():
+    """quota=0 must leave the shipped behaviour untouched."""
+    trav = [_t("a"), _t("b")]
+    merged = GraphRAG._merge_by_quota(trav, [_t("s1"), _t("s2")], 0.0)
+    assert [t["tgt_id"] for t in merged][:2] == ["a", "b"]
+
+
+def test_merge_is_inert_when_a_channel_is_empty():
+    """Relation embeddings are optional; with none, retrieval is unchanged."""
+    trav = [_t("a"), _t("b")]
+    assert GraphRAG._merge_by_quota(trav, [], 0.5) == trav
+    assert GraphRAG._merge_by_quota([], trav, 0.5) == trav
+
+
+def test_merge_loses_nothing_when_channels_differ_in_length():
+    """A short channel must not truncate the long one."""
+    merged = GraphRAG._merge_by_quota([_t(f"t{i}") for i in range(5)], [_t("s0")], 0.5)
+    assert len(merged) == 6
+
+
+def test_relation_channel_keeps_similarity_order():
+    """Relation search returns by similarity; re-sorting would discard it."""
+    config = RAGConfig(api_base="http://localhost:9/v1", api_key="k", embedding_dim=16)
+    rag = GraphRAG(config, llm=FakeLLM(config))
+    seeded = [
+        {**_t("closest"), "asserted_at": "2020-01-01", "hops": 1},
+        {**_t("next"), "asserted_at": "2026-01-01", "hops": 1},
+    ]
+    kept = rag._filter_temporal(seeded, QueryParam(), sort=False)
+    assert [t["tgt_id"] for t in kept] == ["closest", "next"]
