@@ -8,7 +8,7 @@ description: "A Graph RAG library on PostgreSQL with temporal supersession, comm
 
 ### A Graph RAG library on PostgreSQL with temporal supersession, community summarisation and queryable relation types — measured against LightRAG
 
-**[GitHub](https://github.com/crajah/post-graph-rag)** · **[PyPI](https://pypi.org/project/post-graph-rag/)** · `pip install post-graph-rag` · MIT
+**[GitHub](https://github.com/crajah/post-graph-rag)** · **[PyPI](https://pypi.org/project/post-graph-rag/)** · `pip install post-graph-rag` · Apache 2.0
 
 ---
 
@@ -521,6 +521,6 @@ A paper covering the architecture and evaluation methodology is going to arXiv �
 
 **GitHub:** https://github.com/crajah/post-graph-rag · **PyPI:** `pip install post-graph-rag`
 
-MIT licensed, built on PostgreSQL and pgvector, with multi-tenant realms, audit tables and append-only history — because a knowledge graph you cannot isolate, roll back or explain is not one you can put into production.
+Apache 2.0 licensed, built on PostgreSQL and pgvector, with multi-tenant realms, audit tables and append-only history — because a knowledge graph you cannot isolate, roll back or explain is not one you can put into production.
 
 If there is one idea worth taking away independent of this library: **a graph whose edges are free text and whose facts never expire is a graph you can read but not query.** Both are fixable, and neither fix requires the model to do anything it is unreliable at.
