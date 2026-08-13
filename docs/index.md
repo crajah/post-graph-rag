@@ -289,10 +289,12 @@ RAGConfig(embed_relations=True,        # default since 1.5.0
           relation_seed_quota=0.5)     # share of slots for the similarity channel
 ```
 
-| On-topic share of relations reaching the prompt | traversal only | + relation search |
-| :--- | ---: | ---: |
-| gpt-oss-120b | 49% | **73%** |
-| MiniMax-M2.7 | 66% | **98%** |
+| On-topic share of relations reaching the prompt | quota 0.0 | 0.5 | 1.0 |
+| :--- | ---: | ---: | ---: |
+| gpt-oss-120b | 49% | **69%** | 73% |
+| MiniMax-M2.7 | 66% | **88%** | 98% |
+
+Quota 0.0 is traversal alone, the behaviour before this change; 0.5 is the shipped default, in bold; 1.0 gives the similarity channel first claim on every slot.
 
 The two channels are interleaved to a quota rather than pooled and ranked together, and that is not a stylistic choice. Pooling both candidate sets and sorting by a single similarity score does not split the difference — it hands *every* slot to the relation channel, because that channel is ranked by the very quantity being sorted on. Measured: a pooled ranking reproduced the relation channel's output exactly, on all four questions.
 
@@ -308,7 +310,7 @@ The tie-break was a blind comparison on answers instead: generate an answer at e
 - **No self-grading.** No judge model grades prose its own model wrote.
 - **Order-swapped.** Every pair is graded twice with the labels swapped. A win counts only if the judge picks the same answer both ways.
 
-That third control removed **roughly 40% of all judgements** — 7 of 20 on one graph and 11 of 30 on the other — including a stretch where one judge answered "A" to everything put in front of it. A single-pass evaluation would have counted every one of those as a result.
+That third control removed **18 of 50 judgements**, more than a third — 7 of 20 on one graph and 11 of 30 on the other — including a stretch where one judge answered "A" to everything put in front of it. A single-pass evaluation would have counted every one of those as a result.
 
 What survived did not crown a winner. The two graphs pointed opposite ways overall. Split by question shape, they agree:
 
