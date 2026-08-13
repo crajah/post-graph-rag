@@ -7,9 +7,13 @@ as the meaningless "No discouraged".
 """
 import csv, pathlib, re, sys
 
+# Positional: tables are zipped with this list in document order, so a new
+# table means inserting its name at the right index, not appending.
 NAMES = [
     "capability-comparison", "community-detector-comparison",
-    "multi-hop-retrieval-by-depth", "lightrag-encyclopedic-prose",
+    "multi-hop-retrieval-by-depth",
+    "relation-channel-on-topic-share", "retrieval-quota-by-question-shape",
+    "lightrag-encyclopedic-prose",
     "lightrag-narrative-prose", "lightrag-financial-filings",
     "retrieval-recall-granularity-fix", "model-sensitivity",
 ]

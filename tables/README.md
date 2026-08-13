@@ -13,6 +13,8 @@ these are named for their content.
 | `capability-comparison.csv` | GraphRAG / LightRAG / post-graph-rag capabilities | [fc5bbe32](https://gist.github.com/crajah/fc5bbe32b020b2afe1abcd61adaf57c4) |
 | `community-detector-comparison.csv` | Leiden vs label propagation | [b48ce8a7](https://gist.github.com/crajah/b48ce8a7d504df7692e35e195bc37d18) |
 | `multi-hop-retrieval-by-depth.csv` | Relations retrieved at 1, 2 and 3 hops | [07e3cd69](https://gist.github.com/crajah/07e3cd695085f70459da3f22483e7531) |
+| `relation-channel-on-topic-share.csv` | On-topic share with and without relation search | [e814288b](https://gist.github.com/crajah/e814288b9371d55548b244231cc4004d) |
+| `retrieval-quota-by-question-shape.csv` | Blind A/B wins by question shape | [84c68dee](https://gist.github.com/crajah/84c68deeb1fe584cc2faaaffea3f7762) |
 | `lightrag-encyclopedic-prose.csv` | Wikipedia corpus vs LightRAG | [9ddca709](https://gist.github.com/crajah/9ddca7090f0c1797b692f76c865aab70) |
 | `lightrag-narrative-prose.csv` | Dumas trilogy vs LightRAG | [b5d8c200](https://gist.github.com/crajah/b5d8c20068a3eb80bfade1d440b91059) |
 | `lightrag-financial-filings.csv` | Boeing 10-K corpus vs LightRAG | [48d83f71](https://gist.github.com/crajah/48d83f711a46ce02a44d0cc61572a240) |
@@ -26,5 +28,6 @@ Editing a CSV here does not update its gist. Push the change with
 `gh gist edit <id> tables/<file>.csv`, which updates any Medium embed in place.
 
 Regenerate from the article with `python3 tables/extract.py`. It fails if the
-article's table count drifts from the expected eight, rather than silently
-writing the wrong content to a familiar filename.
+article's table count drifts from the expected ten, rather than silently writing
+the wrong content to a familiar filename. `NAMES` is positional, so a table added
+mid-article needs its name inserted at the matching index, not appended.
