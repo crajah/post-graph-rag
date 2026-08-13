@@ -1,7 +1,7 @@
 # post-graph-rag
 
 [![PyPI version](https://img.shields.io/pypi/v/post-graph-rag.svg)](https://pypi.org/project/post-graph-rag/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
 **Production-Grade, High-Performance Knowledge Graph RAG Engine Native to PostgreSQL.**
@@ -409,6 +409,6 @@ They skip automatically when PostgreSQL with pgvector is not reachable.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 Developed by **Chandan Rajah** (<chandan.rajah@gmail.com>).
