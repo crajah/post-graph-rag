@@ -351,19 +351,36 @@ async def test_no_as_of_returns_everything(rag_factory):
 # ----------------------------------------------------------------- recency
 
 @pytest.mark.asyncio
-async def test_relations_carry_assertion_time_and_sort_newest_first(rag_factory):
-    rag = await rag_factory(extraction=FRIENDS)
+async def _index_friends_then_rivals(rag):
     await rag.index_document("friends", metadata=DocumentMetadata(document="a.txt"))
     rag.llm._extraction = ExtractionResult(
         entities=[Entity(name="Alice", type="Person", description="d")],
         triples=[Triple(subject="Alice", predicate="rivals_with", object="Bob")],
     )
     await rag.index_document("rivals", metadata=DocumentMetadata(document="b.txt"))
-
     res = await rag.query_data("Alice", param=QueryParam(mode="mix", top_k=5, ll_keywords=["Alice"]))
-    rels = res["data"]["relationships"]
+    return res["data"]["relationships"]
+
+
+@pytest.mark.asyncio
+async def test_relations_carry_assertion_time_and_sort_newest_first(rag_factory):
+    """Recency ordering is a property of the traversal channel, so this pins the
+    quota to zero: with both channels live the head of the list is shared."""
+    rag = await rag_factory(extraction=FRIENDS, relation_seed_quota=0.0)
+    rels = await _index_friends_then_rivals(rag)
     assert all(r["asserted_at"] for r in rels), "assertion time not surfaced"
     assert rels[0]["relation_type"] == "rivals_with", "newest assertion did not lead"
+
+
+@pytest.mark.asyncio
+async def test_assertion_time_survives_the_channel_merge(rag_factory):
+    """The similarity channel may take the leading slot, but every relation it
+    contributes still carries the provenance the traversal channel attaches —
+    otherwise merging would silently strip temporal filtering downstream."""
+    rag = await rag_factory(extraction=FRIENDS)
+    rels = await _index_friends_then_rivals(rag)
+    assert all(r["asserted_at"] for r in rels), "assertion time lost on merge"
+    assert {r["relation_type"] for r in rels} == {"friend_of", "rivals_with"}
 
 
 # --------------------------------------------------------------- hop ordering

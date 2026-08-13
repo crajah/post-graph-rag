@@ -282,7 +282,8 @@ await rag.index_document(chunk_text, metadata=metadata)
 | `realm` | `RAG_REALM` | `default` | Multi-tenant graph namespace |
 | `space` | `RAG_SPACE` | `default` | Sub-grouping within a realm (`production`, `sandbox`, …) |
 | `schema_per_realm` | `RAG_SCHEMA_PER_REALM` | `0` | Give each realm its own PostgreSQL schema. Recommended — see below |
-| `embed_relations` | `RAG_EMBED_RELATIONS` | `0` | Also embed relation edges for semantic relation search (optional) |
+| `embed_relations` | `RAG_EMBED_RELATIONS` | `1` | Embed relation edges so retrieval can find them by similarity as well as by traversal. Costs one embedding call per distinct triple at index time |
+| `relation_seed_quota` | `RAG_RELATION_SEED_QUOTA` | `0.5` | Share of relation slots reserved for the similarity channel. `0` disables it |
 | `allow_embedding_fallback` | `RAG_ALLOW_EMBEDDING_FALLBACK` | `0` | Use local/deterministic vectors when the embedding API fails |
 | `fallback_models` | `RAG_FALLBACK_MODELS` | — | Comma-separated models to fail over to when the primary is rate-limited or out of credits |
 | `max_retries` | `RAG_MAX_RETRIES` | `5` | Attempts per model before moving to the next |
