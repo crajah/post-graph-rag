@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "post-graph-rag"
-version = "1.5.1"
+version = "1.5.2"
 description = "Graph RAG library leveraging post-graph space sub-grouping and pgvector on PostgreSQL with OpenAI-compatible LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -13,6 +13,22 @@ authors = [
     { name = "Chandan Rajah", email = "chandan.rajah@gmail.com" }
 ]
 keywords = ["graph-rag", "rag", "knowledge-graph", "post-graph", "pgvector", "llm", "openai"]
+# The licence classifier is what PyPI's search filters read; the `license`
+# field above only drives what is displayed. The Python versions mirror
+# requires-python rather than the CI matrix, which exercises 3.11 alone.
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Indexing",
+]
 dependencies = [
     "post-graph>=0.6.0",
     "openai>=1.0.0",
