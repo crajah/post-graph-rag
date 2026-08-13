@@ -274,6 +274,58 @@ The default is 2. Questions about a single entity are better served by 1, where 
 
 ---
 
+## Retrieving relations by embedding, not only by traversal
+
+Everything above ranks relations that traversal already reached. That framing hides an assumption worth testing: that the relations worth having are reachable from a matched entity at all.
+
+They are not always. A relation whose endpoints are named generically — a charge, a programme, a line item that the filing never christens — sits in the graph and is never walked to, because nothing in the question matches its endpoints. No hop budget reaches it and no ranking recovers it.
+
+That distinction is testable, so it was tested. Re-ranking the entire multi-hop candidate set by direct query similarity — a strictly better ranker over the same candidates — moved the on-topic share of retrieved relations from **67.8% to 67.5%**. Nothing. The bottleneck was never the ordering.
+
+Generating candidates a second way is what pays. Relations carry their own embeddings, so they can be searched directly rather than walked to:
+
+```python
+RAGConfig(embed_relations=True,        # default since 1.5.0
+          relation_seed_quota=0.5)     # share of slots for the similarity channel
+```
+
+| On-topic share of relations reaching the prompt | traversal only | + relation search |
+| :--- | ---: | ---: |
+| gpt-oss-120b | 49% | **73%** |
+| MiniMax-M2.7 | 66% | **98%** |
+
+The two channels are interleaved to a quota rather than pooled and ranked together, and that is not a stylistic choice. Pooling both candidate sets and sorting by a single similarity score does not split the difference — it hands *every* slot to the relation channel, because that channel is ranked by the very quantity being sorted on. Measured: a pooled ranking reproduced the relation channel's output exactly, on all four questions.
+
+### The part where the obvious metric was wrong
+
+Setting that quota needed a number, and the number that was easy to compute turned out to be untrustworthy.
+
+Scoring retrieved relations by keyword overlap with the question rewards topical resemblance — which is precisely what embedding similarity maximises. The metric was therefore rewarding the channel under test. It ranked quota 1.0 above 0.5 on both models, and it would have said so regardless.
+
+The tie-break was a blind comparison on answers instead: generate an answer at each setting through the shipped query path, then have judge models pick the better one. Three controls, each of which earned its place:
+
+- **Blind.** The judge sees the question and two answers labelled A and B, and is told nothing about how either was retrieved.
+- **No self-grading.** No judge model grades prose its own model wrote.
+- **Order-swapped.** Every pair is graded twice with the labels swapped. A win counts only if the judge picks the same answer both ways.
+
+That third control removed **roughly 40% of all judgements** — 7 of 20 on one graph and 11 of 30 on the other — including a stretch where one judge answered "A" to everything put in front of it. A single-pass evaluation would have counted every one of those as a result.
+
+What survived did not crown a winner. The two graphs pointed opposite ways overall. Split by question shape, they agree:
+
+| Question shape | quota 0.5 | quota 1.0 |
+| :--- | ---: | ---: |
+| Entity — *what role did the FAA play* | **8** | 4 |
+| Thematic — *what caused cash flow to turn negative* | **7** | 4 |
+| Chain — *how did regulatory action translate into financial consequences* | 2 | **6** |
+
+Traversal-weighted retrieval leads where the question names its subject or a theme. Similarity-weighted retrieval leads on chain questions, and led 5–0 on the weaker of the two graphs — traversal to depth accumulates noise faster when extraction is poorer, so the slots are better spent elsewhere.
+
+The judges' written reasons explain why no single setting wins. Both directions are argued on identical grounds — concrete figures present, extraneous material absent — with 0.5 praised for "detailing concrete earnings charges and programs ($3.5B for 777X, $580M for 767)" in one comparison and 1.0 praised for "citing concrete examples like the $148 million Spirit litigation charge" in another. The criterion is stable; which setting satisfies it depends on the graph.
+
+So it ships as a documented knob defaulting to 0.5, with the harness that produced this table in the repository. Turning the channel on at all is the unambiguous win — the 49%→73% and 66%→98% columns are not close. Where exactly to set the dial is a property of your corpus, and it is measurable in an afternoon.
+
+---
+
 ## Evaluation against LightRAG
 
 Three corpora, deliberately different in register: four Wikipedia articles (~66k chars), the d'Artagnan trilogy (~645k chars of 19th-century narrative prose), and five Boeing 10-K filings (~587k chars of financial disclosure). Same model (MiniMax-M2.7), same embedding model, same gleaning depth, equivalent chunk sizing, and — for the trilogy — the two libraries run **sequentially** so neither contends for the LLM endpoint.
@@ -429,6 +481,8 @@ None of these raise. All produce confident answers. The general lesson is that i
 
 **Extraction quality is register-sensitive, and a domain vocabulary is worth budgeting for.** Filings provoke nominalisation — `Boeing Commercial Airplanes revenue increase` as a vertex — which fragments retrieval until the extraction prompt is constrained. Predicate adherence moves with register too. With a vocabulary supplied, the distinct-label ratio is ~11% on biography but 46% on 10-Ks — a 32-term finance preset covers the reversals without covering the topical tail. Both still sit well below free-text edge keywords on the same corpora (109% and 77%), but the margin is far wider on encyclopedic text, and a vocabulary tuned per domain is what closes it.
 
+**The retrieval quota is a knob, not a solved value.** Adding the relation-similarity channel is unambiguous — the on-topic share rises sharply on both models tested. How much of the context budget it should claim is not: on two graphs built from the same corpus by different extraction models, the blind comparison pointed in opposite directions overall, and only agreed once split by question shape. Two models and ten questions is a small basis for a default. The harness ships so the value can be measured per corpus rather than inherited.
+
 **Supersession needs corpus density to fire.** It resolves only when the same ordered entity pair is characterised twice with conflicting predicates. On a sparse 5% sample of each novel that never happened and the mechanism sat idle; at full density it fired 13 times. A corpus that mentions each relationship exactly once has nothing to supersede — though it also has no contradiction to get wrong.
 
 **Indexing is slower than LightRAG's, and deliberately so.** Graph writes are serialised because entity resolution is a read-modify-write against a uniqueness index, and concurrent writers split the entities that resolution exists to merge. That serialisation is what makes `Babbage` and `Charles Babbage` reliably converge — the density advantage in every table above depends on it. The gap is register-dependent, narrowing from 2× on short encyclopedic documents to 1.37× on long prose, and parallelising across documents would close much of the remainder without touching the write path.
@@ -459,7 +513,7 @@ python evaluation/temporal_eval.py --corpus evaluation/sec_boeing \
     --max-chunks 0 --synthesise
 ```
 
-That reports supersessions, validity intervals, dormant entities and as-of retrieval on a corpus whose facts genuinely change. Alongside it: corpus fetching, indexing with configurable models and vocabularies, a graph analysis report covering cross-document resolution and predicate distribution, a realm-diffing tool, and the LightRAG comparison script. Every table here is reproducible rather than asserted.
+That reports supersessions, validity intervals, dormant entities and as-of retrieval on a corpus whose facts genuinely change. Alongside it: corpus fetching, indexing with configurable models and vocabularies, a graph analysis report covering cross-document resolution and predicate distribution, a realm-diffing tool, the blind A/B judge used to set the retrieval quota, and the LightRAG comparison script. Every table here is reproducible rather than asserted.
 
 A paper covering the architecture and evaluation methodology is going to arXiv — link to follow.
 
