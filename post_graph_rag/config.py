@@ -40,18 +40,38 @@ class RAGConfig:
     # channel takes every slot. Measured: a pooled ranking reproduced the relation
     # channel's results exactly on all four evaluation questions.
     #
-    # Higher values scored better on both models measured (mean on-topic share of
-    # the relations reaching the prompt, five Boeing 10-K filings):
+    # Turning the channel on at all is the decisive part. Mean on-topic share of
+    # the relations reaching the prompt, five Boeing 10-K filings:
     #
     #                    quota 0.0   0.5    1.0
     #   gpt-oss-120b        49%      69%    73%
     #   MiniMax-M2.7        66%      88%    98%
     #
-    # 0.5 rather than 1.0 is a hedge, not a measured optimum: that scoring counts
-    # keyword overlap, which correlates with the similarity the relation channel
-    # ranks by, so it flatters higher quotas — and answer quality did not separate
-    # 0.5 from 1.0 on either model. Which channel suits a given question also
-    # varies by corpus and extraction model, so this stays a knob.
+    # That scoring counts keyword overlap, which correlates with the similarity
+    # the relation channel ranks by, so it cannot be trusted to order 0.5 against
+    # 1.0. A blind comparison settles those two instead: same questions, answers
+    # generated at each setting, graded by judges that did not write them, every
+    # pair graded twice with the labels swapped so a positionally-biased judge
+    # yields no result rather than a wrong one. Wins over ten questions on two
+    # graphs (order-dependent judgements discarded):
+    #
+    #                    entity   thematic   chain
+    #   quota 0.5           8         7        2
+    #   quota 1.0           4         4        6
+    #
+    # 0.5 leads where the question names its subject or a theme, which is most
+    # questions. 1.0 leads on chain questions ("how did X translate into Y"),
+    # and did so 5-0 on the weaker of the two graphs — traversal to depth
+    # collects noise faster when extraction is poorer, so slots are better spent
+    # on similarity there.
+    #
+    # The two graphs pointed opposite ways overall, and the judges' reasons show
+    # why that is not noise: both settings are argued on the same grounds, so
+    # what varies is which one happened to put more anchored specifics in the
+    # prompt. That is a property of the graph, not of the quota. 0.5 is the
+    # default as the setting that leads on the commonest question shapes; raise
+    # it toward 1.0 for chain-heavy corpora or poorer extraction, and measure
+    # with evaluation/blind_quota_judge.py rather than guessing.
     relation_seed_quota: float = field(
         default_factory=lambda: float(_env("RAG_RELATION_SEED_QUOTA", "0.5")))
     # Sent explicitly because the OpenAI SDK otherwise negotiates 'base64' on its
@@ -233,11 +253,22 @@ class RAGConfig:
     )
 
     # Give relation edges their own embeddings so they can be retrieved by
-    # similarity. Optional and off by default: relations are normally reached by
-    # traversing out from a matched entity, and enabling this costs one extra
-    # embedding call per triple at index time.
+    # similarity as well as by traversing out from a matched entity.
+    #
+    # On by default because traversal alone is the binding constraint on what
+    # reaches the prompt: a relation whose endpoints are not near a matched
+    # entity is unreachable at any hop budget, and no amount of re-ranking
+    # recovers it. Measured on five Boeing 10-K filings, adding the relation
+    # channel lifted the on-topic share of retrieved relations from 49% to 73%
+    # (gpt-oss-120b) and 66% to 98% (MiniMax-M2.7). See relation_seed_quota,
+    # which allocates slots between the two channels.
+    #
+    # The cost is one extra embedding call per distinct triple at index time,
+    # and a vector column plus HNSW index on the relations table. Set to 0 on a
+    # corpus where indexing cost dominates and questions name their entities
+    # plainly, since traversal alone reaches those.
     embed_relations: bool = field(
-        default_factory=lambda: _env("RAG_EMBED_RELATIONS", "0").lower() in ("1", "true", "yes")
+        default_factory=lambda: _env("RAG_EMBED_RELATIONS", "1").lower() in ("1", "true", "yes")
     )
 
     # When the embedding API is unreachable, fall back to a local/deterministic

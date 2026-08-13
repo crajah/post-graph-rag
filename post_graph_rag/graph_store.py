@@ -56,8 +56,9 @@ class RAGGraphStore:
                 from_vertex_table="entities",
                 to_vertex_table="entities",
                 realm=self.realm,
-                # Optional: relations are normally reached by traversing from a
-                # matched entity, not by similarity, so this stays off by default.
+                # Enabling this on a table created without it adds the column
+                # and its index in place; rows written earlier keep a NULL
+                # embedding until re-indexed, and edge search skips those.
                 vector_dim=self.config.embedding_dim if self.config.embed_relations else None
             )
             await self.client.create_edge_table(

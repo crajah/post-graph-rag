@@ -226,3 +226,6 @@ evaluation/lightrag_stats.json
 evaluation/dumas/
 reports/
 evaluation/sec_boeing/
+
+# Local agent/session state
+.claude/

@@ -455,8 +455,7 @@ the tail. Expect to extend the vocabulary per domain rather than to inherit one.
 
 One hop answers "what is said about X". Chain questions need the edges *between*
 X's neighbours, which are never adjacent to X. `RAGConfig.max_hops` (or
-`QueryParam(max_hops=...)`) walks further; it defaults to 1, so existing
-behaviour is unchanged until asked for.
+`QueryParam(max_hops=...)`) walks further; it defaults to 2.
 
 Filtering happens inside the walk rather than afterwards — `traverse()` takes
 `relation_types`, `as_of`, `payload_null_keys` and `space` — so a path is never
@@ -500,6 +499,93 @@ Boeing entity reaches over 25,000 edges.
 
 Start at 2 for chain-heavy corpora; leave it at 1 when questions are about a
 single entity, where precision is highest and the walk is cheapest.
+
+### Retrieving relations by embedding, not only by traversal
+
+Traversal can only rank what it reached. A relation whose endpoints are named
+generically is unreachable from a matched entity at any hop budget, and no
+amount of re-ranking recovers it — re-ranking the multi-hop candidate set by
+query similarity moved the on-topic share from 67.8% to 67.5%, which is nothing.
+
+Embedding the relations themselves and searching them directly is a second
+candidate generator rather than a better ranker, and that is where the gain is.
+`embed_relations` (on by default) costs one embedding call per distinct triple at
+index time; `relation_seed_quota` sets how many relation slots it may claim.
+
+Mean on-topic share of the relations reaching the prompt:
+
+| | quota 0.0 | 0.5 | 1.0 |
+| :--- | ---: | ---: | ---: |
+| gpt-oss-120b | 49% | 69% | 73% |
+| MiniMax-M2.7 | 66% | 88% | 98% |
+
+A quota is needed because pooling both candidate sets and sorting by one score
+does not split the difference — it hands *every* slot to the relation channel.
+Measured: a pooled ranking reproduced the relation channel's output exactly on
+all four questions.
+
+#### Why the quota is not simply set to 1.0
+
+The scoring above counts keyword overlap, which correlates with the similarity
+the relation channel ranks by, so it cannot be trusted to order 0.5 against 1.0 —
+it rewards the channel under test. Settling those two needs answers.
+
+```bash
+python evaluation/blind_quota_judge.py --realm boeing_mm --model MiniMax-M2.7 \
+  --judges gemma-4-31B-it DeepSeek-V3.2 --out reports/blind_quota_mm.json
+```
+
+It generates an answer at each setting through the shipped query path, then has
+judge models pick the better one. Three controls: the judge
+sees only the question and two answers labelled A and B; no judge grades prose
+its own model wrote; and every pair is graded twice with the labels swapped, so a
+judge that simply prefers the first answer produces no result rather than a wrong
+one. That control mattered — **7 of 20 judgements on one graph and 11 of 30 on
+the other were order-dependent and discarded.**
+
+Wins over ten questions on two graphs. Judges were `gemma-4-31B-it` and
+`DeepSeek-V3.2` on both, with `gemini-3.6-flash` added on the second:
+
+| | 0.5 wins | 1.0 wins |
+| :--- | ---: | ---: |
+| `boeing_mm` (MiniMax-M2.7) | 10 | 3 |
+| `boeing_oss` (gpt-oss-120b) | 7 | 11 |
+
+The two graphs disagree, and the aggregate (17–14) hides why. Split by question
+shape:
+
+| shape | 0.5 | 1.0 |
+| :--- | ---: | ---: |
+| entity — *"what role did the FAA play"* | 8 | 4 |
+| thematic — *"what caused cash flow to turn negative"* | 7 | 4 |
+| chain — *"how did regulatory action translate into financial consequences"* | 2 | 6 |
+
+0.5 leads where the question names its subject or a theme. 1.0 leads on chain
+questions, and did so 5–0 on the weaker graph: traversal to depth collects noise
+faster when extraction is poorer, so slots are better spent on similarity there.
+
+The judges' stated reasons are worth reading, because they do *not* split by
+setting. Both directions are argued on the same two grounds — concrete figures
+present, extraneous material absent:
+
+> *0.5 wins:* "more specific, detailing concrete earnings charges and programs
+> ($3.5B for 777X, $580M for 767)"; "includes irrelevant information about 401(k)
+> funding strategies" (against 1.0)
+>
+> *1.0 wins:* "more specific, citing concrete examples like the $148 million
+> Spirit litigation charge"; "avoids extraneous details like the 777X loss"
+> (against 0.5)
+
+So the judges are applying a stable criterion, and what varies is which setting
+happened to put more anchored specifics in front of the model. That is a property
+of the graph, not of the quota — which is the honest reading of two graphs
+pointing opposite ways.
+
+**0.5 is the default**, as the setting that leads on the two commonest question
+shapes and is never far behind on the third. Raise it toward 1.0 for a corpus of
+chain questions, or where extraction quality is known to be poor. Anything below
+0.5 gives up a large, unambiguous gain; the choice between 0.5 and 1.0 is worth
+measuring on your own corpus, and this harness is how.
 
 ### Two harness settings that silently invalidate the comparison
 

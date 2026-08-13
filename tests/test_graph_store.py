@@ -117,10 +117,10 @@ async def test_reserved_space_rejected_for_writes(rag_factory):
 
 
 @pytest.mark.asyncio
-async def test_relation_embeddings_off_by_default(rag_factory):
-    """Edge vectors are an optional extra, so the edge table has no vector
-    column unless embed_relations was set."""
-    rag = await rag_factory()
+async def test_relation_embeddings_absent_when_disabled(rag_factory):
+    """Turning embed_relations off must leave the edge table without a vector
+    column, so the cost of the second channel really is opt-out-able."""
+    rag = await rag_factory(embed_relations=False)
     rows = await rag.store.client._fetch(
         "SELECT 1 FROM pg_attribute WHERE attrelid = $1::regclass "
         "AND attname = 'embedding' AND NOT attisdropped",

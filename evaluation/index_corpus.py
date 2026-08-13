@@ -165,7 +165,9 @@ def main():
     ap.add_argument("--max-chunks", type=int, default=10, help="Per document; keeps eval runs bounded")
     ap.add_argument("--category", default="history_of_computing")
     ap.add_argument("--collection", default="eval_corpus")
-    ap.add_argument("--embed-relations", action="store_true")
+    ap.add_argument("--no-embed-relations", dest="embed_relations",
+                    action="store_false", default=True,
+                    help="skip relation embeddings, leaving only entity-seeded traversal")
     ap.add_argument("--stats-out", default=None)
     ap.add_argument("--no-reset", dest="reset", action="store_false", help="Append to the existing realm")
     ap.add_argument("--verbose", action="store_true")
