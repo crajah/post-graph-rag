@@ -910,11 +910,14 @@ class GraphRAG:
             # Emit from whichever channel is under its share of what is out so far.
             want_seeded = (len(out) + 1) * quota > j
             if want_seeded and j < len(seeded):
-                out.append(seeded[j]); j += 1
+                out.append(seeded[j])
+                j += 1
             elif i < len(traversed):
-                out.append(traversed[i]); i += 1
+                out.append(traversed[i])
+                i += 1
             elif j < len(seeded):
-                out.append(seeded[j]); j += 1
+                out.append(seeded[j])
+                j += 1
         return out
 
     @staticmethod

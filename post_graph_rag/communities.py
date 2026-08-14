@@ -12,7 +12,7 @@ callable matching :class:`CommunityDetector` can be supplied instead.
 """
 import logging
 from collections import defaultdict
-from typing import Dict, Hashable, List, Protocol, Sequence, Tuple
+from typing import Dict, List, Protocol, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 

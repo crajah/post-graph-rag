@@ -160,7 +160,7 @@ class LLMService:
     @staticmethod
     def _try_fastembed(text: str) -> Optional[List[float]]:
         try:
-            from fastembed import TextEmbedding
+            from fastembed import TextEmbedding  # type: ignore[import-not-found]
             model = TextEmbedding()
             return [float(x) for x in next(model.embed([text]))]
         except Exception:
@@ -169,7 +169,7 @@ class LLMService:
     @staticmethod
     def _try_sentence_transformers(text: str) -> Optional[List[float]]:
         try:
-            from sentence_transformers import SentenceTransformer
+            from sentence_transformers import SentenceTransformer  # type: ignore[import-not-found]
             model = SentenceTransformer("all-MiniLM-L6-v2")
             return [float(x) for x in model.encode(text).tolist()]
         except Exception:
@@ -290,7 +290,7 @@ class LLMService:
             async def structured(model: str):
                 response = await self.client.beta.chat.completions.parse(
                     model=model,
-                    messages=messages,
+                    messages=messages,  # type: ignore[arg-type]
                     response_format=response_format
                 )
                 return response.choices[0].message.parsed
@@ -306,7 +306,7 @@ class LLMService:
         async def plain(model: str):
             response = await self.client.chat.completions.create(
                 model=model,
-                messages=messages
+                messages=messages  # type: ignore[arg-type]
             )
             return response.choices[0].message.content or ""
 
@@ -324,7 +324,7 @@ class LLMService:
         async def open_stream(model: str):
             return await self.client.chat.completions.create(
                 model=model,
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
                 stream=True
             )
 
