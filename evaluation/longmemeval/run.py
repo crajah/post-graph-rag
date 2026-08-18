@@ -133,14 +133,18 @@ async def judge(llm, question, gold, answer) -> bool:
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "oracle.json"))
-    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
-    ap.add_argument("--judge-model", default="MiniMax-M2.7")
+    ap.add_argument("--model", default="gemma-4-31B-it")
+    ap.add_argument("--judge-model", default="gemini-3.6-flash-lite")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--limit", type=int, default=20)
     ap.add_argument("--types", nargs="*", default=None,
                     help="question_type filter, e.g. temporal-reasoning knowledge-update")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--merge-strategy", default="rrf")
+    ap.add_argument("--concurrency", type=int, default=6,
+                    help="instances indexed and queried at once")
+    ap.add_argument("--chunk-concurrency", type=int, default=8,
+                    help="chunks extracted at once within one instance")
     ap.add_argument("--out", default=str(HERE / "results.json"))
     args = ap.parse_args()
 
@@ -161,52 +165,69 @@ async def main():
 
     results, by_type, degraded = [], defaultdict(list), []
     started = time.time()
-    for i, inst in enumerate(data):
-        realm = f"lme_{args.seed}_{i}"
-        rag = GraphRAG(RAGConfig(
-            model=args.model, realm=realm, schema_per_realm=True,
-            embedding_model=args.embedding_model, embedding_dim=1536,
-            embed_relations=True, merge_strategy=args.merge_strategy,
-            max_retries=8, retry_deadline_secs=600))
-        await rag.initialize()
-        try:
-            t0 = time.time()
+    sem = asyncio.Semaphore(args.concurrency)
+    done = 0
+
+    async def one(i, inst):
+        """Index and answer a single instance in its own realm.
+
+        Instances are independent haystacks, so they parallelise cleanly: the
+        only shared resource is the model router, which the semaphore bounds.
+        """
+        nonlocal done
+        async with sem:
+            realm = f"lme_{args.seed}_{i}"
+            rag = GraphRAG(RAGConfig(
+                model=args.model, realm=realm, schema_per_realm=True,
+                embedding_model=args.embedding_model, embedding_dim=1536,
+                embed_relations=True, merge_strategy=args.merge_strategy,
+                max_concurrent_chunks=args.chunk_concurrency,
+                max_retries=40, retry_deadline_secs=1800))
+            await rag.initialize()
             try:
-                n_sessions = await index_instance(rag, inst)
-            except DegradedRun as e:
-                # Counted separately and never as a wrong answer.
+                t0 = time.time()
+                try:
+                    n_sessions = await index_instance(rag, inst)
+                except DegradedRun as e:
+                    degraded.append({"question_id": inst["question_id"],
+                                     "type": inst["question_type"], "reason": str(e)})
+                    print(f"{inst['question_type']:<26} {'--':>5} {'--':>8} {'--':>8}  "
+                          f"SKIPPED ({str(e)[:50]})", flush=True)
+                    return
+                t_index = time.time() - t0
+
+                t0 = time.time()
+                asked = (f"Today is {parse_date(inst.get('question_date', ''))}. "
+                         f"{inst['question']}") if inst.get("question_date") else inst["question"]
+                out = await rag.query(asked, param=QueryParam(mode="mix", top_k=8))
+                t_query = time.time() - t0
+                answer = (out["answer"] if isinstance(out, dict) else str(out)).strip()
+
+                ok = await judge(judge_llm, inst["question"], inst["answer"], answer)
+                by_type[inst["question_type"]].append(ok)
+                results.append({"question_id": inst["question_id"],
+                                "type": inst["question_type"], "correct": ok,
+                                "index_secs": round(t_index, 1),
+                                "query_secs": round(t_query, 1),
+                                "question": inst["question"], "gold": inst["answer"],
+                                "answer": answer[:1200]})
+                done += 1
+                print(f"{inst['question_type']:<26} {n_sessions:>5} {t_index:>8.1f} "
+                      f"{t_query:>8.1f}  {'CORRECT' if ok else 'incorrect':<9} "
+                      f"[{done}/{len(data)}]", flush=True)
+            except Exception as e:
                 degraded.append({"question_id": inst["question_id"],
-                                 "type": inst["question_type"], "reason": str(e)})
+                                 "type": inst["question_type"],
+                                 "reason": f"{type(e).__name__}: {e}"})
                 print(f"{inst['question_type']:<26} {'--':>5} {'--':>8} {'--':>8}  "
-                      f"SKIPPED (degraded: {str(e)[:60]})")
-                continue
-            t_index = time.time() - t0
-
-            t0 = time.time()
-            # The question is asked as of a date, and "how many weeks since"
-            # is measured from it. Supplying it is not a hint — the benchmark
-            # gives it to every system.
-            asked = (f"Today is {parse_date(inst.get('question_date', ''))}. "
-                     f"{inst['question']}") if inst.get("question_date") else inst["question"]
-            out = await rag.query(asked, param=QueryParam(mode="mix", top_k=8))
-            t_query = time.time() - t0
-            answer = (out["answer"] if isinstance(out, dict) else str(out)).strip()
-
-            ok = await judge(judge_llm, inst["question"], inst["answer"], answer)
-            by_type[inst["question_type"]].append(ok)
-            results.append({"question_id": inst["question_id"],
-                            "type": inst["question_type"], "correct": ok,
-                            "index_secs": round(t_index, 1),
-                            "query_secs": round(t_query, 1),
-                            "question": inst["question"], "gold": inst["answer"],
-                            "answer": answer[:1200]})
-            print(f"{inst['question_type']:<26} {n_sessions:>5} {t_index:>8.1f} "
-                  f"{t_query:>8.1f}  {'CORRECT' if ok else 'incorrect'}")
-        finally:
-            try:
-                await rag.store.client._execute(f'DROP SCHEMA IF EXISTS "{realm}" CASCADE;')
+                      f"FAILED ({type(e).__name__})", flush=True)
             finally:
-                await rag.close()
+                try:
+                    await rag.store.client._execute(f'DROP SCHEMA IF EXISTS "{realm}" CASCADE;')
+                finally:
+                    await rag.close()
+
+    await asyncio.gather(*(one(i, inst) for i, inst in enumerate(data)))
 
     print("-" * 70)
     total = sum(1 for r in results if r["correct"])
