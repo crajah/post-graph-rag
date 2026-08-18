@@ -1,4 +1,4 @@
-post-graph>=0.6.0
+post-graph>=0.7.0
 openai>=1.0.0
 pydantic>=2.0.0
 
