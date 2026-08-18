@@ -133,9 +133,9 @@ async def judge(llm, question, gold, answer) -> bool:
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "oracle.json"))
-    ap.add_argument("--model", default="MiniMax-M2.7")
-    ap.add_argument("--judge-model", default="gemma-4-31B-it")
-    ap.add_argument("--embedding-model", default="text-embedding-3-small")
+    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
+    ap.add_argument("--judge-model", default="MiniMax-M2.7")
+    ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--limit", type=int, default=20)
     ap.add_argument("--types", nargs="*", default=None,
                     help="question_type filter, e.g. temporal-reasoning knowledge-update")
@@ -236,4 +236,6 @@ async def main():
     print(f"  wrote {args.out}")
 
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())
