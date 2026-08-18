@@ -13,6 +13,15 @@ logger = logging.getLogger(__name__)
 VERTEX_TABLES = ("documents", "entities", "communities")
 
 
+def _utc_now() -> str:
+    """Transaction-time stamp: when this system came to believe something.
+
+    UTC and ISO-8601 so it sorts lexically, which is what the as-of-belief
+    filter compares against without parsing.
+    """
+    return datetime.now(timezone.utc).isoformat()
+
+
 class RAGGraphStore:
     def __init__(self, config: RAGConfig):
         self.config = config
@@ -466,6 +475,11 @@ class RAGGraphStore:
                 # without a period must not erase it.
                 "valid_from": valid_from or prev.get("valid_from"),
                 "valid_to": valid_to or prev.get("valid_to"),
+                # Re-observing a relation does not restart its transaction time:
+                # the system has believed it since the first observation, and
+                # resetting this would erase that from the record.
+                "t_created": prev.get("t_created") or _utc_now(),
+                "t_expired": prev.get("t_expired"),
             }
             if prev.get("superseded_by") is not None:
                 payload["superseded_by"] = prev["superseded_by"]
@@ -488,8 +502,15 @@ class RAGGraphStore:
             "weight": 1,
             "negated": bool(negated),
             "confidence": float(confidence),
+            # Validity: when the fact was true in the world, as the text states.
             "valid_from": valid_from,
             "valid_to": valid_to,
+            # Transaction time: when this system came to believe it. The two are
+            # independent — a filing published in 2024 can assert something true
+            # in 2019 — and collapsing them makes "what did we believe last
+            # March" unanswerable, which is the question an audit asks.
+            "t_created": _utc_now(),
+            "t_expired": None,
         }
         return await self.client.add_edge(
             "relations",
@@ -502,6 +523,60 @@ class RAGGraphStore:
             check_cycle=False,
             embedding=embedding if self.config.embed_relations else None
         )
+
+    async def _ensure_relation_fts_index(self):
+        """GIN index over the relation text, for the lexical channel.
+
+        Built lazily on first use rather than at schema creation, so an existing
+        deployment gains it without a migration and one that never calls the
+        lexical channel never pays for it.
+        """
+        table_ref = self.client._get_table_ref("relations", self.realm)
+        index_name = f"{self.realm}_relations_fts"
+        await self.client._execute(
+            f'CREATE INDEX IF NOT EXISTS "{index_name}" ON {table_ref} USING gin ('
+            f"to_tsvector('english', coalesce(relation_type, '') || ' ' || "
+            f"coalesce(payload->>'description', '')))"
+        )
+
+    async def search_relations_text(self, query: str, top_k: int = 20,
+                                    space: Optional[str] = None) -> List[Tuple[Edge, float]]:
+        """Lexical search over relations, ranked by ts_rank.
+
+        The third candidate generator, alongside entity traversal and relation
+        embeddings. It exists because embeddings are weakest exactly where
+        lexical matching is strongest: rare identifiers that carry the meaning
+        but sit nowhere useful in vector space — a part number, a statute, a
+        model designation like ``737-9``. Those are frequently the terms a
+        question turns on, and a nearest-neighbour search will happily return
+        semantically adjacent relations that mention none of them.
+
+        Uses PostgreSQL's own full-text search, so this adds a GIN index and no
+        new infrastructure.
+        """
+        if not (query or "").strip():
+            return []
+        await self._ensure_relation_fts_index()
+        target_space = space or self.space
+        table_ref = self.client._get_table_ref("relations", self.realm)
+        rows = await self.client._fetch(
+            f"SELECT r.id, r.realm, r.space, r.from_id, r.to_id, r.relation_type, r.payload, "
+            f"       r.created_at, r.updated_at, "
+            f"       ts_rank(to_tsvector('english', coalesce(r.relation_type, '') || ' ' || "
+            f"               coalesce(r.payload->>'description', '')), "
+            f"               websearch_to_tsquery('english', $3)) AS rank "
+            f"FROM {table_ref} r "
+            f"WHERE r.realm = $1 AND r.space = $2 "
+            f"  AND to_tsvector('english', coalesce(r.relation_type, '') || ' ' || "
+            f"      coalesce(r.payload->>'description', '')) "
+            f"      @@ websearch_to_tsquery('english', $3) "
+            f"ORDER BY rank DESC LIMIT $4",
+            self.realm, target_space, query, int(top_k),
+        )
+        out: List[Tuple[Edge, float]] = []
+        for r in rows:
+            out.append((self._row_to_edge(r), float(r["rank"])))
+        return out
 
     async def search_similar_relations(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Edge, float]]:
         """Vector similarity search over relation edges.
@@ -562,6 +637,11 @@ class RAGGraphStore:
             if payload.get("superseded_by") == str(new_edge_id):
                 continue
             payload["superseded_by"] = str(new_edge_id)
+            # The moment this system stopped believing the fact, as distinct
+            # from the moment the fact stopped being true. A row that is
+            # superseded is still the correct answer to a question asked about
+            # an earlier belief state.
+            payload["t_expired"] = _utc_now()
             await self.client._execute(
                 f"UPDATE {table_ref} SET payload = $1::jsonb WHERE realm = $2 AND id = $3",
                 json.dumps(payload), self.realm, int(row["id"]),
@@ -694,6 +774,7 @@ class RAGGraphStore:
                 "weight": p.get("weight", 1), "negated": bool(p.get("negated", False)),
                 "superseded_by": p.get("superseded_by"),
                 "valid_from": p.get("valid_from"), "valid_to": p.get("valid_to"),
+                "t_created": p.get("t_created"), "t_expired": p.get("t_expired"),
             })
         return entities, relations
 
