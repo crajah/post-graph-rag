@@ -698,3 +698,61 @@ A long tail of single-use predicates survives by design; those are genuinely
 distinct relations (`funded`, `lived_at`, `co_authored`) that a 35-term vocabulary
 does not cover. Section 4 of the analysis lists the commonest off-vocabulary
 predicates, which is the feedback loop for extending the preset.
+
+
+## Bi-temporal storage, and a lexical retrieval channel
+
+Two changes taken from Graphiti/Zep (arXiv:2501.13956) after comparing designs.
+
+### Both temporal axes, kept separate
+
+Relations previously recorded only *validity* — when a fact held in the world,
+lifted from the prose. They now also carry **transaction time**: `t_created`
+when this system came to believe the fact, `t_expired` when it stopped.
+
+The two are independent, and conflating them loses a question. A 2024 filing
+can assert something true in 2019, so:
+
+- `as_of=2019` — what was true in 2019, according to everything known now.
+- `as_believed_at=2023-01-01` — what the graph held on that date, regardless of
+  when the facts themselves were true.
+
+Only the second reproduces a past answer or audits a past decision. Supersession
+now stamps `t_expired` as well as `superseded_by`, so a retracted belief stops
+being current without ceasing to exist — a superseded row is still the correct
+answer to a question asked about an earlier belief state.
+
+A relation with no `t_created` predates the field and is treated as always
+known, matching the existing rule that absent validity means always valid: the
+absence records that nothing was said, not that the answer is no.
+
+### A third candidate generator
+
+`search_relations_text` adds lexical retrieval over relations using
+PostgreSQL's own full-text search — a GIN index, no new infrastructure.
+
+The motivation is the measurement already in this document: adding the
+relation-embedding channel moved on-topic share 49% → 73%, while re-ranking the
+same candidates moved it 67.8% → 67.5%. **Candidate generation is the
+bottleneck, not ordering**, so a third generator is worth more than a fourth
+ranker.
+
+Lexical search is weakest where embeddings are strongest and strongest where
+they are weakest: rare identifiers that carry the meaning but sit nowhere
+useful in vector space — a part number, a statute, a designation like `737-9`.
+Those are frequently the term a question turns on, and nearest-neighbour search
+will return semantically adjacent relations mentioning none of them.
+
+### Not adopted
+
+**LLM-judged contradiction.** Graphiti asks a model whether two edges conflict.
+Supersession here is decided by declared `exclusive_predicate_groups` and
+document order — deterministic, free at write time, and inspectable. Their
+approach catches undeclared conflicts; this one cannot be wrong in a way you
+cannot audit. Given that model choice already dominates every result in this
+document, putting a model in the resolution path is the wrong trade.
+
+**Incremental community updates.** Their paper reports that dynamic label
+propagation drifts from a full run and needs periodic refreshes. A Leiden
+rebuild is a known-good partition, which is the better default until
+incremental update is a measured bottleneck rather than an assumed one.

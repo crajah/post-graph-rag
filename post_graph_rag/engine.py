@@ -37,6 +37,25 @@ def _accepts_resolution(detector: Callable) -> bool:
         return False
 
 
+def _known_at(t_created: Optional[str], t_expired: Optional[str], instant: str) -> bool:
+    """Was this relation part of the graph's belief state at `instant`?
+
+    Transaction time, not validity. A relation written after the instant was not
+    known yet; one whose belief was retracted before it is no longer part of
+    that state. ISO-8601 UTC sorts lexically, so this compares strings rather
+    than parsing — the same choice `_valid_at` makes.
+
+    A relation with no `t_created` predates this field and is treated as always
+    known, for the same reason absent validity means always valid: the absence
+    records that nothing was said, not that the answer is no.
+    """
+    if t_created and t_created > instant:
+        return False
+    if t_expired and t_expired <= instant:
+        return False
+    return True
+
+
 def _valid_at(valid_from: Optional[str], valid_to: Optional[str], as_of: str) -> bool:
     """Whether a relation holds at ``as_of``.
 
@@ -809,8 +828,14 @@ class GraphRAG:
             "weight": payload.get("weight", 1),
             "negated": bool(payload.get("negated", False)),
             "confidence": float(payload.get("confidence", 1.0)),
+            # Validity: when the fact held in the world.
             "valid_from": payload.get("valid_from"),
             "valid_to": payload.get("valid_to"),
+            # Transaction time: when this system believed it. Both axes travel
+            # with the triple so as_believed_at can filter downstream without
+            # another read.
+            "t_created": payload.get("t_created"),
+            "t_expired": payload.get("t_expired"),
             "superseded_by": payload.get("superseded_by"),
             "asserted_at": asserted.isoformat() if asserted else None,
             # Distance from the entity the query matched. Ranking puts nearer
@@ -837,6 +862,9 @@ class GraphRAG:
             if t.get("superseded_by") and not include_superseded:
                 continue
             if p.as_of and not _valid_at(t.get("valid_from"), t.get("valid_to"), p.as_of):
+                continue
+            if p.as_believed_at and not _known_at(
+                    t.get("t_created"), t.get("t_expired"), p.as_believed_at):
                 continue
             kept.append(t)
 
