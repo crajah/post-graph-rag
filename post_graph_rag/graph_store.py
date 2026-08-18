@@ -1,5 +1,6 @@
 """Graph Store implementation wrapping post-graph and pgvector."""
 import json
+import re
 from datetime import datetime, timezone
 import logging
 from typing import List, Dict, Any, Set, Tuple, Optional, Union
@@ -557,6 +558,17 @@ class RAGGraphStore:
         if not (query or "").strip():
             return []
         await self._ensure_relation_fts_index()
+        # OR the terms, do not AND them. websearch_to_tsquery and
+        # plainto_tsquery both require every term to appear in the same row, so
+        # a natural-language question demands that one relation contain all of
+        # "role", "faa", "play", "across" and "filings" — which nothing does.
+        # The channel then returns nothing and looks disabled rather than
+        # wrong. Retrieval wants any-term matching, ranked; ts_rank already
+        # rewards rows matching more of them.
+        terms = [w for w in re.findall(r"[\w-]+", query.lower()) if len(w) > 2]
+        if not terms:
+            return []
+        tsquery = " | ".join(terms)
         target_space = space or self.space
         table_ref = self.client._get_table_ref("relations", self.realm)
         rows = await self.client._fetch(
@@ -564,14 +576,14 @@ class RAGGraphStore:
             f"       r.created_at, r.updated_at, "
             f"       ts_rank(to_tsvector('english', coalesce(r.relation_type, '') || ' ' || "
             f"               coalesce(r.payload->>'description', '')), "
-            f"               websearch_to_tsquery('english', $3)) AS rank "
+            f"               to_tsquery('english', $3)) AS rank "
             f"FROM {table_ref} r "
             f"WHERE r.realm = $1 AND r.space = $2 "
             f"  AND to_tsvector('english', coalesce(r.relation_type, '') || ' ' || "
             f"      coalesce(r.payload->>'description', '')) "
-            f"      @@ websearch_to_tsquery('english', $3) "
+            f"      @@ to_tsquery('english', $3) "
             f"ORDER BY rank DESC LIMIT $4",
-            self.realm, target_space, query, int(top_k),
+            self.realm, target_space, tsquery, int(top_k),
         )
         out: List[Tuple[Edge, float]] = []
         for r in rows:
