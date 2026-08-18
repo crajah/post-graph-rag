@@ -133,8 +133,8 @@ async def judge(llm, question, gold, answer) -> bool:
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "oracle.json"))
-    ap.add_argument("--model", default="gemma-4-31B-it")
-    ap.add_argument("--judge-model", default="gemini-3.6-flash-lite")
+    ap.add_argument("--model", default="gemma-4-31b-it")
+    ap.add_argument("--judge-model", default="gemini-3.6-flash")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--limit", type=int, default=20)
     ap.add_argument("--types", nargs="*", default=None,
@@ -242,8 +242,11 @@ async def main():
         print(f"\n  !! {len(degraded)} of {len(data)} instances SKIPPED as degraded.")
         print(f"  !! The accuracy above covers {len(results)} instances only, and "
               f"should not be reported until this is zero.")
-    print(f"  median query latency: "
-          f"{sorted(r['query_secs'] for r in results)[len(results)//2]:.1f}s")
+    if results:
+        print(f"  median query latency: "
+              f"{sorted(r['query_secs'] for r in results)[len(results)//2]:.1f}s")
+    else:
+        print("  no instance completed; see the degraded reasons above")
     print(f"  {time.time() - started:.0f}s total")
 
     pathlib.Path(args.out).write_text(json.dumps(
