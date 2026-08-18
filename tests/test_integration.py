@@ -208,3 +208,86 @@ async def test_query_on_an_empty_graph_does_not_crash(rag_factory):
     data = await rag.query_data("anything", param=QueryParam(mode="mix", top_k=5))
     assert data["data"]["entities"] == []
     assert data["data"]["relationships"] == []
+
+
+# ------------------------------------------------------------ bi-temporal
+
+async def test_relations_record_both_temporal_axes(rag_factory):
+    """Validity and belief time are independent and both stored."""
+    rag = await rag_factory(extraction=DOC_A)
+    await rag.index_document("text", metadata=DocumentMetadata(document="a.txt"))
+    data = await rag.query_data("Ada Lovelace", param=QueryParam(mode="mix", top_k=5))
+    rel = data["data"]["relationships"][0]
+    assert rel["t_created"], "no transaction time recorded"
+    assert rel["t_expired"] is None, "a live relation must not be expired"
+
+
+async def test_as_believed_at_hides_facts_learned_later(rag_factory):
+    """The question the second axis exists for: what did we know then.
+
+    `as_of` cannot answer it — the fact is valid throughout; what changed is
+    when this system came to hold it.
+    """
+    rag = await rag_factory(extraction=DOC_A)
+    await rag.index_document("text", metadata=DocumentMetadata(document="a.txt"))
+
+    before_any_indexing = "2000-01-01T00:00:00+00:00"
+    now = await rag.query_data("Ada Lovelace", param=QueryParam(mode="mix", top_k=5))
+    past = await rag.query_data("Ada Lovelace", param=QueryParam(
+        mode="mix", top_k=5, as_believed_at=before_any_indexing))
+
+    assert now["data"]["relationships"], "the relation should be known now"
+    assert not past["data"]["relationships"], (
+        "a relation written today was returned as known in 2000")
+
+
+async def test_supersession_stamps_belief_expiry(rag_factory):
+    """A superseded relation stops being believed, without ceasing to exist."""
+    friends = ExtractionResult(
+        entities=[Entity(name="Alice", type="Person", description="d"),
+                  Entity(name="Bob", type="Person", description="d")],
+        triples=[Triple(subject="Alice", predicate="friend_of", object="Bob")],
+    )
+    rag = await rag_factory(extraction=friends,
+                            exclusive_predicate_groups=[{"friend_of", "rivals_with"}])
+    await rag.index_document("friends", metadata=DocumentMetadata(document="a.txt"))
+    rag.llm._extraction = ExtractionResult(
+        entities=[Entity(name="Alice", type="Person", description="d")],
+        triples=[Triple(subject="Alice", predicate="rivals_with", object="Bob")],
+    )
+    await rag.index_document("rivals", metadata=DocumentMetadata(document="b.txt"))
+
+    data = await rag.query_data("Alice", param=QueryParam(
+        mode="mix", top_k=5, ll_keywords=["Alice"], include_superseded=True))
+    superseded = [r for r in data["data"]["relationships"] if r.get("superseded_by")]
+    assert superseded, "supersession did not fire"
+    assert superseded[0]["t_expired"], "belief expiry was not stamped"
+
+
+# ------------------------------------------------------------ lexical channel
+
+async def test_lexical_search_finds_a_rare_identifier(rag_factory):
+    """What the lexical channel is for: a token embeddings place badly."""
+    parts = ExtractionResult(
+        entities=[Entity(name="Boeing", type="Org", description="d"),
+                  Entity(name="737-9", type="Product", description="d")],
+        triples=[Triple(subject="Boeing", predicate="grounded", object="737-9",
+                        description="The 737-9 fleet was grounded after the door plug failure")],
+    )
+    rag = await rag_factory(extraction=parts)
+    await rag.index_document("text", metadata=DocumentMetadata(document="a.txt"))
+
+    hits = await rag.store.search_relations_text("door plug", top_k=5)
+    assert hits, "lexical search found nothing for a phrase present in the text"
+    assert hits[0][1] > 0, "a match must carry a positive rank"
+
+
+async def test_lexical_search_ignores_an_absent_term(rag_factory):
+    rag = await rag_factory(extraction=DOC_A)
+    await rag.index_document("text", metadata=DocumentMetadata(document="a.txt"))
+    assert await rag.store.search_relations_text("submarine", top_k=5) == []
+
+
+async def test_lexical_search_on_empty_query_is_a_no_op(rag_factory):
+    rag = await rag_factory(extraction=DOC_A)
+    assert await rag.store.search_relations_text("   ", top_k=5) == []
