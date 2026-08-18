@@ -766,9 +766,23 @@ questions, 1.0 on chain questions, and the two graphs disagreed overall. RRF
 needs no such constant: a relation ranked well by several channels outranks one
 ranked well by a single channel, so agreement does the work the quota guesses.
 
-Measured on `boeing_mm`, mean on-topic share of the 25 relations reaching the
-prompt. Every column receives identical channels, so the differences are the
-merge and the channel, separated:
+**Corrected measurement.** The table below came from an offline harness that
+rebuilt the channels by hand. Measuring through `query_data` itself gives
+different absolute numbers, because the harness did not reproduce the entity
+seeding and hop-ordered filtering the real path applies:
+
+| through `query_data` | deferred costs | cash flow | 737 over time | FAA | mean |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| quota 0.5 | 76% | 60% | 88% | **100%** | 81% |
+| **RRF, three channels** | **92%** | **92%** | **100%** | 84% | **92%** |
+
+RRF wins three of four and loses the FAA question, which names a well-connected
+entity traversal already covers completely — fusion can only dilute there. The
+offline harness understated the quota baseline by more than twenty points, so
+the numbers to quote are these, not the ones below.
+
+The offline ablation still stands as a *relative* result, and it is the reason
+RRF is the default rather than a tuning option:
 
 | | mean on-topic |
 | :--- | ---: |

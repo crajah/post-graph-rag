@@ -588,6 +588,7 @@ class GraphRAG:
         similar_docs: List[Tuple[Vertex, float]] = []
         graph_triples: List[Dict[str, Any]] = []
         relation_seeded: List[Dict[str, Any]] = []
+        relation_lexical: List[Dict[str, Any]] = []
 
         if mode in ENTITY_MODES:
             similar_entities = await self.store.search_similar_entities(
@@ -624,7 +625,9 @@ class GraphRAG:
             # relationship whose endpoints are generically named never surfaces
             # the right edges however well the candidates are ordered. This
             # searches every relation instead of walking to it.
-            if self.config.embed_relations and self.config.relation_seed_quota > 0:
+            if self.config.embed_relations and (
+                    self.config.merge_strategy == "rrf"
+                    or self.config.relation_seed_quota > 0):
                 seeded = []
                 for edge, _dist in await self.store.search_similar_relations(
                     query_vec, top_k=self.config.max_relation_edges, space=target_space
@@ -633,6 +636,17 @@ class GraphRAG:
                     if src is not None and tgt is not None:
                         seeded.append(self._format_triple(edge, src, tgt, hops=1))
                 relation_seeded = seeded
+
+            # Third channel: lexical retrieval. Embeddings place rare
+            # identifiers badly — a part number or a designation like 737-9
+            # carries the question's meaning and sits nowhere useful in vector
+            # space — and those are frequently the term a question turns on.
+            if self.config.lexical_search:
+                for edge, _rank in await self.store.search_relations_text(
+                        question, top_k=self.config.lexical_top_k, space=target_space):
+                    src, tgt = await self.store.get_relation_endpoints(edge)
+                    if src is not None and tgt is not None:
+                        relation_lexical.append(self._format_triple(edge, src, tgt, hops=1))
 
             # Pull in passages that mention the matched entities. A question can
             # match an entity by name while the passage explaining it uses none
@@ -655,14 +669,27 @@ class GraphRAG:
             graph_triples.extend(await self._global_relations(p, query_vec, target_space))
 
         # Each channel is filtered and ordered on its own terms — traversal by
-        # hop distance, relation search by similarity — then interleaved to a
-        # quota. Ranking the pool by a single score would hand every slot to the
-        # relation channel and lose what traversal is better at.
-        graph_triples = self._dedupe_triples(self._merge_by_quota(
-            self._filter_temporal(self._dedupe_triples(graph_triples), p),
-            self._filter_temporal(relation_seeded, p, sort=False),
-            self.config.relation_seed_quota,
-        ))
+        # hop distance, relation search by similarity, lexical by ts_rank — and
+        # then combined. Ranking a pooled set by any single score would hand
+        # every slot to whichever channel that score belongs to.
+        traversed = self._filter_temporal(self._dedupe_triples(graph_triples), p)
+        seeded = self._filter_temporal(relation_seeded, p, sort=False)
+        lexical = self._filter_temporal(relation_lexical, p, sort=False)
+
+        if self.config.merge_strategy == "rrf":
+            # Fusion, not a fixed share: a relation several channels agree on
+            # outranks one a single channel ranked first. A quota cannot admit
+            # a third channel without re-tuning its constant, and appending one
+            # to an existing list buries it behind entries the token budget
+            # truncates.
+            graph_triples = self._dedupe_triples(
+                self._merge_by_rrf([c for c in (traversed, seeded, lexical) if c]))
+        else:
+            # The earlier fixed-share interleave. Kept because every measurement
+            # in evaluation/README.md before RRF was taken against it, and it
+            # ignores the lexical channel by construction.
+            graph_triples = self._dedupe_triples(self._merge_by_quota(
+                traversed, seeded, self.config.relation_seed_quota))
 
         formatted_entities = [{
             "entity_name": v.payload.get("name"),
