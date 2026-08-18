@@ -133,7 +133,7 @@ async def judge(llm, question, gold, answer) -> bool:
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "oracle.json"))
-    ap.add_argument("--model", default="gemma-4-31b-it")
+    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
     ap.add_argument("--judge-model", default="gemini-3.6-flash")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--limit", type=int, default=20)
@@ -157,6 +157,33 @@ async def main():
     assert args.model != args.judge_model, "a judge must not grade its own answers"
     judge_llm = LLMService(RAGConfig(model=args.judge_model, max_retries=8,
                                      retry_deadline_secs=300))
+
+    # Preflight: index one real session and confirm relations come back before
+    # committing to the full sweep. Four runs have died on model availability —
+    # a name the router advertises but does not serve, a name differing by one
+    # character — and each cost an hour to discover what this costs seconds.
+    probe = GraphRAG(RAGConfig(
+        model=args.model, realm="lme_preflight", schema_per_realm=True,
+        embedding_model=args.embedding_model, embedding_dim=1536,
+        embed_relations=True, max_retries=6, retry_deadline_secs=180))
+    await probe.initialize()
+    try:
+        sample = data[0]
+        await probe.index_document(
+            render_session(sample["haystack_sessions"][0],
+                           parse_date(sample["haystack_dates"][0])),
+            metadata=DocumentMetadata(document="preflight"))
+        rels = await probe.store.get_all_relations(limit=5)
+        if not rels:
+            raise SystemExit(
+                f"preflight failed: {args.model} indexed a session and produced no "
+                f"relations. The sweep would report every instance as degraded.")
+        print(f"preflight OK: {args.model} produced {len(rels)} relations")
+    finally:
+        try:
+            await probe.store.client._execute('DROP SCHEMA IF EXISTS "lme_preflight" CASCADE;')
+        finally:
+            await probe.close()
 
     print(f"{len(data)} instances | model={args.model} judge={args.judge_model} "
           f"merge={args.merge_strategy}")
