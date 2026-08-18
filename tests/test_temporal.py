@@ -485,3 +485,42 @@ def test_relation_channel_keeps_similarity_order():
     ]
     kept = rag._filter_temporal(seeded, QueryParam(), sort=False)
     assert [t["tgt_id"] for t in kept] == ["closest", "next"]
+
+
+# ------------------------------------------------------------------- RRF
+
+def _t3(src, pred, tgt):
+    return {"src_id": src, "relation_type": pred, "tgt_id": tgt}
+
+
+def test_rrf_rewards_agreement_between_channels():
+    """A triple ranked by two channels beats one ranked first by only one.
+
+    This is the property a quota cannot express: the quota allocates slots by
+    a fixed share, so a triple every channel agrees on still waits its turn.
+    """
+    a = [_t3("A", "r", "1"), _t3("A", "r", "2")]
+    b = [_t3("A", "r", "3"), _t3("A", "r", "2")]
+    merged = GraphRAG._merge_by_rrf([a, b])
+    assert merged[0]["tgt_id"] == "2", "the agreed triple did not lead"
+
+
+def test_rrf_deduplicates_across_channels():
+    a = [_t3("A", "r", "1")]
+    b = [_t3("a", "R", "1")]          # same triple, different casing
+    assert len(GraphRAG._merge_by_rrf([a, b])) == 1
+
+
+def test_rrf_loses_nothing():
+    a = [_t3("A", "r", str(i)) for i in range(5)]
+    b = [_t3("B", "r", str(i)) for i in range(3)]
+    assert len(GraphRAG._merge_by_rrf([a, b])) == 8
+
+
+def test_rrf_with_one_channel_preserves_its_order():
+    a = [_t3("A", "r", str(i)) for i in range(4)]
+    assert [t["tgt_id"] for t in GraphRAG._merge_by_rrf([a])] == ["0", "1", "2", "3"]
+
+
+def test_rrf_is_inert_on_empty_channels():
+    assert GraphRAG._merge_by_rrf([[], []]) == []
