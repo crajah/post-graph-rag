@@ -229,3 +229,6 @@ evaluation/sec_boeing/
 
 # Local agent/session state
 .claude/
+
+# LongMemEval dataset (15MB, fetched by evaluation/longmemeval/fetch.sh)
+evaluation/longmemeval/*.json
