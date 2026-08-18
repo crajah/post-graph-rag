@@ -72,6 +72,39 @@ class RAGConfig:
     # default as the setting that leads on the commonest question shapes; raise
     # it toward 1.0 for chain-heavy corpora or poorer extraction, and measure
     # with evaluation/blind_quota_judge.py rather than guessing.
+    # How the retrieval channels are combined. "rrf" fuses them by reciprocal
+    # rank, which needs no share constant and lets a third channel contribute
+    # without re-tuning; "quota" is the earlier fixed-share interleave, kept
+    # because it is what every earlier measurement in evaluation/README.md was
+    # taken against.
+    #
+    # Measured through query_data itself on five Boeing 10-K filings, mean
+    # on-topic share of the 25 relations reaching the prompt:
+    #
+    #   quota   81%      rrf   92%      (rrf wins 3 of 4 questions)
+    #
+    # An offline harness that rebuilt the channels by hand reported 59% for the
+    # quota, and was wrong: it did not reproduce the entity seeding and
+    # hop-ordered filtering the real path applies, so it understated the
+    # baseline by more than 20 points. Only the figures above come from the
+    # shipped retrieval path, and they are the ones to trust.
+    #
+    # An ablation on that same harness still stands as a *relative* result: the
+    # lexical channel added to a quota changed nothing at all, because a quota
+    # interleaves traversal against one seeded list and appended lexical results
+    # sit behind entries the token budget already truncates. RRF is what makes a
+    # third channel reachable, which is the reason this defaults to it.
+    #
+    # rrf loses on one of the four — the FAA question, 100% to 84%. That names a
+    # well-connected entity traversal already covers completely, so fusion can
+    # only dilute. A corpus of such questions is the case for "quota".
+    merge_strategy: str = field(
+        default_factory=lambda: _env("RAG_MERGE_STRATEGY", "rrf"))
+    # Lexical (full-text) retrieval over relations, the third channel. Costs a
+    # GIN index, built on first use.
+    lexical_search: bool = field(
+        default_factory=lambda: _env("RAG_LEXICAL_SEARCH", "1").lower() in ("1", "true", "yes"))
+    lexical_top_k: int = field(default_factory=lambda: int(_env("RAG_LEXICAL_TOP_K", "50")))
     relation_seed_quota: float = field(
         default_factory=lambda: float(_env("RAG_RELATION_SEED_QUOTA", "0.5")))
     # Sent explicitly because the OpenAI SDK otherwise negotiates 'base64' on its
