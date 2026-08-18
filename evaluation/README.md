@@ -756,3 +756,43 @@ document, putting a model in the resolution path is the wrong trade.
 propagation drifts from a full run and needs periodic refreshes. A Leiden
 rebuild is a known-good partition, which is the better default until
 incremental update is a measured bottleneck rather than an assumed one.
+
+
+### Reciprocal rank fusion, and why the lexical channel needs it
+
+The quota needs a constant saying how much context each channel deserves, and
+the blind comparison could not settle it — 0.5 led on entity and thematic
+questions, 1.0 on chain questions, and the two graphs disagreed overall. RRF
+needs no such constant: a relation ranked well by several channels outranks one
+ranked well by a single channel, so agreement does the work the quota guesses.
+
+Measured on `boeing_mm`, mean on-topic share of the 25 relations reaching the
+prompt. Every column receives identical channels, so the differences are the
+merge and the channel, separated:
+
+| | mean on-topic |
+| :--- | ---: |
+| quota 0.5, two channels | 59% |
+| RRF, two channels | 64% |
+| **RRF, three channels** | **84%** |
+| quota 0.5 + lexical folded into the seeded side | 59% |
+
+**The last row is the finding.** Adding the lexical channel to the quota
+changes nothing at all. The quota interleaves traversal against one "seeded"
+list, so appending lexical results to that list puts them behind entries that
+the 25-relation budget already truncates — they never surface. The channel is
+only reachable when the merge treats it as a peer.
+
+So neither change carries the gain alone: fusion alone is +5, and the third
+channel is worth +20 *only* under fusion. That is an argument about
+architecture rather than tuning — a fixed-share merge cannot accommodate a new
+generator without re-tuning the share, while RRF admits one for free.
+
+The FAA question is the exception, gaining little (52% to 56%). It names a
+well-connected entity that traversal already reaches, which is the case the
+earlier quota measurement also found least improvable.
+
+A caveat this measurement inherits: on-topic share counts keyword overlap,
+which flatters lexical matching by construction. The direction is large enough
+to survive that bias, but the magnitude should not be quoted without the blind
+answer comparison that settled the quota question.

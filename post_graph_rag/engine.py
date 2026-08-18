@@ -907,6 +907,39 @@ class GraphRAG:
         return sorted(triples, key=score, reverse=True)[:limit]
 
     @staticmethod
+    def _merge_by_rrf(channels: List[List[Dict[str, Any]]], k: int = 60) -> List[Dict[str, Any]]:
+        """Reciprocal rank fusion across any number of ranked channels.
+
+        score(d) = sum over channels of 1 / (k + rank(d))
+
+        The alternative to a hand-set quota. A quota needs a constant that says
+        how much of the context each channel deserves, and the blind comparison
+        could not settle that constant: 0.5 led on entity and thematic
+        questions while 1.0 led on chain questions, and the two graphs
+        disagreed overall. RRF needs no such constant — a document ranked well
+        by two channels outranks one ranked well by a single channel, and
+        agreement between channels does the work the quota was guessing at.
+
+        k=60 is the value from the original TREC work; it damps the difference
+        between the top ranks so a channel cannot dominate on its first result
+        alone.
+        """
+        scores: Dict[str, float] = {}
+        seen: Dict[str, Dict[str, Any]] = {}
+        for channel in channels:
+            for rank, triple in enumerate(channel, start=1):
+                key = "\u0000".join((
+                    str(triple.get("src_id", "")).lower(),
+                    str(triple.get("relation_type", "")).lower(),
+                    str(triple.get("tgt_id", "")).lower(),
+                ))
+                scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank)
+                # Keep the first sighting: channels order by their own criteria
+                # and the earliest is the best that channel had to offer.
+                seen.setdefault(key, triple)
+        return [seen[key] for key in sorted(scores, key=lambda x: -scores[x])]
+
+    @staticmethod
     def _merge_by_quota(
         traversed: List[Dict[str, Any]],
         seeded: List[Dict[str, Any]],
