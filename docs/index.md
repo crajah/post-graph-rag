@@ -473,6 +473,38 @@ None of these raise. All produce confident answers. The general lesson is that i
 
 ---
 
+## LongMemEval, and three features adapted from Graphiti
+
+Everything above is measured against LightRAG on corpora chosen here. [LongMemEval](https://arxiv.org/abs/2410.10813) is someone else's data scored by someone else's method, and it is what Zep publish on ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)) — the fairest available comparison for a temporally-aware graph.
+
+On the oracle variant, 20 instances, `gemini-3.6-flash` with a panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2 voting by majority:
+
+| | accuracy |
+| :--- | ---: |
+| **temporal-reasoning** | **13/16 — 81%** |
+| knowledge-update | 2/4 — 50% |
+| **overall** | **15/20 — 75%** |
+
+The judges agreed on 59 of 60 votes, so the figure describes the answers rather than the grader. Two changes of comparable size got it there: a conversational extraction prompt (25% → 45%), because the default forbids pronouns and possessive phrases and so discards the entire subject matter of a chat log, and the answering model (45% → 70%).
+
+Three further features are adapted from Graphiti, all shipping off by default: **MMR** diversification of the merged candidates, **node-distance reranking**, and **LLM contradiction detection** to complement the declarative supersession above. Measured paired — each instance indexed once, every variant answering from that identical graph:
+
+| | accuracy | delta |
+| :--- | ---: | ---: |
+| baseline | 60% | — |
+| MMR | 65% | +5 |
+| **node distance** | **70%** | **+10** |
+
+Contradiction detection changes what is written rather than what is read, so it gets its own re-indexed baseline: 75% against 70%.
+
+### Pairing is what makes those numbers mean anything
+
+Measured the obvious way, with a fresh index per variant, node-distance reranking scored −5. The same code scores +10 once every variant reads the same graph. The repeats explain it: they agreed in 80 of 80 cells, so with the graph held fixed the system is deterministic, and all the movement lives in extraction. A run that re-indexes per arm is measuring the extractor rather than the feature.
+
+The same baseline has scored 75%, 70% and 60% on identical code and identical instances, purely from re-indexing. At 20 instances, effects of this size are promising rather than established — the sign test on node distance gives p = 0.31, and separating them cleanly needs 100–200 instances. All three point the same way, and each addresses a specific gap: MMR because RRF fuses three channels that correlate and a restatement costs a slot at top_k of eight; node distance because the relation-embedding and lexical channels report `hops=1` for everything, never having walked; contradiction detection because `exclusive_predicate_groups` only fires on predicate pairs declared in advance between the same two entities, and so cannot see "lives in Paris" becoming "lives in Berlin".
+
+---
+
 ## Limitations
 
 **Community summarisation is single-level.** GraphRAG's hierarchical levels are not implemented, so semantically overlapping clusters can coexist. Leiden at resolution 2.0 keeps the largest cluster to 17% of the graph, which makes this tolerable rather than solved.

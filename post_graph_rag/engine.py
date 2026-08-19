@@ -2,7 +2,8 @@ import asyncio
 import inspect
 import math
 import logging
-from typing import Callable, List, Dict, Any, Optional, Sequence, Tuple, Union
+import re
+from typing import Callable, List, Dict, Any, Optional, Sequence, Set, Tuple, Union
 from post_graph import Vertex
 from post_graph_rag.chunking import make_paragraph_chunker
 from post_graph_rag.communities import default_detector, group_by_community
@@ -400,11 +401,38 @@ class GraphRAG:
                 source_chunk=doc_vertex.id,
             )
             added_relations.append(edge)
+            declared = []
             if self.config.exclusive_predicate_groups:
-                superseded.extend(await self.store.supersede_conflicting(
+                declared = await self.store.supersede_conflicting(
                     subj_vertex.id, obj_vertex.id, triple.predicate, edge.id,
                     self.config.exclusive_predicate_groups, space=target_space,
-                ))
+                )
+                superseded.extend(declared)
+
+            # The declarative pass only fires on predicate pairs someone
+            # declared in advance, and only between the same two entities. A
+            # contradiction that changes the object — "lives in Paris" then
+            # "lives in Berlin" — cannot be seen that way, and reaches
+            # retrieval with both sides looking current. Ask the model, but
+            # only about what is left: the deterministic path has already run,
+            # and anything it resolved is excluded below.
+            if self.config.contradiction_detection and not declared:
+                candidates = [
+                    c for c in await self.store.find_contradiction_candidates(
+                        subj_vertex.id, edge.id,
+                        limit=self.config.contradiction_candidates,
+                        space=target_space)
+                    if c["id"] not in set(superseded)
+                ]
+                contradicted = await self.extractor.detect_contradictions(
+                    f"{subj_vertex.payload.get('name', subj_vertex.id)} "
+                    f"-[{triple.predicate}]-> "
+                    f"{obj_vertex.payload.get('name', obj_vertex.id)}"
+                    + (f": {triple.description}" if triple.description else ""),
+                    candidates,
+                )
+                superseded.extend(await self.store.mark_superseded(
+                    contradicted, edge.id, space=target_space))
 
         # Link the chunk to every entity it mentions, populating doc_mentions.
         mentioned = {v.id: v for v in entity_vertex_map.values()}
@@ -589,6 +617,7 @@ class GraphRAG:
         graph_triples: List[Dict[str, Any]] = []
         relation_seeded: List[Dict[str, Any]] = []
         relation_lexical: List[Dict[str, Any]] = []
+        node_distances: Dict[str, int] = {}
 
         if mode in ENTITY_MODES:
             similar_entities = await self.store.search_similar_entities(
@@ -605,6 +634,10 @@ class GraphRAG:
                 p.include_superseded if p.include_superseded is not None
                 else self.config.include_superseded
             )
+            # Hop count per vertex, accumulated from the walk. The channels that
+            # do not walk have no distance of their own, and this is the only
+            # place a real one is known.
+            node_distances.update({v.id: 0 for v, _ in similar_entities})
             for entity_vertex, _dist in similar_entities:
                 # Supersession and as-of are applied inside the walk as well as
                 # after it. Filtering only the result set would still let a path
@@ -619,6 +652,9 @@ class GraphRAG:
                     max_edges=self.config.max_relation_edges,
                 ):
                     graph_triples.append(self._format_triple(edge, source, target, hops))
+                    for endpoint in (source, target):
+                        if hops < node_distances.get(endpoint.id, 1 << 30):
+                            node_distances[endpoint.id] = hops
 
             # Second channel: relations found by searching their own embeddings.
             # Traversal can only rank what it reached, so a question describing a
@@ -690,6 +726,16 @@ class GraphRAG:
             # ignores the lexical channel by construction.
             graph_triples = self._dedupe_triples(self._merge_by_quota(
                 traversed, seeded, self.config.relation_seed_quota))
+
+        # Reranking runs after the merge and before truncation, which is the
+        # only point where every channel's candidates sit in one order and none
+        # has been discarded yet. Distance first, then MMR: distance is a
+        # statement about relevance, and MMR is defined as a trade against
+        # whatever relevance order it is handed.
+        if self.config.node_distance_rerank:
+            graph_triples = self._rerank_by_node_distance(graph_triples, node_distances)
+        if self.config.mmr_enabled:
+            graph_triples = self._apply_mmr(graph_triples, self.config.mmr_lambda)
 
         formatted_entities = [{
             "entity_name": v.payload.get("name"),
@@ -850,6 +896,12 @@ class GraphRAG:
         return {
             "src_id": from_v.payload.get("name", from_v.id),
             "tgt_id": to_v.payload.get("name", to_v.id),
+            # Identifiers, kept alongside the display names. Reranking needs to
+            # look a relation up (its embedding) and to know which vertices it
+            # joins; names are ambiguous and are what the prompt renders.
+            "edge_id": getattr(edge, "id", None),
+            "src_key": from_v.id,
+            "tgt_key": to_v.id,
             "relation_type": edge.relation_type,
             "description": payload.get("description", ""),
             "weight": payload.get("weight", 1),
@@ -965,6 +1017,114 @@ class GraphRAG:
                 # and the earliest is the best that channel had to offer.
                 seen.setdefault(key, triple)
         return [seen[key] for key in sorted(scores, key=lambda x: -scores[x])]
+
+    @staticmethod
+    def _triple_tokens(triple: Dict[str, Any]) -> Set[str]:
+        """Content words of a triple, for measuring overlap between two of them."""
+        text = " ".join(str(triple.get(f, "")) for f in
+                        ("src_id", "relation_type", "tgt_id", "description"))
+        return {w for w in re.findall(r"[\w-]+", text.lower()) if len(w) > 2}
+
+    # Two relations joining the same pair of entities are usually one fact
+    # said twice — "uses Disney+" and "subscribed_to Disney+". Not always,
+    # though: "produces 737" and "discontinued 737" share endpoints and are
+    # both worth keeping. So this is weighted as a strong hint rather than
+    # certainty, high enough to lose a close contest and too low to bury
+    # anything on its own.
+    _SAME_ENDPOINTS_REDUNDANCY = 0.6
+
+    @classmethod
+    def _redundancy(cls, a: Dict[str, Any], b: Dict[str, Any]) -> float:
+        """How much of `b` is already said by `a`, in [0, 1].
+
+        Two signals, whichever is stronger. Word overlap catches restatement
+        across different entity pairs. Shared endpoints catch the case word
+        overlap measures badly: `_dedupe_triples` has already removed exact
+        (subject, predicate, object) repeats, so a surviving restatement is one
+        whose description is worded differently — and those differing words
+        drag Jaccard down to around 0.25 precisely when the two triples are
+        most redundant, which is backwards.
+
+        Deliberately lexical rather than embedding-based. Measuring by
+        embedding would be sharper on pure paraphrase, but it needs the vectors,
+        which is another read per candidate to reorder the few that survive
+        truncation. If measurement shows paraphrase slipping through, that is
+        the upgrade — the interface here does not change.
+        """
+        ta, tb = cls._triple_tokens(a), cls._triple_tokens(b)
+        jaccard = len(ta & tb) / len(ta | tb) if ta and tb else 0.0
+        same_endpoints = (
+            str(a.get("src_id", "")).lower() == str(b.get("src_id", "")).lower()
+            and str(a.get("tgt_id", "")).lower() == str(b.get("tgt_id", "")).lower()
+            and bool(a.get("src_id"))
+        )
+        return max(jaccard, cls._SAME_ENDPOINTS_REDUNDANCY if same_endpoints else 0.0)
+
+    @classmethod
+    def _apply_mmr(cls, triples: List[Dict[str, Any]], lambda_: float,
+                   limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Reorder by maximal marginal relevance.
+
+        Relevance here is the incoming order — whatever RRF or the quota
+        decided — so this only ever demotes a candidate for being redundant
+        with one already chosen. It never promotes on diversity alone, which is
+        what keeps a low lambda from filling the context with unrelated facts.
+
+        Greedy and O(n^2) in the candidate count, which is fine: this runs on a
+        merged list of tens, after truncation would otherwise have thrown most
+        of it away.
+        """
+        if not triples or lambda_ >= 1.0:
+            return triples[:limit] if limit else triples
+        lambda_ = max(0.0, lambda_)
+        n = len(triples)
+        # Rank position stands in for relevance, normalised so it is comparable
+        # with the redundancy term.
+        relevance = {i: 1.0 - (i / n) for i in range(n)}
+        remaining = set(range(n))
+        chosen: List[int] = []
+        target = min(limit or n, n)
+        while remaining and len(chosen) < target:
+            best, best_score = None, float("-inf")
+            for i in sorted(remaining):
+                penalty = max((cls._redundancy(triples[i], triples[j])
+                               for j in chosen), default=0.0)
+                score = lambda_ * relevance[i] - (1.0 - lambda_) * penalty
+                if score > best_score:
+                    best, best_score = i, score
+            assert best is not None
+            chosen.append(best)
+            remaining.discard(best)
+        return [triples[i] for i in chosen]
+
+    @staticmethod
+    def _rerank_by_node_distance(
+        triples: List[Dict[str, Any]],
+        distances: Dict[str, int],
+    ) -> List[Dict[str, Any]]:
+        """Order by graph distance from the entities the question matched.
+
+        `hops` on a triple is only meaningful for the traversal channel; the
+        relation-embedding and lexical channels set it to 1 because they never
+        walked anywhere. `distances` is the real hop count per vertex, built
+        from the traversal, so a relation those channels found far from
+        anything the question mentioned is ranked as far.
+
+        A relation neither endpoint of which was reached keeps its incoming
+        position rather than being dropped: not reaching it is exactly why the
+        other channels exist. Sorting is stable, so within one distance the
+        merge order survives.
+        """
+        if not distances:
+            return triples
+        unreached = max(distances.values(), default=0) + 1
+
+        def distance(t: Dict[str, Any]) -> int:
+            ends = [distances.get(str(t.get(k))) for k in ("src_key", "tgt_key")]
+            found = [d for d in ends if d is not None]
+            return min(found) if found else unreached
+
+        return sorted(triples, key=distance)
 
     @staticmethod
     def _merge_by_quota(

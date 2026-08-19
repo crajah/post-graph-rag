@@ -661,6 +661,85 @@ class RAGGraphStore:
             superseded.append(str(row["id"]))
         return superseded
 
+    async def find_contradiction_candidates(
+        self,
+        from_id: str,
+        new_edge_id: str,
+        limit: int = 8,
+        space: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Current relations about the same subject, as candidates to contradict.
+
+        Scoped to the subject rather than the subject-object pair, which is what
+        `supersede_conflicting` uses. A contradiction usually changes the object
+        — "lives in Paris" then "lives in Berlin" — so a pair-scoped search
+        cannot see it by construction. That is precisely the case the
+        declarative pass misses.
+
+        Already-superseded relations are excluded: they have been retracted, and
+        re-retracting them would rewrite `t_expired` and corrupt the belief
+        history that supersession exists to preserve. Newest first, because a
+        contradiction is nearly always with a recent assertion.
+        """
+        target_space = space or self.space
+        table_ref = self.client._get_table_ref("relations", self.realm)
+        rows = await self.client._fetch(
+            f"SELECT id, relation_type, from_id, to_id, payload FROM {table_ref} "
+            f"WHERE realm = $1 AND space = $2 AND from_id = $3 AND id <> $4 "
+            f"AND (payload->>'superseded_by') IS NULL "
+            f"ORDER BY id DESC LIMIT $5",
+            self.realm, target_space, int(from_id), int(new_edge_id), int(limit),
+        )
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+            out.append({
+                "id": str(row["id"]),
+                "relation_type": row["relation_type"],
+                "from_id": str(row["from_id"]),
+                "to_id": str(row["to_id"]),
+                "description": payload.get("description", ""),
+                "valid_from": payload.get("valid_from"),
+                "valid_to": payload.get("valid_to"),
+            })
+        return out
+
+    async def mark_superseded(
+        self,
+        edge_ids: List[str],
+        new_edge_id: str,
+        space: Optional[str] = None,
+    ) -> List[str]:
+        """Retract specific relations in favour of a newer one.
+
+        The write half of `supersede_conflicting`, split out so contradiction
+        detection can reuse it and cannot drift from it. Both axes are set the
+        same way: `superseded_by` records what replaced the fact, `t_expired`
+        when this system stopped believing it.
+        """
+        if not edge_ids:
+            return []
+        table_ref = self.client._get_table_ref("relations", self.realm)
+        superseded = []
+        for edge_id in edge_ids:
+            rows = await self.client._fetch(
+                f"SELECT id, payload FROM {table_ref} WHERE realm = $1 AND id = $2",
+                self.realm, int(edge_id),
+            )
+            if not rows:
+                continue
+            payload = rows[0]["payload"] if isinstance(rows[0]["payload"], dict) else json.loads(rows[0]["payload"])
+            if payload.get("superseded_by"):
+                continue
+            payload["superseded_by"] = str(new_edge_id)
+            payload["t_expired"] = _utc_now()
+            await self.client._execute(
+                f"UPDATE {table_ref} SET payload = $1::jsonb WHERE realm = $2 AND id = $3",
+                json.dumps(payload), self.realm, int(edge_id),
+            )
+            superseded.append(str(edge_id))
+        return superseded
+
     async def add_doc_mention(self, doc_vertex: Vertex, entity_vertex: Vertex, space: Optional[str] = None) -> Optional[Edge]:
         """Link a document chunk to an entity it mentions, at most once.
 
