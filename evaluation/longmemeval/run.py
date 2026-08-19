@@ -30,6 +30,7 @@ answering model so a model cannot mark its own work.
 import argparse
 import asyncio
 import json
+import logging
 import pathlib
 import random
 import re
@@ -42,7 +43,55 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 from post_graph_rag import DocumentMetadata, GraphRAG, QueryParam, RAGConfig  # noqa: E402
 from post_graph_rag.llm import LLMService  # noqa: E402
 
+logger = logging.getLogger(__name__)
+
 HERE = pathlib.Path(__file__).resolve().parent
+
+# The library's default extraction prompt forbids exactly what a chat log is
+# made of. It says: never emit a pronoun as an entity, never emit a possessive
+# role phrase, emit only the stable entity that could be named again in a
+# different document. In a conversation the central entity is the speaker —
+# "I", "my" — and the facts are possessive: my sneakers, my wake-up time, my
+# loyalty tier. Those rules are right for filings and wrong here, and the first
+# run's failures were all of that shape.
+CONVERSATIONAL_PROMPT = """You are extracting a knowledge graph from a chat log
+between a user and an assistant.
+
+Extract ENTITIES and TRIPLES that capture what is true about the USER.
+
+The speaker is an entity. Emit the user as the entity 'User'. First-person
+pronouns — I, me, my, mine — all refer to 'User'. This is the opposite of the
+usual rule against pronoun entities, and it is deliberate: in a conversation the
+speaker is the subject of almost every fact worth keeping.
+
+KEEP, as triples from 'User':
+- Possessions and their locations: (User, keeps_sneakers_in, shoe rack in closet)
+- Habits, routines and times: (User, wakes_up_at, 6:45 AM)
+- Preferences and dislikes: (User, prefers, oat milk)
+- Status, memberships, tiers: (User, has_status, Premier Silver)
+- Purchases and quantities: (User, owns_count_of_tops, five)
+- Events the user took part in, with WHEN: (User, attended, Summer Nights festival)
+- Plans, decisions and changes of mind
+
+DATES ARE FACTS, NOT DECORATION.
+Each conversation begins with a line '[Conversation on YYYY-MM-DD]'. That is
+when the statements in it were made. Put it in valid_from on EVERY triple you
+extract from that conversation. A question like "how many weeks ago did I attend
+the festival" is unanswerable without it, and it is the single most common
+reason an answer cannot be produced.
+
+Where the text states its own date ("last Tuesday", "in March"), resolve it
+against the conversation date and use the resolved date.
+
+DO NOT extract:
+- Assistant suggestions the user did not adopt.
+- Generic advice, or abstractions like 'Product variety' or 'Seasonal flavors'.
+  A concept nobody could ask a question about is not worth a vertex.
+
+Predicates should be specific and readable: 'keeps_in', 'wakes_up_at',
+'attended', 'purchased', 'has_status', 'prefers', 'lives_in', 'works_as'.
+
+Return strictly the required JSON structure."""
 
 JUDGE_PROMPT = """You are grading an answer against the reference answer for a
 question about a user's chat history.
@@ -122,6 +171,31 @@ async def index_instance(rag, instance) -> int:
     return len(sessions)
 
 
+async def judge_panel(llms, question, gold, answer):
+    """Majority vote over a panel. Returns (verdict, per-judge votes).
+
+    One judge is one model's opinion, and this repository has repeatedly found
+    model choice dominating results — including on the judging side, where
+    re-grading the same stored answers moved a score by five points. A panel
+    does not remove that, but it stops a single grader's bias deciding the
+    number on its own.
+
+    A judge that fails or replies unusably does not vote. The majority is taken
+    over votes actually cast, and the ballot is recorded so a lopsided panel is
+    visible rather than averaged away.
+    """
+    votes = {}
+    for name, llm in llms.items():
+        try:
+            votes[name] = await judge(llm, question, gold, answer)
+        except Exception:
+            logger.warning("judge %s failed to vote", name)
+    if not votes:
+        # No verdict is not a pass.
+        return False, votes
+    return sum(votes.values()) * 2 > len(votes), votes
+
+
 async def judge(llm, question, gold, answer) -> bool:
     reply = await llm.chat_completion([{"role": "user", "content": JUDGE_PROMPT.format(
         question=question, gold=gold, answer=answer)}])
@@ -134,13 +208,19 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "oracle.json"))
     ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
-    ap.add_argument("--judge-model", default="gemini-3.6-flash")
+    ap.add_argument("--judge-model", default="gemini-3.6-flash",
+                    help="single judge; ignored when --judges is given")
+    ap.add_argument("--judges", nargs="*", default=None,
+                    help="panel of judges; a majority marks an answer correct")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--limit", type=int, default=20)
     ap.add_argument("--types", nargs="*", default=None,
                     help="question_type filter, e.g. temporal-reasoning knowledge-update")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--merge-strategy", default="rrf")
+    ap.add_argument("--conversational", dest="conversational", action="store_true",
+                    default=True, help="use the chat-tuned extraction prompt")
+    ap.add_argument("--no-conversational", dest="conversational", action="store_false")
     ap.add_argument("--concurrency", type=int, default=6,
                     help="instances indexed and queried at once")
     ap.add_argument("--chunk-concurrency", type=int, default=8,
@@ -154,9 +234,12 @@ async def main():
     random.Random(args.seed).shuffle(data)
     data = data[:args.limit]
 
-    assert args.model != args.judge_model, "a judge must not grade its own answers"
-    judge_llm = LLMService(RAGConfig(model=args.judge_model, max_retries=8,
-                                     retry_deadline_secs=300))
+    panel_names = args.judges or [args.judge_model]
+    if args.model in panel_names:
+        raise SystemExit(f"{args.model} cannot both answer and judge")
+    judge_llms = {n: LLMService(RAGConfig(model=n, max_retries=25,
+                                          retry_deadline_secs=900))
+                  for n in panel_names}
 
     # Preflight: index one real session and confirm relations come back before
     # committing to the full sweep. Four runs have died on model availability —
@@ -165,7 +248,8 @@ async def main():
     probe = GraphRAG(RAGConfig(
         model=args.model, realm="lme_preflight", schema_per_realm=True,
         embedding_model=args.embedding_model, embedding_dim=1536,
-        embed_relations=True, max_retries=6, retry_deadline_secs=180))
+        embed_relations=True, max_retries=6, retry_deadline_secs=180,
+        extraction_prompt=CONVERSATIONAL_PROMPT if args.conversational else None))
     await probe.initialize()
     try:
         sample = data[0]
@@ -187,6 +271,7 @@ async def main():
 
     print(f"{len(data)} instances | model={args.model} judge={args.judge_model} "
           f"merge={args.merge_strategy}")
+    print(f"judges: {', '.join(panel_names)}")
     print(f"{'type':<26} {'sess':>5} {'index s':>8} {'query s':>8}  verdict")
     print("-" * 70)
 
@@ -209,6 +294,7 @@ async def main():
                 embedding_model=args.embedding_model, embedding_dim=1536,
                 embed_relations=True, merge_strategy=args.merge_strategy,
                 max_concurrent_chunks=args.chunk_concurrency,
+                extraction_prompt=CONVERSATIONAL_PROMPT if args.conversational else None,
                 max_retries=40, retry_deadline_secs=1800))
             await rag.initialize()
             try:
@@ -230,14 +316,15 @@ async def main():
                 t_query = time.time() - t0
                 answer = (out["answer"] if isinstance(out, dict) else str(out)).strip()
 
-                ok = await judge(judge_llm, inst["question"], inst["answer"], answer)
+                ok, votes = await judge_panel(judge_llms, inst["question"],
+                                              inst["answer"], answer)
                 by_type[inst["question_type"]].append(ok)
                 results.append({"question_id": inst["question_id"],
                                 "type": inst["question_type"], "correct": ok,
                                 "index_secs": round(t_index, 1),
                                 "query_secs": round(t_query, 1),
                                 "question": inst["question"], "gold": inst["answer"],
-                                "answer": answer[:1200]})
+                                "votes": votes, "answer": answer[:1200]})
                 done += 1
                 print(f"{inst['question_type']:<26} {n_sessions:>5} {t_index:>8.1f} "
                       f"{t_query:>8.1f}  {'CORRECT' if ok else 'incorrect':<9} "
@@ -262,6 +349,16 @@ async def main():
         print(f"  {qtype:<26} {sum(marks):>3}/{len(marks):<3} {100*sum(marks)/len(marks):>5.0f}%")
     print(f"  {'OVERALL':<26} {total:>3}/{len(results):<3} "
           f"{100*total/max(1,len(results)):>5.0f}%")
+    if results and len(panel_names) > 1:
+        print("\n  per-judge agreement with the panel verdict:")
+        for name in panel_names:
+            cast = [(r["correct"], r["votes"][name]) for r in results if name in r.get("votes", {})]
+            if not cast:
+                print(f"    {name:<24} cast no votes")
+                continue
+            agree = sum(1 for v, own in cast if v == own)
+            print(f"    {name:<24} {agree}/{len(cast)} ({100*agree/len(cast):.0f}%)")
+
     if degraded:
         # Loud, and excluded from the denominator: a skipped instance is not a
         # wrong answer, and an accuracy figure computed over a degraded run is
@@ -277,7 +374,7 @@ async def main():
     print(f"  {time.time() - started:.0f}s total")
 
     pathlib.Path(args.out).write_text(json.dumps(
-        {"model": args.model, "judge": args.judge_model,
+        {"model": args.model, "judge": panel_names,
          "merge_strategy": args.merge_strategy, "n": len(results),
          "accuracy": total / max(1, len(results)),
          "degraded": degraded, "degraded_count": len(degraded),

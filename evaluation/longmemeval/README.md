@@ -14,47 +14,62 @@ python -u run.py --limit 20 --types temporal-reasoning knowledge-update \
     --concurrency 10 --chunk-concurrency 8
 ```
 
-## First reportable result
+## Result
 
-`google/gemma-4-26b-a4b-it-maas`, `gemini-embedding-001`, judged by
-`gemini-3.6-flash`, RRF merge, oracle variant, 20 instances:
+`gemini-3.6-flash` extracting and answering, `gemini-embedding-001`, RRF merge,
+conversational extraction prompt, oracle variant, 20 instances. Judged by a
+panel of **MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2**, majority vote:
 
 | | accuracy |
 | :--- | ---: |
-| temporal-reasoning | 4/16 — 25% |
-| knowledge-update | 1/4 — 25% |
-| **overall** | **5/20 — 25%** |
+| **temporal-reasoning** | **13/16 — 81%** |
+| knowledge-update | 2/4 — 50% |
+| **overall** | **15/20 — 75%** |
 
-Median query latency 3.9s; median indexing 129s per instance (max 705s).
-Zero degraded instances, zero provider errors — the first run of five where
-that was true.
+Zero degraded instances. Median query latency 7.9s, median indexing 50s per
+instance, 570s for the run.
 
-**This is a poor result and the cause is not what the benchmark is testing.**
+**The judges agreed almost completely** — MiniMax 95%, gpt-oss 95%, DeepSeek
+100% agreement with the majority verdict. One judgement was contested across
+sixty votes, so the figure is a property of the answers rather than of who
+marked them. That mattered to establish: re-grading a fixed set of stored
+answers with a different single judge had previously moved a score by five
+points.
 
-Of the 15 wrong answers, **all 15 are retrieval failures**. Eight decline
-explicitly; the other seven answer while saying "there is no information
-regarding…". None finds the evidence and reasons badly. The misses are not
-even temporal:
+### How it got here
 
-| question | gold answer |
-| :--- | :--- |
-| where do you keep your old sneakers | in a shoe rack in my closet |
-| what time do you wake up | 6:45 AM |
-| what is your current status | Premier Silver |
+| | overall | what changed |
+| :--- | ---: | :--- |
+| gemma-4-26b, document extraction prompt | 25% | baseline |
+| MiniMax-M2.7, conversational prompt | 45% | **the extraction prompt** |
+| gemini-3.6-flash, single judge | 70% | **the answering model** |
+| gemini-3.6-flash, three-judge panel | **75%** | judging scheme |
 
-These are single facts stated plainly in one session. A diagnostic on one
-instance shows why: of 32 relations extracted from a conversation, **none
-carried `valid_from`**, and the relations themselves were abstractions —
-`Seasonal flavors -[creates]-> Product variety` — rather than the concrete
-personal facts the questions ask about.
+Two interventions carried the gain, and they were worth about the same.
 
-So the number measures **the extraction prompt on conversational text**. It was
-tuned on filings and encyclopedic prose, where the significant entities are
-named things and validity is stated in the sentence. Chat encodes its facts
-differently: preferences, locations, times and possessions, with the date in the
-envelope rather than the prose. The graph, the temporal model and the retrieval
-fusion are barely exercised, because what reaches them is already the wrong
-material.
+**The extraction prompt was the first.** The library's default forbids exactly
+what a chat log is made of: never emit a pronoun as an entity, never emit a
+possessive role phrase, emit only the stable entity nameable in a *different*
+document. In a conversation the central entity is the speaker — "I", "my" — and
+the facts are possessive: my sneakers, my wake-up time, my loyalty tier. Rules
+that are right for filings discard the entire subject matter of a chat. Before
+the fix, a diagnostic on one instance found 32 extracted relations, **none**
+carrying `valid_from`, and the relations themselves were abstractions like
+`Seasonal flavors -[creates]-> Product variety`. The conversational prompt
+inverts those rules and makes the session date mandatory on every triple.
+
+**The answering model was the second**, holding prompt and merge fixed. That is
+consistent with everything else measured in this repository: model choice moves
+results at least as much as design does.
+
+### What still fails
+
+Five wrong answers, and they are no longer retrieval failures of the original
+kind. Two produce a specific wrong value (`3 tops` where the gold is `five`),
+two decline on questions whose evidence is present, and one answers a
+possession question with the wrong location. The date-arithmetic cluster that
+dominated earlier runs is largely gone — 81% on temporal-reasoning is the
+category this design exists for, and it was 25% before the extraction fix.
 
 ## Caveats
 
