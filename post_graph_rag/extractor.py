@@ -2,7 +2,7 @@
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from pydantic import BaseModel, Field
 
@@ -147,6 +147,37 @@ class ExtractionResult(BaseModel):
 class KeywordResultSchema(BaseModel):
     high_level_keywords: List[str] = Field(default_factory=list, description="High-level overarching themes, concepts, or intent terms")
     low_level_keywords: List[str] = Field(default_factory=list, description="Specific entities, proper nouns, jargon, or concrete items")
+
+
+class ContradictionResultSchema(BaseModel):
+    contradicted_ids: List[str] = Field(
+        default_factory=list,
+        description="IDs of existing facts the new fact contradicts. Empty if none.")
+
+
+CONTRADICTION_SYSTEM_PROMPT = """You decide which previously recorded facts a new fact makes false.
+
+You are given one NEW FACT and a numbered list of EXISTING FACTS about the same subject.
+Return the IDs of existing facts that the new fact CONTRADICTS.
+
+A fact is contradicted only when both cannot be true of the same subject at the same time:
+- "lives in Paris" vs "lives in Berlin" -> contradicted, a person lives in one place
+- "prefers tea" vs "prefers coffee" -> contradicted, a stated preference replaces the old one
+- "works at Acme" vs "works at Globex" -> contradicted unless the text supports holding both
+
+A fact is NOT contradicted when it merely differs, adds detail, or concerns another aspect:
+- "lives in Paris" vs "visited Berlin" -> not contradicted, different relations
+- "owns a car" vs "owns a bicycle" -> not contradicted, both can hold
+- "likes jazz" vs "likes jazz and blues" -> not contradicted, one refines the other
+- Facts whose stated validity periods do not overlap -> NOT contradicted, both held, at
+  different times. That is what the periods are for.
+
+Be conservative. Marking a fact contradicted retracts it from every future answer, so
+when the two can be read as coexisting, leave it alone. Returning an empty list is a
+correct and common answer.
+
+Respond with JSON: {"contradicted_ids": ["3", "7"]}
+"""
 
 
 BASE_SYSTEM_PROMPT = """You are an expert, domain-agnostic Knowledge Graph Extractor.
@@ -575,6 +606,51 @@ class GraphExtractor:
         return ExtractionResult(entities=entities, triples=triples)
 
     # ---------------------------------------------------------------- keywords
+
+    async def detect_contradictions(
+        self,
+        new_fact: str,
+        candidates: List[Dict[str, Any]],
+    ) -> List[str]:
+        """Which existing facts does the new one make false?
+
+        Returns candidate IDs. An empty list on any failure — a wrong answer
+        here retracts a true fact from every future query, so the failure mode
+        has to be "changed nothing", not "guessed". That is the opposite of the
+        fail-closed rule used during extraction, and deliberately so: there the
+        risk is silently indexing nothing, here it is silently deleting
+        something.
+
+        Only IDs that were actually offered are returned. A model that invents
+        an ID would otherwise retract an unrelated relation.
+        """
+        if not candidates:
+            return []
+        offered = {str(c["id"]) for c in candidates}
+        listing = "\n".join(
+            f"- ID {c['id']}: {c.get('description') or c.get('relation_type')}"
+            + (f" [valid {c.get('valid_from') or '?'} to {c.get('valid_to') or 'present'}]"
+               if c.get("valid_from") or c.get("valid_to") else "")
+            for c in candidates
+        )
+        messages = [
+            {"role": "system", "content": CONTRADICTION_SYSTEM_PROMPT},
+            {"role": "user", "content": f"NEW FACT:\n{new_fact}\n\nEXISTING FACTS:\n{listing}"},
+        ]
+        try:
+            res = await self.llm_service.chat_completion(
+                messages, response_format=ContradictionResultSchema)
+            if isinstance(res, ContradictionResultSchema):
+                ids = res.contradicted_ids
+            elif isinstance(res, str) and res.strip():
+                cleaned = res.strip().removeprefix("```json").removeprefix("```").removesuffix("```")
+                ids = json.loads(cleaned).get("contradicted_ids", [])
+            else:
+                return []
+        except Exception as e:
+            logger.warning("Contradiction detection failed (%s); retracting nothing.", e)
+            return []
+        return [str(i) for i in ids if str(i) in offered]
 
     async def extract_keywords(self, query: str) -> KeywordResult:
         """Extract high-level and low-level keywords from a user query.
