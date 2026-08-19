@@ -812,40 +812,34 @@ to survive that bias, but the magnitude should not be quoted without the blind
 answer comparison that settled the quota question.
 
 
-## LongMemEval: an external benchmark, and a poor result worth reading
+## LongMemEval
 
-Every other number in this document is structural. LongMemEval
-([arXiv:2501.13956](https://arxiv.org/abs/2501.13956), the benchmark Zep publish
-on) scores answers against someone else's data and someone else's judge.
+An external benchmark, and the only measurement here scored against someone
+else's data and someone else's judge. It is also what Zep publish on
+([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)), which makes it the
+fairest available comparison for a temporally-aware graph.
 
-Oracle variant, 20 instances, `google/gemma-4-26b-a4b-it-maas` with
-`gemini-embedding-001`, RRF merge, judged by `gemini-3.6-flash`:
+`gemini-3.6-flash`, RRF merge, conversational extraction prompt, oracle
+variant, 20 instances, judged by a panel of MiniMax-M2.7, gpt-oss-120b and
+DeepSeek-V3.2:
 
 | | accuracy |
 | :--- | ---: |
-| temporal-reasoning | 4/16 — 25% |
-| knowledge-update | 1/4 — 25% |
-| **overall** | **5/20 — 25%** |
+| **temporal-reasoning** | **13/16 — 81%** |
+| knowledge-update | 2/4 — 50% |
+| **overall** | **15/20 — 75%** |
 
-Median query latency 3.9s. Zero degraded instances, zero provider errors.
+The judges agreed on 59 of 60 votes, so the figure describes the answers rather
+than the grader — worth establishing, because re-grading a fixed set of answers
+with a different single judge had moved a score five points.
 
-**All 15 wrong answers are retrieval failures, not reasoning failures**, and the
-misses are not temporal — "where do you keep your old sneakers", "what time do
-you wake up", "what is your current status". Single facts, stated plainly in one
-session, not surfaced. A diagnostic shows why: of 32 relations extracted from a
-conversation, none carried `valid_from`, and the relations were abstractions
-(`Seasonal flavors -[creates]-> Product variety`) rather than the personal facts
-the questions ask about.
+Getting there took two changes of comparable size: a **conversational
+extraction prompt** (25% → 45%), because the default prompt forbids pronouns
+and possessive phrases and so discards the entire subject matter of a chat log;
+and the **answering model** (45% → 70%), consistent with model choice dominating
+every other measurement in this document.
 
-So the figure measures **the extraction prompt against conversational text**,
-which it was not designed for: it was tuned on filings and encyclopedic prose,
-where entities are named things and validity is stated in the sentence. The
-graph, the temporal model and the retrieval fusion are barely exercised, because
-what reaches them is already the wrong material.
-
-The oracle variant contains only evidence sessions, so it is *easier* than the
-haystacks Zep report on. Being behind on the easier variant understates the gap.
-
-Details, harness design decisions and the fail-closed rules are in
-[`longmemeval/README.md`](longmemeval/README.md). The next piece of work this
-implies is a conversational extraction prompt, not a retrieval change.
+Caveats: the oracle variant contains only evidence sessions, so it is easier
+than the S and M haystacks Zep report on; 20 instances, one seed. Details, the
+harness design decisions and the fail-closed rules are in
+[`longmemeval/README.md`](longmemeval/README.md).
