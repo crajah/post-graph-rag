@@ -843,3 +843,53 @@ Caveats: the oracle variant contains only evidence sessions, so it is easier
 than the S and M haystacks Zep report on; 20 instances, one seed. Details, the
 harness design decisions and the fail-closed rules are in
 [`longmemeval/README.md`](longmemeval/README.md).
+
+## Reranking and contradiction detection
+
+Three features adapted from [Graphiti](https://github.com/getzep/graphiti),
+measured on the same 20 LongMemEval instances with `gemini-3.6-flash` and the
+same three-judge panel. All three ship **off by default**.
+
+Retrieval-side features are measured **paired**: each instance is indexed once
+and every variant answers from that identical graph, three times.
+
+| | accuracy | delta | better / worse / unchanged |
+| :--- | ---: | ---: | :--- |
+| baseline | 60% | — | — |
+| MMR (`mmr_enabled`) | 65% | +5 | 2 / 1 / 17 |
+| **node distance** (`node_distance_rerank`) | **70%** | **+10** | 3 / 1 / 16 |
+| both | 65% | +5 | 3 / 2 / 15 |
+
+Contradiction detection changes what is written rather than what is read, so it
+is measured against its own re-indexed baseline: **75% against 70%**.
+
+**The pairing is what makes these numbers mean anything.** Measured the earlier
+way — one fresh index per variant — node-distance reranking scored −5, and the
+same code scores +10 once every variant reads the same graph. The repeats
+explain why: they agreed in **80 of 80 cells**, so with a graph held fixed the
+system is deterministic, and all the movement lives in extraction. A run that
+re-indexes per arm is measuring the extractor, not the feature.
+
+That variance is worth stating plainly: the baseline has scored 75%, 70% and
+60% on identical code and identical instances, purely from re-indexing. Effects
+of this size need roughly 100–200 instances to separate cleanly, and the sign
+tests here (p = 0.31 for node distance) put these results at *promising*. All
+three point the same way, and the mechanism for each is independently
+motivated:
+
+- **MMR** trades a little relevance for coverage. RRF fuses three channels that
+  correlate — traversal and relation-embedding search routinely return the same
+  fact worded differently — and at a top_k of eight a restatement costs a slot.
+- **Node distance** gives the relation-embedding and lexical channels a real
+  hop count. They report `hops=1` for everything because they never walked, so
+  without it a fact three hops from anything the question mentioned outranks one
+  sitting on it.
+- **Contradiction detection** covers what `exclusive_predicate_groups` cannot:
+  that pass only fires on predicate pairs declared in advance and only between
+  the same two entities, so it cannot see a contradiction that changes the
+  object — "lives in Paris" then "lives in Berlin". The model is asked only
+  about the residue the deterministic pass left, and it retracts nothing on a
+  failed or unparseable answer.
+
+Reproduce with [`longmemeval/ablate_retrieval.py`](longmemeval/ablate_retrieval.py)
+(paired) and `run.py --contradiction`.

@@ -107,6 +107,41 @@ class RAGConfig:
     lexical_top_k: int = field(default_factory=lambda: int(_env("RAG_LEXICAL_TOP_K", "50")))
     relation_seed_quota: float = field(
         default_factory=lambda: float(_env("RAG_RELATION_SEED_QUOTA", "0.5")))
+
+    # --- Reranking, applied after the channels are merged ---------------------
+    # RRF fuses the channels but says nothing about redundancy, and the channels
+    # correlate: traversal and relation-embedding search routinely return the
+    # same fact worded differently, and both feed a top_k of a handful. MMR
+    # trades a little relevance for coverage, keeping a candidate only if it
+    # adds something the already-selected ones do not.
+    mmr_enabled: bool = field(
+        default_factory=lambda: _env("RAG_MMR", "0").lower() in ("1", "true", "yes"))
+    # 1.0 is pure relevance (MMR off in effect), 0.0 pure diversity. Above ~0.8
+    # the penalty rarely changes the order; below ~0.4 it starts promoting
+    # unrelated relations over the ones that answer the question.
+    mmr_lambda: float = field(default_factory=lambda: float(_env("RAG_MMR_LAMBDA", "0.7")))
+
+    # Rank by graph distance from the entities the question matched. The
+    # traversal channel already carries true hop counts; the relation-embedding
+    # and lexical channels do not, because they never walked to what they found.
+    # This resolves a real distance for those, so a fact three hops from
+    # anything the question mentioned stops outranking one sitting on it.
+    node_distance_rerank: bool = field(
+        default_factory=lambda: _env("RAG_NODE_DISTANCE_RERANK", "0").lower() in ("1", "true", "yes"))
+
+    # --- Contradiction detection ---------------------------------------------
+    # `exclusive_predicate_groups` only fires when the conflicting pair was
+    # declared in advance, so an unforeseen contradiction reaches retrieval with
+    # both sides looking current. This asks the model, but only about the
+    # residue the declarative pass did not resolve — the cheap deterministic
+    # path stays first and the model never sees what it already handled.
+    # Off by default: it costs an LLM call per new relation that has candidates.
+    contradiction_detection: bool = field(
+        default_factory=lambda: _env("RAG_CONTRADICTION_DETECTION", "0").lower() in ("1", "true", "yes"))
+    # Existing relations offered to the model per new relation. Beyond a dozen
+    # or so the prompt dilutes and the judgement gets worse, not better.
+    contradiction_candidates: int = field(
+        default_factory=lambda: int(_env("RAG_CONTRADICTION_CANDIDATES", "8")))
     # Sent explicitly because the OpenAI SDK otherwise negotiates 'base64' on its
     # own, and gateways fronting non-OpenAI providers (litellm -> Vertex AI) reject
     # the parameter outright, failing every embedding call. 'float' is the API

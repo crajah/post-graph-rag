@@ -226,6 +226,16 @@ async def main():
     ap.add_argument("--chunk-concurrency", type=int, default=8,
                     help="chunks extracted at once within one instance")
     ap.add_argument("--out", default=str(HERE / "results.json"))
+    # Ablation switches. Each of the three features taken from Graphiti is off
+    # by default, so a run with no switches reproduces the 75% baseline and any
+    # difference is attributable to the one flag that was turned on.
+    ap.add_argument("--mmr", action="store_true",
+                    help="diversify the merged candidates by maximal marginal relevance")
+    ap.add_argument("--mmr-lambda", type=float, default=0.7)
+    ap.add_argument("--node-distance", action="store_true",
+                    help="rerank by graph distance from the matched entities")
+    ap.add_argument("--contradiction", action="store_true",
+                    help="ask the model which existing facts a new one retracts")
     args = ap.parse_args()
 
     data = json.loads(pathlib.Path(args.data).read_text())
@@ -271,6 +281,9 @@ async def main():
 
     print(f"{len(data)} instances | model={args.model} judge={args.judge_model} "
           f"merge={args.merge_strategy}")
+    on = [n for n, v in (("mmr", args.mmr), ("node-distance", args.node_distance),
+                         ("contradiction", args.contradiction)) if v]
+    print(f"features: {', '.join(on) if on else 'none (baseline)'}")
     print(f"judges: {', '.join(panel_names)}")
     print(f"{'type':<26} {'sess':>5} {'index s':>8} {'query s':>8}  verdict")
     print("-" * 70)
@@ -295,6 +308,9 @@ async def main():
                 embed_relations=True, merge_strategy=args.merge_strategy,
                 max_concurrent_chunks=args.chunk_concurrency,
                 extraction_prompt=CONVERSATIONAL_PROMPT if args.conversational else None,
+                mmr_enabled=args.mmr, mmr_lambda=args.mmr_lambda,
+                node_distance_rerank=args.node_distance,
+                contradiction_detection=args.contradiction,
                 max_retries=40, retry_deadline_secs=1800))
             await rag.initialize()
             try:
@@ -376,6 +392,12 @@ async def main():
     pathlib.Path(args.out).write_text(json.dumps(
         {"model": args.model, "judge": panel_names,
          "merge_strategy": args.merge_strategy, "n": len(results),
+         # Self-describing: an ablation result is meaningless without the
+         # switches it was taken under, and these files outlive the shell
+         # history that produced them.
+         "features": {"mmr": args.mmr, "mmr_lambda": args.mmr_lambda,
+                      "node_distance": args.node_distance,
+                      "contradiction": args.contradiction},
          "accuracy": total / max(1, len(results)),
          "degraded": degraded, "degraded_count": len(degraded),
          "reportable": not degraded,
