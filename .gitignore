@@ -232,3 +232,8 @@ evaluation/sec_boeing/
 
 # LongMemEval dataset (15MB, fetched by evaluation/longmemeval/fetch.sh)
 evaluation/longmemeval/*.json
+
+# ECT-QA dataset (27MB, fetched by evaluation/ectqa/fetch.sh)
+evaluation/ectqa/data/
+evaluation/ectqa/*.json
+evaluation/ectqa/filelist.txt
