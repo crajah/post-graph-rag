@@ -21,8 +21,8 @@ async def main():
     print("=" * 62)
 
     config = RAGConfig(
-        model=os.getenv("RAG_MODEL", "DeepSeek-V3.2"),
-        embedding_model=os.getenv("RAG_EMBEDDING_MODEL", "text-embedding-3-small"),
+        model=os.getenv("RAG_MODEL", "google/gemma-4-26b-a4b-it-maas"),
+        embedding_model=os.getenv("RAG_EMBEDDING_MODEL", "gemini-embedding-001"),
         embedding_dim=int(os.getenv("RAG_EMBEDDING_DIM", "1536")),
         realm=REALM,
         # Each realm gets its own schema, so the demo cannot collide with

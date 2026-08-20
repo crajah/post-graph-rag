@@ -22,8 +22,8 @@ class RAGConfig:
 
     api_base: str = field(default_factory=lambda: _env("OPENAI_API_BASE", "http://localhost:4000/v1"))
     api_key: str = field(default_factory=lambda: _env("OPENAI_API_KEY", _LOCAL_API_KEY_PLACEHOLDER))
-    model: str = field(default_factory=lambda: _env("RAG_MODEL", "DeepSeek-V3.2"))
-    embedding_model: str = field(default_factory=lambda: _env("RAG_EMBEDDING_MODEL", "text-embedding-3-small"))
+    model: str = field(default_factory=lambda: _env("RAG_MODEL", "google/gemma-4-26b-a4b-it-maas"))
+    embedding_model: str = field(default_factory=lambda: _env("RAG_EMBEDDING_MODEL", "gemini-embedding-001"))
     embedding_dim: int = field(default_factory=lambda: int(_env("RAG_EMBEDDING_DIM", "1536")))
     # Hops to walk out from a matched entity during retrieval. 1 answers "what is
     # said about X"; chain questions need the edges between X's neighbours, which

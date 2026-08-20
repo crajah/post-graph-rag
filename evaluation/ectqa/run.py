@@ -64,6 +64,59 @@ FINANCE_PREDICATES = [
     "repurchased", "employs", "led_by", "partnered_with", "supplies",
 ]
 
+# The default extraction rule fills valid_from "ONLY when the text states when
+# the fact held". On an earnings call almost no sentence does: the speaker says
+# "revenue was $948 million", because everyone on the call knows which quarter
+# they are discussing. The quarter lives in the document, not the sentence.
+#
+# Measured consequence, before this prompt existed: the figures were extracted
+# correctly and 9% of them carried a date. A question naming a quarter then had
+# nothing to filter on, sixteen quarters of the same metric were
+# indistinguishable, and the run scored 0% on every answerable category while
+# refusing correctly on all the unanswerable ones. The values were there; the
+# time was not.
+#
+# This is the same failure as LongMemEval's, where dates sat in metadata the
+# extraction prompt never saw. The fix is the same: make the date mandatory on
+# every triple, and state it in the text the model is reading.
+FINANCIAL_PROMPT = """You are extracting a temporal knowledge graph from an earnings call transcript.
+
+Every transcript begins with a header naming the company and the quarter, e.g.
+[Western Digital Corporation earnings call, 2022 Q1, quarter ending 2022-03-31].
+
+RULES
+
+1. `valid_from` is MANDATORY on every triple. Use the quarter-ending date from the
+   header unless the sentence names a different period, in which case use that one.
+   A triple without valid_from is useless: the same metric is restated every
+   quarter, and a figure with no date cannot be told apart from fifteen others.
+
+2. Extract every stated FIGURE as its own triple. These are the point of the
+   document. The object must be the value itself, with its unit:
+     Western Digital -[reported_revenue]-> $4.1 billion
+     Western Digital -[reported_gross_margin]-> 33.9%
+     Western Digital -[reported_earnings_per_share]-> $2.30
+   Keep the segment when the figure is segment-level:
+     Client Solutions -[reported_revenue]-> $948 million
+
+3. Prefer these predicates for figures, and reuse them exactly:
+   reported_revenue, reported_revenue_growth, reported_gross_margin,
+   reported_operating_margin, reported_earnings_per_share, reported_net_income,
+   reported_free_cash_flow, reported_operating_cash_flow, reported_capex,
+   reported_guidance, reported_headcount, reported_backlog, reported_bookings.
+   Invent a predicate only when a figure fits none of them.
+
+4. Record direction and comparison when stated — "up 5% sequentially", "down 1%
+   year over year" — in the description, alongside the figure.
+
+5. Narrative facts (leadership, partnerships, product launches, acquisitions) are
+   worth extracting, but never at the expense of the figures. If a passage
+   contains figures, they come first.
+
+Return the same JSON schema as usual: entities, then triples with subject,
+predicate, object, description, valid_from.
+"""
+
 ANSWER_INSTRUCTION = (
     "You are answering a question about earnings call transcripts. The facts "
     "below carry the quarter they were stated in. Match the quarter the question "
@@ -121,7 +174,7 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "data"))
     ap.add_argument("--questions", default=str(HERE / "local_questions_old.json"))
-    ap.add_argument("--model", default="gemini-3.6-flash")
+    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--judges", nargs="*",
                     default=["MiniMax-M2.7", "gpt-oss-120b", "DeepSeek-V3.2"])
@@ -223,6 +276,7 @@ async def main():
         embedding_model=args.embedding_model, embedding_dim=1536,
         embed_relations=True, merge_strategy="rrf",
         predicate_vocabulary=FINANCE_PREDICATES, extract_validity=True,
+        extraction_prompt=FINANCIAL_PROMPT,
         max_concurrent_chunks=args.chunk_concurrency,
         fallback_models=args.fallback_models,
         max_retries=args.max_retries, retry_deadline_secs=1800))

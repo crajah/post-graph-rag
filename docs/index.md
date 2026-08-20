@@ -79,8 +79,8 @@ A minimal end-to-end example — index a document, then ask a question that requ
 from post_graph_rag import GraphRAG, RAGConfig, DocumentMetadata, QueryParam
 
 rag = GraphRAG(RAGConfig(
-    model="MiniMax-M2.7",
-    embedding_model="text-embedding-3-small",
+    model="google/gemma-4-26b-a4b-it-maas",
+    embedding_model="gemini-embedding-001",
     embedding_dim=1536,
     realm="research_kb",
     schema_per_realm=True,
