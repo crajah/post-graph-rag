@@ -310,11 +310,20 @@ async def main():
 
     pathlib.Path(args.out).write_text(json.dumps(
         {"benchmark": "ECT-QA", "model": args.model, "judges": args.judges,
+         # Which models actually served, not merely which were configured. A
+         # router cooldown mid-run silently splits extraction across the
+         # fallback chain, and a graph built that way is not attributable to
+         # any one model.
+         "served": dict(rag.llm.served),
+         "judges_served": {n: dict(j.served) for n, j in judge_llms.items()},
          "realm": args.realm, "spaces": spaces, "n": len(results),
          "accuracy": total / max(1, len(results)),
          "by_type": {k: sum(v) / len(v) for k, v in by_type.items()},
          "degraded": degraded, "degraded_count": len(degraded),
          "reportable": not degraded, "results": results}, indent=2))
+    print("\n  models that served extraction and answering:")
+    for name, n in rag.llm.served.most_common():
+        print(f"    {name:<34} {n:>6}")
     print(f"  wrote {args.out}  ({time.time()-started:.0f}s)")
 
 

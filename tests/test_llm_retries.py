@@ -1,8 +1,15 @@
 """Tests for LLM retry logic and retryable error detection."""
 
+import pytest
 
 from post_graph_rag.config import RAGConfig
+from post_graph_rag.errors import LLMError
 from post_graph_rag.llm import LLMService, _is_retryable, RETRYABLE_STATUS, RETRYABLE_MARKERS
+
+
+def _rate_limit_error():
+    """A retryable failure, shaped like the router's 429."""
+    return Exception("Error code: 429 - rate limit exceeded")
 
 
 def _config(**kw):
@@ -115,3 +122,54 @@ class TestEncodingFormatKwargs:
     def test_base64_format(self):
         svc = LLMService(_config(embedding_encoding_format="base64"))
         assert svc._encoding_format_kwargs() == {"encoding_format": "base64"}
+
+
+# --------------------------------------------------- which model actually served
+
+@pytest.mark.asyncio
+async def test_served_records_the_model_that_succeeded():
+    """Provenance, not configuration.
+
+    A run that fails over builds its graph from more than one model, and
+    afterwards that is indistinguishable from a run the primary served alone —
+    unless it was counted at the time.
+    """
+    svc = LLMService(RAGConfig(model="primary", fallback_models=["backup"],
+                               max_retries=2, retry_backoff_secs=0))
+    calls = []
+
+    async def attempt(model):
+        calls.append(model)
+        if model == "primary":
+            raise _rate_limit_error()
+        return "ok"
+
+    assert await svc._with_failover(attempt, "test") == "ok"
+    assert svc.served == {"backup": 1}
+    assert "primary" not in svc.served
+
+
+@pytest.mark.asyncio
+async def test_served_counts_each_success_separately():
+    svc = LLMService(RAGConfig(model="primary", max_retries=1, retry_backoff_secs=0))
+
+    async def attempt(model):
+        return "ok"
+
+    for _ in range(3):
+        await svc._with_failover(attempt, "test")
+    assert svc.served["primary"] == 3
+
+
+@pytest.mark.asyncio
+async def test_served_stays_empty_when_everything_fails():
+    """Nothing served means nothing counted — no phantom provenance."""
+    svc = LLMService(RAGConfig(model="primary", fallback_models=["backup"],
+                               max_retries=1, retry_backoff_secs=0))
+
+    async def attempt(model):
+        raise _rate_limit_error()
+
+    with pytest.raises(LLMError):
+        await svc._with_failover(attempt, "test")
+    assert not svc.served
