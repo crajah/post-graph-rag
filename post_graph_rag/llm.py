@@ -1,5 +1,6 @@
 """LLM and Embedding service wrapper for OpenAI-compatible endpoints."""
 import asyncio
+import collections
 import hashlib
 import logging
 import time
@@ -41,6 +42,13 @@ class LLMService:
             base_url=config.api_base,
             api_key=config.api_key
         )
+        # Which model actually served each successful call, not which one was
+        # configured. With fallbacks enabled those differ, and silently so: a
+        # router cooldown mid-run can leave half a graph extracted by the
+        # primary model and half by a fallback, which is indistinguishable
+        # afterwards from a graph the primary built alone. Extraction variance
+        # is large enough that this changes what a measurement means.
+        self.served: collections.Counter = collections.Counter()
 
     # -------------------------------------------------------------- embeddings
 
@@ -249,7 +257,9 @@ class LLMService:
         for model in self._model_candidates():
             for tries in range(1, max(1, self.config.max_retries) + 1):
                 try:
-                    return await attempt(model)
+                    result = await attempt(model)
+                    self.served[model] += 1
+                    return result
                 except Exception as e:
                     last = e
                     if not _is_retryable(e):
