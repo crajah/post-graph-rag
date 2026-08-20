@@ -1,4 +1,6 @@
 """DB-backed tests for RAGGraphStore: schema strictness, entity resolution, spaces."""
+import asyncio
+
 import pytest
 
 from post_graph_rag import RAGGraphStore
@@ -143,3 +145,71 @@ async def test_relation_embeddings_when_enabled(rag_factory):
 
     hits = await store.search_similar_relations(fake_embed("poseidon sea"), top_k=2)
     assert hits and hits[0][0].relation_type == "brother_of"
+
+
+# ------------------------------------------- concurrent lazy index creation
+
+class _RacingClient:
+    """A client whose CREATE INDEX behaves the way PostgreSQL actually does.
+
+    `IF NOT EXISTS` is not atomic: concurrent creators can both find the index
+    absent and then collide in pg_class, and the loser sees a unique violation
+    rather than the silent no-op the clause suggests.
+    """
+
+    def __init__(self, fail_times=1):
+        self.attempts = 0
+        self.fail_times = fail_times
+
+    def _get_table_ref(self, table, realm):
+        return f'"{realm}"."{table}"'
+
+    async def _execute(self, sql, *args):
+        self.attempts += 1
+        if self.attempts <= self.fail_times:
+            raise Exception(
+                'duplicate key value violates unique constraint '
+                '"pg_class_relname_nsp_index"')
+        return None
+
+
+def _store_with(client):
+    store = RAGGraphStore.__new__(RAGGraphStore)
+    store.client = client
+    store.realm = "r"
+    store._fts_index_ready = False
+    store._fts_index_lock = asyncio.Lock()
+    return store
+
+
+@pytest.mark.asyncio
+async def test_fts_index_tolerates_a_concurrent_creator():
+    """Losing the race means the index exists, which is all the caller wanted."""
+    store = _store_with(_RacingClient(fail_times=1))
+    await store._ensure_relation_fts_index()          # must not raise
+    assert store._fts_index_ready
+
+
+@pytest.mark.asyncio
+async def test_fts_index_is_created_once_under_concurrency():
+    """Six parallel first queries — the shape that broke a live ECT-QA run."""
+    client = _RacingClient(fail_times=0)
+    store = _store_with(client)
+    await asyncio.gather(*(store._ensure_relation_fts_index() for _ in range(6)))
+    assert client.attempts == 1
+
+
+@pytest.mark.asyncio
+async def test_fts_index_still_raises_on_a_real_failure():
+    """A missing index would leave the lexical channel silently empty.
+
+    Only the duplicate-key case is benign; anything else must surface.
+    """
+    class Broken(_RacingClient):
+        async def _execute(self, sql, *args):
+            raise Exception("permission denied for schema r")
+
+    store = _store_with(Broken())
+    with pytest.raises(Exception, match="permission denied"):
+        await store._ensure_relation_fts_index()
+    assert not store._fts_index_ready
