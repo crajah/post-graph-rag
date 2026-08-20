@@ -1,4 +1,5 @@
 """Graph Store implementation wrapping post-graph and pgvector."""
+import asyncio
 import json
 import re
 from datetime import datetime, timezone
@@ -29,6 +30,9 @@ class RAGGraphStore:
         self.client = AsyncPostGraph(dsn=config.db_uri, schema_per_realm=config.schema_per_realm)
         self.realm = config.realm
         self.space = config.space or "default"
+        # Guards the lazily-built lexical index against concurrent first use.
+        self._fts_index_ready = False
+        self._fts_index_lock = asyncio.Lock()
 
     async def connect(self):
         await self.client.connect()
@@ -531,14 +535,42 @@ class RAGGraphStore:
         Built lazily on first use rather than at schema creation, so an existing
         deployment gains it without a migration and one that never calls the
         lexical channel never pays for it.
+
+        `IF NOT EXISTS` is not atomic. Two sessions can both find the index
+        absent and then race to insert into pg_class, and the loser gets a
+        unique violation on pg_class_relname_nsp_index rather than the silent
+        no-op the clause implies. Concurrent first queries hit this reliably —
+        six parallel questions against a fresh realm failed here, and the
+        failure surfaced as a lost query rather than as anything about indexes.
+
+        Two guards, because they cover different races. The lock serialises
+        callers inside this process; catching the violation covers separate
+        processes and connections, which no in-process lock can reach. Either
+        way the index exists afterwards, which is all the caller needs.
         """
-        table_ref = self.client._get_table_ref("relations", self.realm)
-        index_name = f"{self.realm}_relations_fts"
-        await self.client._execute(
-            f'CREATE INDEX IF NOT EXISTS "{index_name}" ON {table_ref} USING gin ('
-            f"to_tsvector('english', coalesce(relation_type, '') || ' ' || "
-            f"coalesce(payload->>'description', '')))"
-        )
+        if self._fts_index_ready:
+            return
+        async with self._fts_index_lock:
+            if self._fts_index_ready:
+                return
+            table_ref = self.client._get_table_ref("relations", self.realm)
+            index_name = f"{self.realm}_relations_fts"
+            try:
+                await self.client._execute(
+                    f'CREATE INDEX IF NOT EXISTS "{index_name}" ON {table_ref} USING gin ('
+                    f"to_tsvector('english', coalesce(relation_type, '') || ' ' || "
+                    f"coalesce(payload->>'description', '')))"
+                )
+            except Exception as e:
+                # 23505 is unique_violation; the message check covers drivers
+                # that do not expose sqlstate. Anything else is a real failure
+                # and must not be swallowed — a missing index would otherwise
+                # turn into an empty lexical channel that looks disabled.
+                text = f"{getattr(e, 'sqlstate', '')} {e}".lower()
+                if "23505" not in text and "duplicate key" not in text:
+                    raise
+                logger.debug("Relation FTS index %r created concurrently.", index_name)
+            self._fts_index_ready = True
 
     async def search_relations_text(self, query: str, top_k: int = 20,
                                     space: Optional[str] = None) -> List[Tuple[Edge, float]]:
