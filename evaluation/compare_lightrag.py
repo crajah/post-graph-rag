@@ -31,8 +31,8 @@ from openai import AsyncOpenAI
 
 BASE = os.getenv("OPENAI_API_BASE", "http://localhost:4000/v1")
 KEY = os.getenv("OPENAI_API_KEY", "EMPTY")
-MODEL = os.getenv("RAG_MODEL", "MiniMax-M2.7")
-EMB_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "text-embedding-3-small")
+MODEL = os.getenv("RAG_MODEL", "google/gemma-4-26b-a4b-it-maas")
+EMB_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "gemini-embedding-001")
 EMB_DIM = int(os.getenv("RAG_EMBEDDING_DIM", "1536"))
 # Stated explicitly for the same reason post-graph-rag states it: the OpenAI SDK
 # otherwise negotiates 'base64', which gateways fronting non-OpenAI providers
