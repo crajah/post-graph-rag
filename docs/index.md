@@ -79,7 +79,7 @@ A minimal end-to-end example — index a document, then ask a question that requ
 from post_graph_rag import GraphRAG, RAGConfig, DocumentMetadata, QueryParam
 
 rag = GraphRAG(RAGConfig(
-    model="google/gemma-4-26b-a4b-it-maas",
+    model="gemini-3.6-flash",
     embedding_model="gemini-embedding-001",
     embedding_dim=1536,
     realm="research_kb",

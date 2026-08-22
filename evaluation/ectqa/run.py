@@ -178,7 +178,7 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "data"))
     ap.add_argument("--questions", default=str(HERE / "local_questions_old.json"))
-    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
+    ap.add_argument("--model", default="gemini-3.6-flash")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--judges", nargs="*",
                     default=["MiniMax-M2.7", "gpt-oss-120b", "DeepSeek-V3.2"])

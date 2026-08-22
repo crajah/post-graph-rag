@@ -78,7 +78,7 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--domain", default="quant")
     ap.add_argument("--data", default=str(HERE / "data"))
-    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
+    ap.add_argument("--model", default="gemini-3.6-flash")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--fallback-models", nargs="*",
                     default=["gemini-3.5-flash-lite", "Meta-Llama-3.3-70B-Instruct"])

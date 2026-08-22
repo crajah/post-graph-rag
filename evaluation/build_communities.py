@@ -77,7 +77,7 @@ async def run(args):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--realm", default=os.getenv("RAG_EVAL_REALM", "wiki_kb"))
-    ap.add_argument("--model", default=os.getenv("RAG_MODEL", "google/gemma-4-26b-a4b-it-maas"))
+    ap.add_argument("--model", default=os.getenv("RAG_MODEL", "gemini-3.6-flash"))
     ap.add_argument("--fallback-models", nargs="*", default=[
         m for m in os.getenv("RAG_FALLBACK_MODELS", "").split(",") if m])
     ap.add_argument("--embedding-model", default=os.getenv("RAG_EMBEDDING_MODEL", "gemini-embedding-001"))
