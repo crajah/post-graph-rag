@@ -207,7 +207,7 @@ async def judge(llm, question, gold, answer) -> bool:
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "oracle.json"))
-    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
+    ap.add_argument("--model", default="gemini-3.6-flash")
     ap.add_argument("--judge-model", default="gemini-3.6-flash",
                     help="single judge; ignored when --judges is given")
     ap.add_argument("--judges", nargs="*", default=None,

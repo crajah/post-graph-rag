@@ -199,7 +199,7 @@ async def main():
     config = RAGConfig(
         api_base="http://localhost:4000/v1",       # OpenAI-compatible router endpoint
         api_key=os.environ["OPENAI_API_KEY"],     # Never hardcode credentials
-        model="google/gemma-4-26b-a4b-it-maas",                    # LLM model for extraction & synthesis
+        model="gemini-3.6-flash",                    # LLM model for extraction & synthesis
         embedding_model="gemini-embedding-001", # Embedding model
         embedding_dim=1536,                       # Must match the model's output width
         db_uri="postgresql://user:password@localhost:5432/postgres",
@@ -275,7 +275,7 @@ await rag.index_document(chunk_text, metadata=metadata)
 | :--- | :--- | :--- | :--- |
 | `api_base` | `OPENAI_API_BASE` | `http://localhost:4000/v1` | Base URL for OpenAI-compatible LLM endpoint |
 | `api_key` | `OPENAI_API_KEY` | `EMPTY` | API key. `EMPTY` is the placeholder local servers accept |
-| `model` | `RAG_MODEL` | `google/gemma-4-26b-a4b-it-maas` | Primary LLM model for triple extraction & synthesis |
+| `model` | `RAG_MODEL` | `gemini-3.6-flash` | Primary LLM model for triple extraction & synthesis |
 | `embedding_model` | `RAG_EMBEDDING_MODEL` | `gemini-embedding-001` | Model for vector embedding generation |
 | `embedding_dim` | `RAG_EMBEDDING_DIM` | `1536` | Embedding width. Must match the model, and is fixed once tables exist |
 | `db_uri` | `POSTGRES_URI` | `postgresql://localhost:5432/postgres` | PostgreSQL connection DSN |

@@ -21,7 +21,7 @@ async def main():
     print("=" * 62)
 
     config = RAGConfig(
-        model=os.getenv("RAG_MODEL", "google/gemma-4-26b-a4b-it-maas"),
+        model=os.getenv("RAG_MODEL", "gemini-3.6-flash"),
         embedding_model=os.getenv("RAG_EMBEDDING_MODEL", "gemini-embedding-001"),
         embedding_dim=int(os.getenv("RAG_EMBEDDING_DIM", "1536")),
         realm=REALM,
