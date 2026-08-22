@@ -163,9 +163,13 @@ async def index_company(rag, quarters, space):
         # and every temporal question failed.
         header = (f"[{doc.get('company_name', path.stem)} earnings call, "
                   f"{year} {quarter.upper()}, quarter ending {as_of}]\n\n")
+        # source identifies *this transcript*, not the corpus. Passing a constant
+        # here made every quarter share one document key, and a matching key
+        # means re-index: each transcript deleted the previous one, leaving one
+        # quarter per company and 92% of relations dormant.
         await rag.index_text(header + text, metadata=DocumentMetadata(
             document=f"{doc.get('stock_code', '')}-{year}-{quarter}",
-            source="ect", space=space, extra={"quarter_end": as_of},
+            source=str(path), space=space, extra={"quarter_end": as_of},
         ))
     return len(quarters)
 

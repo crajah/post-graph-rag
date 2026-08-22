@@ -91,11 +91,23 @@ class KeywordResult:
 def document_key(source: Optional[str], document: Optional[str]) -> str:
     """Stable identity for a document across re-indexing runs.
 
-    Prefers the source (a URL or path, which survives renaming) and falls back to
-    the title. Without a stable key, re-indexing appends a second copy instead of
-    replacing the first.
+    Both parts are used. Preferring the source alone was a trap: a caller that
+    passes a constant source — a corpus name rather than a path — collapses every
+    document onto one key, and since a matching key means *re-index*, each
+    document deletes the one before it. That failed silently in an ECT-QA run,
+    where 80 transcripts shared ``source="ect"`` and the graph ended up holding
+    only the last quarter of each company, 92% of its relations dormant.
+
+    Combining them costs the case where a file is renamed but keeps its path:
+    the title moves, so the key moves, and the re-index appends instead of
+    replacing. That is a duplicate — visible, and recoverable by deleting it.
+    The alternative failure mode destroys data and looks like nothing happened.
     """
-    return (source or document or "").strip() or "unkeyed"
+    src = (source or "").strip()
+    doc = (document or "").strip()
+    if src and doc:
+        return f"{src}::{doc}"
+    return src or doc or "unkeyed"
 
 
 def content_hash(text: str) -> str:

@@ -151,8 +151,13 @@ class TestQueryParam:
 
 
 class TestDocumentKey:
-    def test_prefers_source(self):
-        assert document_key("http://x.com", "doc.pdf") == "http://x.com"
+    def test_uses_both_parts(self):
+        # Source alone used to win, which let a constant source collapse an
+        # entire corpus onto one key — and a matching key means re-index.
+        assert document_key("http://x.com", "doc.pdf") == "http://x.com::doc.pdf"
+
+    def test_distinct_documents_under_one_source_stay_distinct(self):
+        assert document_key("corpus", "a") != document_key("corpus", "b")
 
     def test_falls_back_to_document(self):
         assert document_key(None, "doc.pdf") == "doc.pdf"
