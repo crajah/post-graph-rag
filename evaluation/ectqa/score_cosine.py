@@ -32,16 +32,36 @@ sys.path.insert(0, str(HERE.parents[1]))
 from post_graph_rag import RAGConfig                      # noqa: E402
 from post_graph_rag.llm import LLMService                 # noqa: E402
 
-REFUSAL = re.compile(
-    r"\b(unanswerable|not available|cannot be determined|does not contain|"
-    r"do not contain|not support|no information|not provided|not specified)\b",
-    re.I)
-
-
 def is_refusal(answer: str) -> bool:
-    """A refusal is a different outcome from a wrong answer, so it is counted
-    separately rather than scored as a near miss."""
-    return bool(REFUSAL.search(answer or ""))
+    """Only a leading refusal counts.
+
+    Matching those phrases anywhere was wrong: a good answer that ends with an
+    honest caveat — "the results for other quarters are missing" — was counted
+    as a refusal, which put 50 of 60 in that bucket while several of them stated
+    the gold figures correctly. The harness itself judges refusal by what the
+    answer opens with, and so does this.
+    """
+    head = (answer or "").strip().lower()[:60]
+    return head.startswith("unanswerable")
+
+
+FIGURE = re.compile(r"-?\d+(?:\.\d+)?%?")
+
+
+def figure_recall(gold: str, answer: str):
+    """Share of the gold figures that appear in the answer.
+
+    Cosine on this benchmark is depressed by verbosity: gold is a bare list
+    ("33.9%, 33.6%, 31.7%, and 32.3%") while the system replies in prose. Two
+    answers containing exactly the same figures score differently by length
+    alone. Figure recall is unaffected by wording and is reported alongside.
+    """
+    g = [x for x in FIGURE.findall(gold or "") if any(c.isdigit() for c in x)]
+    if not g:
+        return None
+    a = set(FIGURE.findall(answer or ""))
+    hit = sum(1 for x in g if x in a or x.rstrip('%') in {y.rstrip('%') for y in a})
+    return hit / len(g)
 
 
 def cosine(a, b):
@@ -77,7 +97,8 @@ async def main():
         else:
             ge, ae = await llm.get_embedding(gold), await llm.get_embedding(answer)
             sim = cosine(ge, ae)
-        scored.append({**r, "similarity": round(sim, 4), "refusal": is_refusal(answer)})
+        scored.append({**r, "similarity": round(sim, 4), "refusal": is_refusal(answer),
+                       "figure_recall": figure_recall(gold, answer)})
 
     answered = [s for s in scored if not s["refusal"]]
     refused = [s for s in scored if s["refusal"]]
@@ -91,6 +112,10 @@ async def main():
           f"({len(answered)/len(scored):.0%})   mean similarity {mean([s['similarity'] for s in answered]):.3f}")
     print(f"  all            {len(scored):>3}          mean similarity "
           f"{mean([s['similarity'] for s in scored]):.3f}")
+    fr = [s["figure_recall"] for s in scored if s["figure_recall"] is not None]
+    exact = [x for x in fr if x == 1.0]
+    print(f"\n  figure recall  mean {mean(fr):.3f} over {len(fr)} gold answers containing figures")
+    print(f"                 all figures present in {len(exact)}/{len(fr)} = {len(exact)/len(fr):.1%}")
     hits = [s for s in scored if s["similarity"] >= args.threshold]
     print(f"\n  accuracy @ {args.threshold:.2f}: {len(hits)}/{len(scored)} = "
           f"{len(hits)/len(scored):.1%}   (threshold is a choice, not a measurement)")
@@ -111,6 +136,8 @@ async def main():
         "mean_similarity": round(mean([s["similarity"] for s in scored]), 4),
         "mean_similarity_answered": round(mean([s["similarity"] for s in answered]), 4),
         "accuracy_at_threshold": round(len(hits) / len(scored), 4) if scored else 0.0,
+        "figure_recall_mean": round(mean(fr), 4) if fr else None,
+        "figure_recall_complete": round(len(exact) / len(fr), 4) if fr else None,
         "by_type": {t: round(mean(v), 4) for t, v in by_type.items()},
         "results": scored,
     }, indent=1))
