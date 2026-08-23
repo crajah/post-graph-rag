@@ -107,10 +107,26 @@ async def test_validity_extraction_can_be_disabled():
 
 # ---------------------------------------------------------- document identity
 
-def test_document_key_prefers_source():
-    assert document_key("https://x/a", "A.txt") == "https://x/a"
+def test_document_key_uses_both_parts():
+    assert document_key("https://x/a", "A.txt") == "https://x/a::A.txt"
     assert document_key(None, "A.txt") == "A.txt"
+    assert document_key("https://x/a", None) == "https://x/a"
     assert document_key(None, None) == "unkeyed"
+
+
+def test_document_key_does_not_collapse_on_a_constant_source():
+    """The failure this guards against deleted 15 of every 16 documents.
+
+    A caller passing a corpus name as the source — rather than a path — used to
+    produce one key for the whole corpus. Since a matching key means re-index,
+    every document removed the one before it.
+    """
+    keys = {document_key("ect", f"WDC-2023-q{q}") for q in range(1, 5)}
+    assert len(keys) == 4
+
+
+def test_document_key_ignores_surrounding_whitespace():
+    assert document_key(" s://a ", " A.txt ") == "s://a::A.txt"
 
 
 def test_content_hash_detects_change():
@@ -147,6 +163,30 @@ async def test_indexed_chunks_carry_a_comparable_hash(rag_factory):
 
 def _long(n=8, word="Alice"):
     return "\n".join(f"{word} and Bob appear together in paragraph {i}, at length." for i in range(n))
+
+
+@pytest.mark.asyncio
+async def test_documents_sharing_a_source_do_not_replace_each_other(rag_factory):
+    """Distinct documents under one source must coexist.
+
+    This is the end-to-end shape of a real failure: an ECT-QA run passed
+    ``source="ect"`` for all 80 transcripts, every one keyed to "ect", and since
+    a matching key means re-index, each transcript deleted the previous one. The
+    graph ended with one quarter per company and 92% of relations dormant, and
+    the only symptom was the system answering "unanswerable" to almost
+    everything — which it was right to do, given what was left.
+    """
+    rag = await rag_factory(extraction=FRIENDS, chunk_chars=200, chunk_overlap_chars=0,
+                            skip_unchanged_documents=False)
+    for quarter in ("q1", "q2", "q3"):
+        await rag.index_text(
+            _long(word="Alice"),
+            metadata=DocumentMetadata(source="ect", document=f"ACME-2023-{quarter}"))
+
+    for quarter in ("q1", "q2", "q3"):
+        chunks = await rag.store.find_document_chunks(
+            document_key("ect", f"ACME-2023-{quarter}"))
+        assert chunks, f"{quarter} was deleted by a later document sharing its source"
 
 
 @pytest.mark.asyncio

@@ -26,6 +26,7 @@ import importlib.util
 import json
 import pathlib
 import random
+import re
 import sys
 import time
 
@@ -91,25 +92,50 @@ RULES
    A triple without valid_from is useless: the same metric is restated every
    quarter, and a figure with no date cannot be told apart from fifteen others.
 
-2. Extract every stated FIGURE as its own triple. These are the point of the
-   document. The object must be the value itself, with its unit:
-     Western Digital -[reported_revenue]-> $4.1 billion
-     Western Digital -[reported_gross_margin]-> 33.9%
-     Western Digital -[reported_earnings_per_share]-> $2.30
+2. REPORTED ACTUALS AND GUIDANCE ARE DIFFERENT FACTS. Never use the same
+   predicate for both. A question asking what a company *achieved* must not be
+   answered with what it *expected*.
+
+     "gross margin was 33.9%"        -> reported_gross_margin      -> 33.9%
+     "we expect 25% to 26%"          -> guided_gross_margin        -> 25% to 26%
+     "revenue of $4.1 billion"       -> reported_revenue           -> $4.1 billion
+     "we see revenue of $3B to $3.2B"-> guided_revenue             -> $3B to $3.2B
+
+   Past tense and "was/were/came in at/delivered/achieved" mean reported.
+   "expect/anticipate/guidance/outlook/we see/should be" mean guided.
+
+3. THE OBJECT OF A FIGURE TRIPLE MUST BE A NUMBER. It carries digits and a unit:
+   `33.9%`, `$4.1 billion`, `$2.30`, `317 million shares`.
+
+   These are NOT acceptable objects for a reported_* or guided_* predicate:
+     "increased", "improve sequentially", "relatively flat", "grew",
+     "expanded", "declined", "record levels"
+   If a sentence states only a direction with no number, do not force it into a
+   figure predicate. Put it in a narrative triple instead, or drop it.
+   A directional word where a number belongs makes the metric unanswerable.
+
+4. EVERY SENTENCE STATING A NUMBER PRODUCES A TRIPLE. Work through the transcript
+   sentence by sentence. If a sentence contains a figure attached to a metric,
+   emit it — even when the same metric already appeared earlier in the call, and
+   even when the figure is repeated from the prepared remarks in the Q&A.
+   Missing figures is the single most damaging failure here: the questions ask
+   for values, and a value absent from the graph cannot be recovered later.
+
    Keep the segment when the figure is segment-level:
      Client Solutions -[reported_revenue]-> $948 million
 
-3. Prefer these predicates for figures, and reuse them exactly:
-   reported_revenue, reported_revenue_growth, reported_gross_margin,
+5. Prefer these predicates and reuse them exactly.
+   Reported: reported_revenue, reported_revenue_growth, reported_gross_margin,
    reported_operating_margin, reported_earnings_per_share, reported_net_income,
    reported_free_cash_flow, reported_operating_cash_flow, reported_capex,
-   reported_guidance, reported_headcount, reported_backlog, reported_bookings.
+   reported_headcount, reported_backlog, reported_bookings.
+   Guidance: the same names with `guided_` instead of `reported_`.
    Invent a predicate only when a figure fits none of them.
 
-4. Record direction and comparison when stated — "up 5% sequentially", "down 1%
-   year over year" — in the description, alongside the figure.
+6. Record direction and comparison in the description when stated — "up 5%
+   sequentially", "down 1% year over year" — but the object stays the number.
 
-5. Narrative facts (leadership, partnerships, product launches, acquisitions) are
+7. Narrative facts (leadership, partnerships, product launches, acquisitions) are
    worth extracting, but never at the expense of the figures. If a passage
    contains figures, they come first.
 
@@ -117,12 +143,83 @@ Return the same JSON schema as usual: entities, then triples with subject,
 predicate, object, description, valid_from.
 """
 
+def _cosine(a, b):
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+    return 0.0 if not na or not nb else dot / (na * nb)
+
+
+NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+def _numbers(text: str):
+    return [float(x) for x in NUMBER.findall(text or "")]
+
+
+def numeric_f1(gold: str, answer: str, rel_tol: float = 0.01, abs_tol: float = 0.05):
+    """F1 over the figures in the answer against the figures in gold.
+
+    ECT-QA answers are lists of numbers, so matching numbers is the measurement
+    and everything else is proxy. Two things this gets right that whole-text
+    cosine does not:
+
+    Tolerance. The system answered 32% where gold said 32.3% — three other
+    figures exact — and a judge panel failed the whole answer. A near miss on
+    one figure should cost a fraction, not everything.
+
+    Precision as well as recall. Recall alone rewards an answer that lists every
+    number in the transcript, which is not an answer.
+
+    Returns None when gold contains no figure, so the caller can fall back to
+    cosine for the narrative questions.
+    """
+    g = _numbers(gold)
+    if not g:
+        return None
+    a = _numbers(answer)
+    if not a:
+        return 0.0
+    def near(x, ys):
+        return any(abs(x - y) <= max(abs_tol, abs(x) * rel_tol) for y in ys)
+    recall = sum(1 for x in g if near(x, a)) / len(g)
+    precision = sum(1 for y in a if near(y, g)) / len(a)
+    return 0.0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
+
+
+async def answer_similarity(llm, gold: str, answer: str) -> float:
+    """Cosine between gold and answer in embedding space.
+
+    Kept for questions whose gold carries no figure. On numeric answers it
+    separates poorly — measured on a full run, correct answers averaged 0.643
+    and refusals 0.509, because a refusal shares almost all its vocabulary with
+    an answer. numeric_f1 separated the same rows 0.770 against 0.144.
+    """
+    if not (answer or "").strip():
+        return 0.0
+    ge = await llm.get_embedding(gold)
+    ae = await llm.get_embedding(answer)
+    return _cosine(ge, ae)
+
+
 ANSWER_INSTRUCTION = (
     "You are answering a question about earnings call transcripts. The facts "
     "below carry the quarter they were stated in. Match the quarter the question "
-    "asks about — a value from the wrong quarter is a wrong answer. If the facts "
-    "do not support an answer, say exactly: unanswerable."
+    "asks about — a value from the wrong quarter is a wrong answer.\n\n"
+    "PARTIAL ANSWERS ARE WANTED. If the question asks about several periods and "
+    "you have figures for some of them, give the figures you have and name the "
+    "periods you could not find. Do not withhold four correct quarters because a "
+    "fifth is missing.\n\n"
+    "Say exactly 'unanswerable' only when you have no relevant figure at all, or "
+    "when the question asks about a company or metric the facts never mention."
 )
+# Measured: the previous wording ended "if the facts do not support an answer,
+# say exactly: unanswerable", and the model read that as all-or-nothing. It
+# refused 45 of 60 questions, several while quoting the very figures it had
+# retrieved — "Q1 FY2022 at 33.9%, Q2 at 33.6% ... the results for other quarters
+# are missing" — and then scored zero. Under numeric F1 a partial answer earns
+# partial credit, so the old instruction was costing points the metric would
+# have awarded.
 
 
 def transcript_files(data_dir: pathlib.Path):
@@ -163,9 +260,13 @@ async def index_company(rag, quarters, space):
         # and every temporal question failed.
         header = (f"[{doc.get('company_name', path.stem)} earnings call, "
                   f"{year} {quarter.upper()}, quarter ending {as_of}]\n\n")
+        # source identifies *this transcript*, not the corpus. Passing a constant
+        # here made every quarter share one document key, and a matching key
+        # means re-index: each transcript deleted the previous one, leaving one
+        # quarter per company and 92% of relations dormant.
         await rag.index_text(header + text, metadata=DocumentMetadata(
             document=f"{doc.get('stock_code', '')}-{year}-{quarter}",
-            source="ect", space=space, extra={"quarter_end": as_of},
+            source=str(path), space=space, extra={"quarter_end": as_of},
         ))
     return len(quarters)
 
@@ -174,8 +275,15 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=str(HERE / "data"))
     ap.add_argument("--questions", default=str(HERE / "local_questions_old.json"))
-    ap.add_argument("--model", default="google/gemma-4-26b-a4b-it-maas")
+    ap.add_argument("--model", default="gemini-3.6-flash")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
+    ap.add_argument("--f1-threshold", type=float, default=0.60,
+                    help="numeric F1 at or above which a figure answer counts as "
+                         "correct; the primary metric")
+    ap.add_argument("--similarity-threshold", type=float, default=0.62,
+                    help="cosine similarity at or above which an answer counts as "
+                         "correct; gold is terse and answers are prose, so this "
+                         "sits well below the 0.8 a like-for-like pair would need")
     ap.add_argument("--judges", nargs="*",
                     default=["MiniMax-M2.7", "gpt-oss-120b", "DeepSeek-V3.2"])
     # The router puts models into hour-long cooldowns and exhausts provider
@@ -199,7 +307,10 @@ async def main():
     # 429s carry "try again in 3600 seconds", so retrying the same model is
     # waiting an hour by instalments when a working model is one call away.
     ap.add_argument("--max-retries", type=int, default=3)
-    ap.add_argument("--top-k", type=int, default=12)
+    ap.add_argument("--top-k", type=int, default=48,
+                    help="gold answers need a mean of 5.5 figures and up to 32, "
+                         "often one per quarter across 16 quarters; 12 chunks "
+                         "cannot cover that regardless of ranking quality")
     ap.add_argument("--skip-index", action="store_true",
                     help="reuse an already-indexed realm and only run the questions")
     ap.add_argument("--out", default=str(HERE / "results.json"))
@@ -266,6 +377,8 @@ async def main():
     print(f"  cross-company eligible: {len(eligible)} (asking {min(len(eligible), args.cross_company)})")
     print(f"judges: {', '.join(args.judges)}\n")
 
+    embed_llm = LLMService(RAGConfig(embedding_model=args.embedding_model,
+                                     max_retries=args.max_retries))
     judge_llms = {n: LLMService(RAGConfig(model=n, max_retries=args.max_retries,
                                           fallback_models=args.fallback_models,
                                           retry_deadline_secs=900))
@@ -333,7 +446,25 @@ async def main():
                     votes = {"rule": ok}
                     kind = "unanswerable"
                 else:
-                    ok, votes = await judge_panel(judge_llms, q["question"], gold, answer)
+                    # Scored by embedding similarity to the gold answer, not by a
+                    # judge panel. The panel was measured against its own output
+                    # and failed: on "gross margin in each quarter of 2022" the
+                    # system returned 33.9%, 33.6%, 31.7% and 32% against a gold
+                    # of 33.9%, 33.6%, 31.7%, 32.3% — three exact and one within
+                    # 0.3pp — and all three judges marked the whole answer wrong.
+                    # ECT-QA answers are lists of figures; a judge asked whether
+                    # that is "correct" argues about rounding and ordering rather
+                    # than measuring retrieval.
+                    f1 = numeric_f1(gold, answer)
+                    if f1 is not None:
+                        # Gold states figures: score the figures.
+                        ok = f1 >= args.f1_threshold
+                        votes = {"numeric_f1": round(f1, 4)}
+                    else:
+                        # Narrative gold with no figure to match; fall back.
+                        sim = await answer_similarity(embed_llm, gold, answer)
+                        ok = sim >= args.similarity_threshold
+                        votes = {"cosine": round(sim, 4)}
                     kind = ("cross-company" if space == RESERVED_SPACE_ALL
                             else q["question_type"].split("|")[0])
 
