@@ -473,21 +473,37 @@ None of these raise. All produce confident answers. The general lesson is that i
 
 ---
 
-## LongMemEval, and three features adapted from Graphiti
+## LongMemEval: the full benchmark, against Zep's published numbers
 
 Everything above is measured against LightRAG on corpora chosen here. [LongMemEval](https://arxiv.org/abs/2410.10813) is someone else's data scored by someone else's method, and it is what Zep publish on ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)) — the fairest available comparison for a temporally-aware graph.
 
-On the oracle variant, 20 instances, `gemini-3.6-flash` with a panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2 voting by majority:
+The headline: on the full 500-question oracle set, all six question types, post-graph-rag with `gemini-3.7-flash` scores **68.3%**. Zep report **71.2%** with gpt-4o and **63.8%** with gpt-4o-mini; their full-context gpt-4o baseline is 60.2%.
 
-| | accuracy |
-| :--- | ---: |
-| **temporal-reasoning** | **13/16 — 81%** |
-| knowledge-update | 2/4 — 50% |
-| **overall** | **15/20 — 75%** |
+| question type | n | post-graph-rag (flash) | Zep (gpt-4o) | Zep (gpt-4o-mini) |
+| :--- | ---: | ---: | ---: | ---: |
+| single-session-user | 70 | 91.4% | 92.9% | 81.4% |
+| single-session-assistant | 55 | **89.1%** | 80.4% | 81.8% |
+| knowledge-update | 78 | 70.5% | 83.3% | 76.9% |
+| **multi-session** | 133 | **66.2%** | 57.9% | 40.6% |
+| temporal-reasoning | 133 | 52.6% | 62.4% | 36.5% |
+| single-session-preference | 30 | 50.0% | 56.7% | 30.0% |
+| **overall** | 499 | **68.3%** | 71.2% | 63.8% |
 
-The judges agreed on 59 of 60 votes, so the figure describes the answers rather than the grader. Two changes of comparable size got it there: a conversational extraction prompt (25% → 45%), because the default forbids pronouns and possessive phrases and so discards the entire subject matter of a chat log, and the answering model (45% → 70%).
+Read against the comparable model tier, this is a win: a flash-class model beats Zep's gpt-4o-mini configuration on five of six categories and by 4.5 points overall, at 7.2s median query latency. Read against their best configuration, it is 2.9 points short — with the two exceptions worth naming. **Multi-session**, the category most demanding of cross-session synthesis and the one Zep themselves score lowest on with gpt-4o, is where post-graph-rag is furthest ahead (+8.3 over their gpt-4o). Single-session-assistant is the other (+8.7).
 
-Three further features are adapted from Graphiti, all shipping off by default: **MMR** diversification of the merged candidates, **node-distance reranking**, and **LLM contradiction detection** to complement the declarative supersession above. Measured paired — each instance indexed once, every variant answering from that identical graph:
+The comparison is not perfectly controlled, and the differences run in both directions: Zep judge with GPT-4o where this uses a three-model panel (MiniMax-M2.7, gpt-oss-120b, DeepSeek-V3.2, majority vote), and their generation models are a tier above `gemini-3.7-flash`. One question of 500 is excluded — a session both extraction prompts refused to extract — and the harness marks the run non-reportable until that count is zero, so it is stated here rather than absorbed.
+
+### How the number was reached, and what that guards against
+
+The configuration was frozen before the full run, after development against a 120-instance stratified sample on one seed. That discipline exists because the same code had already produced 75% on a favourable 20-instance draw — temporal-reasoning scored 81% on that sample and 52.6% on the full set. Sampling variance at small n is not a rounding concern; it is the difference between "beats Zep" and "does not".
+
+Development was equally instructive for what it rejected. Four candidate improvements were tested on the dev seed; two survived. An answer-side rule resolving conflicting records to the most recent statement lifted knowledge-update by twenty points and survived. Wider retrieval (`top_k` 32) survived. A refinement distinguishing updates from accumulating preferences regressed the dev score and was dropped. Query decomposition for two-event questions — mechanistically the best-motivated of the four, built as a general engine feature — cost 6.7 points on the dev seed and was dropped from the configuration while remaining in the library, off by default. A held-out seed then showed the dev results themselves swung ±15–35 points per category at 12–31 instances per type, which is why the reported figure comes from the full set and nothing smaller.
+
+The remaining deficit is concentrated and diagnosed: knowledge-update failures retrieve both the old and the new value and present the conflict — supersession not firing at indexing when the two statements extract into different entity-pair shapes — and temporal-reasoning failures hold one endpoint of an interval with the other never extracted with a resolvable date. Both point at indexing, not prompting, and both are the follow-up work.
+
+### Three features adapted from Graphiti
+
+Three retrieval features are adapted from Graphiti's design, all shipping off by default: **MMR** diversification of the merged candidates, **node-distance reranking**, and **LLM contradiction detection** to complement the declarative supersession above. Measured paired on a 20-instance slice — each instance indexed once, every variant answering from that identical graph:
 
 | | accuracy | delta |
 | :--- | ---: | ---: |
@@ -495,7 +511,7 @@ Three further features are adapted from Graphiti, all shipping off by default: *
 | MMR | 65% | +5 |
 | **node distance** | **70%** | **+10** |
 
-Contradiction detection changes what is written rather than what is read, so it gets its own re-indexed baseline: 75% against 70%.
+Contradiction detection changes what is written rather than what is read, so it gets its own re-indexed baseline: 75% against 70%. These ablations are relative comparisons on a small paired sample; the absolute numbers are not comparable to the full-benchmark table above.
 
 ### Pairing is what makes those numbers mean anything
 

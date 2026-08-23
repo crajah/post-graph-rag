@@ -1,4 +1,8 @@
-,accuracy
-temporal-reasoning,13/16 — 81%
-knowledge-update,2/4 — 50%
-overall,15/20 — 75%
+question type,n,post-graph-rag (flash),Zep (gpt-4o),Zep (gpt-4o-mini)
+single-session-user,70,91.4%,92.9%,81.4%
+single-session-assistant,55,89.1%,80.4%,81.8%
+knowledge-update,78,70.5%,83.3%,76.9%
+multi-session,133,66.2%,57.9%,40.6%
+temporal-reasoning,133,52.6%,62.4%,36.5%
+single-session-preference,30,50.0%,56.7%,30.0%
+overall,499,68.3%,71.2%,63.8%
