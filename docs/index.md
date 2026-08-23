@@ -538,11 +538,13 @@ A fourth change followed from watching what the third cost. Encouraging partial 
 | | accuracy | mean numeric F1 | refused |
 | :--- | ---: | ---: | ---: |
 | judge panel, original prompt | 0.162 | — | 75% |
-| numeric F1, same answers | 0.265 | 0.201 | 75% |
-| + extraction split, `top_k` 48, partial answers | 0.353 | 0.419 | 7% |
-| **+ scope discipline** | **0.397** | **0.430** | 10% |
+| numeric F1, same answers | 0.221 | 0.191 | 75% |
+| + extraction split, `top_k` 48, partial answers | 0.324 | 0.447 | 7% |
+| **+ scope discipline** | **0.353** | **0.451** | 10% |
 
-By question type, the gains are not evenly spread. Relative-time questions went from 0.167 to **1.000** — six of six — and multi-time from 0.400 to 0.520. Single-time recovered from the regression to 0.053, which is where it started: still close to nothing.
+These figures were themselves corrected once. The first numeric-F1 implementation counted every number in the text as a figure, which cut both ways: a prose answer citing "fiscal 2023-q2 [1]" bled precision on chronology it never asserted as a value — single-time questions containing their gold figures scored 0.38–0.59 against a 0.60 threshold, reading as a category at zero — while gold answers stating a year alongside each figure handed out free recall matches, inflating multi-time. Chronology and citation markers are now excluded from figure matching, and questions whose gold *is* a period ("Q1 2022") get period-token matching of their own instead of falling to cosine. The corrected column is lower than the first published version of this table, and the correction is stated rather than silently applied.
+
+By question type under the corrected metric: single-time 0.421 — the earlier "category at zero" was the metric artifact above, not the system. Multi-time 0.280 and relative-time 0.167, both previously overstated by year-matching. Cross-company 0.100: answers now produce figures, but frequently for a different quarter than the question intends, which is a real failure of period selection rather than of retrieval or scoring.
 
 Cross-company remains **0.000 over ten questions**, unmoved by every change so far, and two hypotheses for it have now been falsified rather than confirmed. It is not retrieval: all four companies are retrieved even at `top_k=12`, with eleven chunks discussing the metric asked about. It is not the all-or-nothing refusal wording either, since that fix moved every other category and left this one untouched. Ten questions at zero out of sixty is the part of this benchmark still unexplained, and an average that quietly absorbed it would be the more flattering number and the less useful one.
 

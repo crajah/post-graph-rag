@@ -152,9 +152,58 @@ def _cosine(a, b):
 
 NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 
+# Text that reads as chronology or citation rather than as a figure. Without
+# this, a prose answer citing "fiscal 2023-q2 [1]" contributes 2023, 2 and 1 as
+# figures, and precision collapses under numbers the model never asserted as
+# values. Measured on the scoped run: cross-company answers containing the gold
+# figures scored 0.11-0.24 purely from this, and single-time answers landed at
+# 0.38-0.59 against a 0.60 threshold. Stripped from gold and answer alike, so
+# the comparison stays symmetric.
+_NOT_A_FIGURE = re.compile(
+    r"\[\d+\]"                                   # citation markers
+    r"|\b(?:19|20)\d{2}-q[1-4]\b"                # 2023-q2
+    r"|\b(?:19|20)\d{2}-\d{2}(?:-\d{2})?\b"     # ISO dates
+    r"|\bq[1-4]\s+(?:19|20)\d{2}\b"             # Q3 2022
+    r"|\b(?:fy\s*)?(?:19|20)\d{2}\b"            # bare years, FY2023
+    r"|\bq[1-4]\b",                              # bare quarter labels
+    re.I)
+
 
 def _numbers(text: str):
-    return [float(x) for x in NUMBER.findall(text or "")]
+    return [float(x) for x in NUMBER.findall(_NOT_A_FIGURE.sub(" ", text or ""))]
+
+
+_PERIOD = re.compile(r"\b(?:q([1-4])[\s-]*((?:19|20)\d{2})|((?:19|20)\d{2})[\s-]*q([1-4]))\b", re.I)
+
+
+def _periods(text: str):
+    """Quarter-year tokens, normalised so 'Q1 2022' and '2022-q1' compare equal.
+
+    Needed because some gold answers ARE periods — "in which quarter was the
+    margin highest" is answered by a quarter, not a figure. Those tokens are
+    chronology in a prose answer but the value itself in that gold, so they get
+    their own matching tier rather than being stripped or being counted as
+    numbers.
+    """
+    out = set()
+    for m in _PERIOD.finditer(text or ""):
+        q = m.group(1) or m.group(4)
+        y = m.group(2) or m.group(3)
+        out.add(f"{y}-q{q}")
+    return out
+
+
+def period_f1(gold: str, answer: str):
+    """F1 over quarter-year tokens; None when gold names no period."""
+    g = _periods(gold)
+    if not g:
+        return None
+    a = _periods(answer)
+    if not a:
+        return 0.0
+    hit = len(g & a)
+    prec, rec = hit / len(a), hit / len(g)
+    return 0.0 if prec + rec == 0 else 2 * prec * rec / (prec + rec)
 
 
 def numeric_f1(gold: str, answer: str, rel_tol: float = 0.01, abs_tol: float = 0.05):
@@ -464,10 +513,15 @@ async def main():
                     # that is "correct" argues about rounding and ordering rather
                     # than measuring retrieval.
                     f1 = numeric_f1(gold, answer)
+                    pf1 = period_f1(gold, answer) if f1 is None else None
                     if f1 is not None:
                         # Gold states figures: score the figures.
                         ok = f1 >= args.f1_threshold
                         votes = {"numeric_f1": round(f1, 4)}
+                    elif pf1 is not None:
+                        # Gold is a period ("Q1 2022"): match periods as tokens.
+                        ok = pf1 >= args.f1_threshold
+                        votes = {"period_f1": round(pf1, 4)}
                     else:
                         # Narrative gold with no figure to match; fall back.
                         sim = await answer_similarity(embed_llm, gold, answer)

@@ -32,6 +32,7 @@ try:
 except SystemExit:
     pass
 numeric_f1 = _run.numeric_f1
+period_f1 = _run.period_f1
 
 from post_graph_rag import RAGConfig                      # noqa: E402
 from post_graph_rag.llm import LLMService                 # noqa: E402
@@ -69,8 +70,11 @@ async def main():
     for r in gold_rows:
         gold, answer = str(r["gold"]), str(r.get("answer") or "")
         f1 = numeric_f1(gold, answer)
+        pf1 = period_f1(gold, answer) if f1 is None else None
         if f1 is not None:
             ok, metric, value = f1 >= args.f1_threshold, "numeric_f1", f1
+        elif pf1 is not None:
+            ok, metric, value = pf1 >= args.f1_threshold, "period_f1", pf1
         else:
             sim = cosine(await llm.get_embedding(gold), await llm.get_embedding(answer)) \
                 if answer.strip() else 0.0
