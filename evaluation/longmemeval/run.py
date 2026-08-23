@@ -29,6 +29,7 @@ answering model so a model cannot mark its own work.
 """
 import argparse
 import asyncio
+import collections
 import json
 import logging
 import pathlib
@@ -156,13 +157,29 @@ async def index_instance(rag, instance) -> int:
         text = render_session(turns, parse_date(raw_date))
         if not text.strip():
             continue
+        meta = DocumentMetadata(
+            document=session_id, source=f"session://{session_id}",
+            category="chat_session", extra={"session_date": parse_date(raw_date)})
         try:
-            written = await rag.index_document(text, metadata=DocumentMetadata(
-                document=session_id, source=f"session://{session_id}",
-                category="chat_session", extra={"session_date": parse_date(raw_date)}))
-        except Exception as e:
-            raise DegradedRun(
-                f"session {session_id} failed to index: {type(e).__name__}: {e}") from e
+            written = await rag.index_document(text, metadata=meta)
+        except Exception as first:
+            # Some ShareGPT/UltraChat sessions are walls of code or generated
+            # prose the conversational prompt cannot shape into speaker-centred
+            # triples, and the extractor correctly refuses to write placeholders.
+            # The document-style default prompt handles exactly that register,
+            # so try it before declaring the instance degraded — one dead
+            # session otherwise voids the whole question.
+            try:
+                fallback = rag.extractor._system_prompt
+                rag.extractor._system_prompt = None       # base document prompt
+                written = await rag.index_document(text, metadata=meta)
+                print(f"  session {session_id}: conversational extraction failed "
+                      f"({type(first).__name__}); document prompt succeeded", flush=True)
+            except Exception as e:
+                raise DegradedRun(
+                    f"session {session_id} failed to index: {type(e).__name__}: {e}") from e
+            finally:
+                rag.extractor._system_prompt = fallback
         if not written:
             raise DegradedRun(
                 f"session {session_id} produced no graph structure; the evidence "
@@ -214,6 +231,11 @@ async def main():
                     help="panel of judges; a majority marks an answer correct")
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--limit", type=int, default=20)
+    ap.add_argument("--stratify", action="store_true",
+                    help="sample proportionally per question type with a floor, "
+                         "rather than shuffling the whole set and truncating")
+    ap.add_argument("--stratify-floor", type=int, default=10,
+                    help="minimum instances per question type when stratifying")
     ap.add_argument("--types", nargs="*", default=None,
                     help="question_type filter, e.g. temporal-reasoning knowledge-update")
     ap.add_argument("--seed", type=int, default=0)
@@ -241,8 +263,28 @@ async def main():
     data = json.loads(pathlib.Path(args.data).read_text())
     if args.types:
         data = [d for d in data if d["question_type"] in args.types]
-    random.Random(args.seed).shuffle(data)
-    data = data[:args.limit]
+    rng = random.Random(args.seed)
+    rng.shuffle(data)
+    if args.stratify:
+        # Proportional sampling with a floor per type. Shuffle-and-truncate
+        # under-samples the rare categories, and single-session-preference is
+        # 30 of 500 — it would land around 7 instances in a sample of 120,
+        # which is too thin to read. It is also the category Zep scores worst
+        # on (56.7%), so a comparison that barely covers it is not a comparison.
+        by_type = collections.defaultdict(list)
+        for d in data:
+            by_type[d["question_type"]].append(d)
+        n_types = len(by_type)
+        floor = min(args.stratify_floor, args.limit // max(1, n_types))
+        quota = {t: max(floor, round(args.limit * len(v) / len(data)))
+                 for t, v in by_type.items()}
+        picked = []
+        for t, v in by_type.items():
+            picked += v[:quota[t]]
+        rng.shuffle(picked)
+        data = picked[:args.limit]
+    else:
+        data = data[:args.limit]
 
     panel_names = args.judges or [args.judge_model]
     if args.model in panel_names:
@@ -326,9 +368,29 @@ async def main():
                 t_index = time.time() - t0
 
                 t0 = time.time()
+                # Diagnosed from the all-six-types baseline (results_all6_base):
+                # knowledge-update failures mostly retrieved BOTH the old and the
+                # new value and presented the conflict instead of resolving it;
+                # temporal-reasoning failures mostly found one endpoint of an
+                # interval and refused, or declined to do date arithmetic.
+                # Supersession filters the graph channels, but a stale value can
+                # still arrive through raw chunk text, so the resolution rule
+                # has to live at the answer as well.
                 asked = (f"Today is {parse_date(inst.get('question_date', ''))}. "
                          f"{inst['question']}") if inst.get("question_date") else inst["question"]
-                out = await rag.query(asked, param=QueryParam(mode="mix", top_k=8))
+                asked = (
+                    "Answer from the facts and conversation excerpts provided.\n"
+                    "- When records conflict about the same thing, the most recent "
+                    "statement is the current truth. Give the current value only; "
+                    "do not present the conflict or hedge between versions.\n"
+                    "- For questions about durations or counts of days/weeks: find "
+                    "the dates of the events, then compute the difference "
+                    "yourself. Use the stated 'today' for phrases like 'how long "
+                    "ago'. Prefer a specific number over a refusal.\n"
+                    "- If an event's date is only implied (e.g. said during a "
+                    "session), use that session's date.\n\n" + asked
+                )
+                out = await rag.query(asked, param=QueryParam(mode="mix", top_k=32))
                 t_query = time.time() - t0
                 answer = (out["answer"] if isinstance(out, dict) else str(out)).strip()
 

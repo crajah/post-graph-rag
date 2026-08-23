@@ -210,3 +210,37 @@ class TestRetrievalModes:
         assert "hybrid" in RETRIEVAL_MODES
         assert "naive" in RETRIEVAL_MODES
         assert "bypass" in RETRIEVAL_MODES
+
+
+class TestDecomposeParsing:
+    """_decompose_question output handling, without an LLM."""
+
+    def _parse(self, out):
+        # Mirrors the parsing in GraphRAG._decompose_question.
+        lines = [l.strip("-• \t") for l in (out or "").splitlines()]
+        lines = [l for l in lines if l and l.upper() != "NONE" and len(l) > 8]
+        return lines[:4] if 2 <= len(lines) else None
+
+    def test_none_reply_means_no_subqueries(self):
+        assert self._parse("NONE") is None
+
+    def test_single_aspect_is_not_a_decomposition(self):
+        assert self._parse("bought Adidas running shoes") is None
+
+    def test_two_events_parse(self):
+        out = "bought Adidas running shoes at the outlet mall\nrealized the shoelace on the old shoes broke"
+        assert len(self._parse(out)) == 2
+
+    def test_bullets_are_stripped(self):
+        out = "- started using the Ibotta cashback app\n- the stated question date"
+        subs = self._parse(out)
+        assert subs and all(not s.startswith("-") for s in subs)
+
+    def test_shredding_is_capped_at_four(self):
+        out = "\n".join(f"event number {i} description" for i in range(9))
+        assert len(self._parse(out)) == 4
+
+    def test_empty_or_garbage_is_none(self):
+        assert self._parse("") is None
+        assert self._parse(None) is None
+        assert self._parse("ok\nno") is None   # fragments below the length floor

@@ -597,6 +597,9 @@ class GraphRAG:
                 "metadata": {"query_mode": mode, "keywords": {"high_level": [], "low_level": []}}
             }
 
+        if self.config.auto_decompose and p.subqueries is None:
+            p.subqueries = await self._decompose_question(question)
+
         if not p.hl_keywords and not p.ll_keywords:
             kw_res = await self.extractor.extract_keywords(question)
             p.hl_keywords = kw_res.high_level_keywords
@@ -623,6 +626,21 @@ class GraphRAG:
             similar_entities = await self.store.search_similar_entities(
                 entity_vec, top_k=p.top_k, space=target_space
             )
+            if p.subqueries:
+                # Each subquery seeds its own entity search; the walks then run
+                # from the union. A question comparing two events embeds as one
+                # vector resembling neither, so the second event's entities sit
+                # below the cutoff however large top_k is. Deduplicated by vertex
+                # id keeping the better score.
+                seen = {v.id: (v, d) for v, d in similar_entities}
+                per_sub = max(4, p.top_k // max(1, len(p.subqueries)))
+                for sub in p.subqueries:
+                    sub_vec = await self.llm.get_embedding(sub)
+                    for v, dist in await self.store.search_similar_entities(
+                            sub_vec, top_k=per_sub, space=target_space):
+                        if v.id not in seen or dist < seen[v.id][1]:
+                            seen[v.id] = (v, dist)
+                similar_entities = list(seen.values())
         if mode in DOCUMENT_MODES:
             similar_docs = await self.store.search_similar_documents(
                 query_vec, top_k=p.top_k, space=target_space
@@ -678,11 +696,16 @@ class GraphRAG:
             # carries the question's meaning and sits nowhere useful in vector
             # space — and those are frequently the term a question turns on.
             if self.config.lexical_search:
-                for edge, _rank in await self.store.search_relations_text(
-                        question, top_k=self.config.lexical_top_k, space=target_space):
-                    src, tgt = await self.store.get_relation_endpoints(edge)
-                    if src is not None and tgt is not None:
-                        relation_lexical.append(self._format_triple(edge, src, tgt, hops=1))
+                # Subqueries search the lexical channel too: BM25 is where a
+                # distinctively-worded second event is most likely to surface.
+                lex_queries = [question] + list(p.subqueries or [])
+                lex_k = max(8, self.config.lexical_top_k // len(lex_queries))
+                for lex_q in lex_queries:
+                    for edge, _rank in await self.store.search_relations_text(
+                            lex_q, top_k=lex_k, space=target_space):
+                        src, tgt = await self.store.get_relation_endpoints(edge)
+                        if src is not None and tgt is not None:
+                            relation_lexical.append(self._format_triple(edge, src, tgt, hops=1))
 
             # Pull in passages that mention the matched entities. A question can
             # match an entity by name while the passage explaining it uses none
@@ -921,6 +944,34 @@ class GraphRAG:
             # relations first, so truncation sheds the most tenuous ones.
             "hops": hops,
         }
+
+
+    _DECOMPOSE_PROMPT = (
+        "Does this question compare, order, count, or measure the gap between "
+        "TWO OR MORE distinct facts or events? If yes, list each fact/event as a "
+        "short standalone search phrase, one per line. If the question is about "
+        "a single fact, reply with exactly: NONE.\n\nQuestion: {question}"
+    )
+
+    async def _decompose_question(self, question: str) -> Optional[List[str]]:
+        """Split a multi-aspect question into per-aspect retrieval phrases.
+
+        Applied uniformly rather than routed by question category: the engine
+        has no oracle for what kind of question it was handed, and a benchmark
+        harness must not use one either. Single-aspect questions come back NONE
+        and cost one small completion.
+        """
+        try:
+            out = await self.llm.chat_completion(
+                [{"role": "user",
+                  "content": self._DECOMPOSE_PROMPT.format(question=question)}])
+        except Exception:
+            return None                      # retrieval degrades to single-query
+        lines = [l.strip("-• \t") for l in (out or "").splitlines()]
+        lines = [l for l in lines if l and l.upper() != "NONE" and len(l) > 8]
+        # One aspect is just the question again; more than four is the model
+        # shredding rather than decomposing.
+        return lines[:4] if 2 <= len(lines) else None
 
     def _filter_temporal(self, triples: List[Dict[str, Any]], p: QueryParam,
                          sort: bool = True) -> List[Dict[str, Any]]:

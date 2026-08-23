@@ -136,6 +136,13 @@ class QueryParam:
     # answer or audits a decision.
     as_believed_at: Optional[str] = None        # Graph as known at this ISO instant
     include_superseded: Optional[bool] = None   # Include relations a later assertion replaced
+
+    # Additional retrieval texts whose candidates merge into the same pools
+    # before ranking. A question comparing two events embeds as one vector that
+    # resembles neither event, so the second event's facts sit below the cutoff
+    # however large top_k is. Retrieving each event separately is the fix; the
+    # fusion step already knows how to rank candidates from several sources.
+    subqueries: Optional[List[str]] = None
     max_hops: Optional[int] = None              # Hops to walk from a matched entity (None = config default)
     conversation_history: List[Dict[str, str]] = field(default_factory=list) # Multi-turn chat history
     hl_keywords: List[str] = field(default_factory=list) # Custom high-level search terms

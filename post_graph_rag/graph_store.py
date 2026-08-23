@@ -27,7 +27,9 @@ def _utc_now() -> str:
 class RAGGraphStore:
     def __init__(self, config: RAGConfig):
         self.config = config
-        self.client = AsyncPostGraph(dsn=config.db_uri, schema_per_realm=config.schema_per_realm)
+        self.client = AsyncPostGraph(
+            dsn=config.db_uri, schema_per_realm=config.schema_per_realm,
+            pool_min_size=config.pool_min_size, pool_max_size=config.pool_max_size)
         self.realm = config.realm
         self.space = config.space or "default"
         # Guards the lazily-built lexical index against concurrent first use.

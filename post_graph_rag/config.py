@@ -149,6 +149,14 @@ class RAGConfig:
     embedding_encoding_format: Optional[str] = field(
         default_factory=lambda: _env("RAG_EMBEDDING_ENCODING_FORMAT", "float") or None)
     db_uri: str = field(default_factory=lambda: _env("POSTGRES_URI", "postgresql://localhost:5432/postgres"))
+
+    # Connection pool size per client. The default of 10 is right for one client
+    # but wrong for many: an evaluation running 24 instances concurrently opens
+    # 24 pools, and 240 connections exceeds a stock max_connections of 100. The
+    # failure is TooManyConnectionsError partway through a long run, so the size
+    # is exposed rather than left to be discovered.
+    pool_min_size: int = field(default_factory=lambda: int(_env("RAG_POOL_MIN_SIZE", "10")))
+    pool_max_size: int = field(default_factory=lambda: int(_env("RAG_POOL_MAX_SIZE", "10")))
     realm: str = field(default_factory=lambda: _env("RAG_REALM", "default"))
     space: str = field(default_factory=lambda: _env("RAG_SPACE", "default"))
 
@@ -250,6 +258,14 @@ class RAGConfig:
     # Include relations that a later assertion has superseded. Off by default:
     # the history is kept, but a superseded fact should not be presented as
     # current unless explicitly asked for.
+    # Decompose multi-aspect questions into per-aspect subqueries before
+    # retrieval. A question comparing two things embeds as one vector that
+    # resembles neither, so the second aspect's facts sit below the similarity
+    # cutoff however large top_k is. Off by default: single-aspect corpora pay
+    # an extra LLM call for nothing.
+    auto_decompose: bool = field(
+        default_factory=lambda: _env("RAG_AUTO_DECOMPOSE", "0").lower() in ("1", "true", "yes")
+    )
     include_superseded: bool = field(
         default_factory=lambda: _env("RAG_INCLUDE_SUPERSEDED", "0").lower() in ("1", "true", "yes")
     )
