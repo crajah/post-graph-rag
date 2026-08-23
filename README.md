@@ -265,6 +265,33 @@ await rag.index_document(chunk_text, metadata=metadata)
 ### Design Rationale: Optional vs. Required
 - **All metadata fields are optional** with default `None`. This allows seamless indexing of raw strings, short code snippets, webhooks, or unformatted text, while offering rich structural provenance tracking when indexing multi-page PDFs or categorized enterprise documents.
 
+### Document identity: `source` and `document` together
+
+Re-indexing **replaces** rather than appends, so two documents that resolve to the
+same key are treated as one document seen twice — the second deletes the first.
+
+The key is built from `source` **and** `document` together, so give at least one
+of them a value that is unique per document:
+
+```python
+# Correct: source identifies this document
+DocumentMetadata(source="/corpus/WDC-2022-q1.json", document="WDC-2022-q1")
+
+# Wrong: a corpus name is not a document identity
+DocumentMetadata(source="ect", document="WDC-2022-q1")   # was catastrophic before 1.8.0
+```
+
+Before 1.8.0 the key preferred `source` and ignored `document` entirely, so the
+second form collapsed an entire corpus onto one key. An 80-transcript run kept
+five transcripts and marked 92% of its relations dormant, with no error raised —
+the only visible symptom was the system declining to answer questions whose
+evidence had been deleted. Since 1.8.0 both parts contribute, so the second form
+is merely untidy rather than destructive.
+
+**Upgrading:** keys computed before 1.8.0 do not match the new scheme, so
+re-indexing an existing document appends a copy instead of replacing it. Rebuild
+realms indexed on the old scheme.
+
 ---
 
 ## ⚙️ Configuration Reference (`RAGConfig`)

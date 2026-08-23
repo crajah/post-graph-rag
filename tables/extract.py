@@ -16,6 +16,8 @@ NAMES = [
     "lightrag-encyclopedic-prose",
     "lightrag-narrative-prose", "lightrag-financial-filings",
     "retrieval-recall-granularity-fix", "model-sensitivity",
+    "longmemeval-by-question-type", "longmemeval-paired-ablation",
+    "ectqa-scoring-and-prompt-changes",
 ]
 
 
@@ -48,7 +50,16 @@ def main():
     md = (here.parent / "docs" / "index.md").read_text()
     found = tables(md)
     if len(found) != len(NAMES):
-        sys.exit(f"expected {len(NAMES)} tables, found {len(found)} — update NAMES")
+        # Names are positional, so a table added mid-article shifts every later
+        # CSV onto the wrong filename. Show the headers either side of the
+        # mismatch rather than only the counts.
+        detail = []
+        for i, tbl in enumerate(found):
+            header = tbl[0].strip()[:70]
+            name = NAMES[i] if i < len(NAMES) else "*** unnamed ***"
+            detail.append(f"  [{i:>2}] {name:<34} {header}")
+        sys.exit(f"expected {len(NAMES)} tables, found {len(found)} — update NAMES.\n"
+                 + "\n".join(detail))
     for name, tbl in zip(NAMES, found):
         rows = []
         for line in tbl:

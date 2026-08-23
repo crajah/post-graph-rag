@@ -505,6 +505,33 @@ The same baseline has scored 75%, 70% and 60% on identical code and identical in
 
 ---
 
+## What an evaluation harness is for: three defects it found
+
+Since 1.8.0 the ECT-QA harness — sixteen quarters of earnings calls per company, where the same metric is restated every quarter and only the date separates the values — has been less useful for the score it produces than for the faults it exposed. All three were invisible in normal use.
+
+**A constant `source` was deleting documents.** `document_key()` preferred `source` over the document title and discarded the title entirely, so a caller passing a corpus name rather than a path collapsed every document onto one key. Since a matching key means *re-index*, each document deleted the one before it. An 80-transcript corpus retained five transcripts, 92% of relations were marked dormant, and nothing raised an error. The only symptom was the system answering "unanswerable" — which was correct, given what remained. The key now combines both parts; realms indexed earlier should be rebuilt, since their keys no longer match.
+
+**The judge panel was scoring worse than the system.** Asked for gross margin in each quarter of 2022, the answer gave 33.9%, 33.6%, 31.7% and 32% against a gold of 33.9%, 33.6%, 31.7%, 32.3% — three exact, the fourth within 0.3 points. All three judges failed the whole answer. Scoring moved to tolerance-based numeric F1, and rescoring identical answers took the run from 0.162 to 0.265. Ten points that were never a system failure.
+
+Cosine similarity was the obvious replacement and was rejected on measurement: gold is a bare list of figures while the system replies in prose, so whole-text embedding is dominated by length. Correct answers averaged 0.643 and refusals 0.509 — 0.13 apart, with no threshold between them. Figure matching separated the same rows 0.770 against 0.144. Cosine remains the fallback for questions whose gold carries no figure.
+
+**The answer prompt was instructing the refusals.** It ended *"if the facts do not support an answer, say exactly: unanswerable"*, and the model read that as requiring completeness — refusing 45 of 60 questions, several while quoting figures it had already retrieved. Under F1 a partial answer earns partial credit, so the wording was discarding points the metric would have awarded. Rewritten to ask for partial answers, refusals fell from 75% to 7% and mean numeric F1 rose from 0.201 to 0.419. `top_k` also moved from 12 to 48, since gold answers need a mean of 5.5 figures and up to 32 — usually one per quarter across sixteen quarters, which twelve chunks cannot cover however well they are ranked.
+
+A fourth change followed from watching what the third cost. Encouraging partial answers helped multi-period questions and hurt single-period ones — the model volunteered neighbouring quarters where exactly one figure was wanted, and precision in the F1 charged it for them. Adding scope discipline — answer the periods asked and no others, and when no period is named answer for the most recent the facts cover — recovered that without giving back the gain.
+
+| | accuracy | mean numeric F1 | refused |
+| :--- | ---: | ---: | ---: |
+| judge panel, original prompt | 0.162 | — | 75% |
+| numeric F1, same answers | 0.265 | 0.201 | 75% |
+| + extraction split, `top_k` 48, partial answers | 0.353 | 0.419 | 7% |
+| **+ scope discipline** | **0.397** | **0.430** | 10% |
+
+By question type, the gains are not evenly spread. Relative-time questions went from 0.167 to **1.000** — six of six — and multi-time from 0.400 to 0.520. Single-time recovered from the regression to 0.053, which is where it started: still close to nothing.
+
+Cross-company remains **0.000 over ten questions**, unmoved by every change so far, and two hypotheses for it have now been falsified rather than confirmed. It is not retrieval: all four companies are retrieved even at `top_k=12`, with eleven chunks discussing the metric asked about. It is not the all-or-nothing refusal wording either, since that fix moved every other category and left this one untouched. Ten questions at zero out of sixty is the part of this benchmark still unexplained, and an average that quietly absorbed it would be the more flattering number and the less useful one.
+
+---
+
 ## Limitations
 
 **Community summarisation is single-level.** GraphRAG's hierarchical levels are not implemented, so semantically overlapping clusters can coexist. Leiden at resolution 2.0 keeps the largest cluster to 17% of the graph, which makes this tolerable rather than solved.

@@ -1,0 +1,5 @@
+,accuracy,mean numeric F1,refused
+"judge panel, original prompt",0.162,—,75%
+"numeric F1, same answers",0.265,0.201,75%
+"+ extraction split, top_k 48, partial answers",0.353,0.419,7%
++ scope discipline,0.397,0.430,10%
