@@ -1,5 +1,7 @@
-,GraphRAG,LightRAG 1.5.6,post-graph-rag
-Community detection + summaries,Yes,No,Yes
-"Temporal model (validity, supersession)",No,No,Yes
-Controlled predicate vocabulary,No,No,Yes
-Single-datastore (graph + vectors + transactions),No,partial,Yes
+,GraphRAG,LightRAG 1.5.6,Graphiti / Zep,post-graph-rag
+Community detection + summaries,Yes,No,No,Yes
+Bi-temporal model (validity and belief time),No,No,Yes,Yes
+Supersession inferred from document order,No,No,No,Yes
+Controlled predicate vocabulary,No,No,No,Yes
+Runs on PostgreSQL you already operate,No,partial,No,Yes
+Transaction spanning graph and app tables,No,No,No,Yes

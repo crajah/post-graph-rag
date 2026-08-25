@@ -1,12 +1,12 @@
 ---
 layout: default
-title: "post-graph-rag: Graph RAG with a Memory of Time"
-description: "A Graph RAG library on PostgreSQL that beats Graphiti's published LongMemEval numbers at its model tier — with facts that expire, on one database you already run."
+title: "post-graph-rag: A Knowledge Graph That Can Change Its Mind"
+description: "Every production knowledge graph only grows. post-graph-rag closes facts a later document contradicts — bi-temporal, queryable predicates, entirely on PostgreSQL — and beats Graphiti's published LongMemEval scores at its model tier."
 ---
 
-# post-graph-rag: Graph RAG with a Memory of Time
+# post-graph-rag: A Knowledge Graph That Can Change Its Mind
 
-### Beats Graphiti's published LongMemEval scores at the same model tier. Runs entirely on PostgreSQL. Understands that facts expire.
+### Every graph in production only grows. This one closes facts that a later document contradicts — bi-temporally, with queryable predicates, on the PostgreSQL you already run
 
 **[GitHub](https://github.com/crajah/post-graph-rag)** · **[PyPI](https://pypi.org/project/post-graph-rag/)** · `pip install post-graph-rag` · Apache 2.0
 
@@ -33,14 +33,22 @@ What sits on top of that substrate is aimed at the two problems above — a temp
 
 To be precise about what is novel here, since the field moves quickly:
 
-| | GraphRAG | LightRAG 1.5.6 | post-graph-rag |
-| :--- | :---: | :---: | :---: |
-| Community detection + summaries | ✅ | ❌ | ✅ |
-| Temporal model (validity, supersession) | ❌ | ❌ | ✅ |
-| Controlled predicate vocabulary | ❌ | ❌ | ✅ |
-| Single-datastore (graph + vectors + transactions) | ❌ | partial | ✅ |
+| | GraphRAG | LightRAG 1.5.6 | Graphiti / Zep | post-graph-rag |
+| :--- | :---: | :---: | :---: | :---: |
+| Community detection + summaries | ✅ | ❌ | ❌ | ✅ |
+| Bi-temporal model (validity **and** belief time) | ❌ | ❌ | ✅ | ✅ |
+| Supersession inferred from document order | ❌ | ❌ | ❌ | ✅ |
+| Controlled predicate vocabulary | ❌ | ❌ | ❌ | ✅ |
+| Runs on PostgreSQL you already operate | ❌ | partial | ❌ | ✅ |
+| Transaction spanning graph **and** app tables | ❌ | ❌ | ❌ | ✅ |
 
-Community summarisation is Microsoft GraphRAG's contribution, adopted here rather than invented; LightRAG dropped it in favour of dual-level keyword retrieval, so it is a genuine difference against that system but not against GraphRAG. The temporal model and the predicate vocabulary appear in neither.
+Two of those rows are the reason this library exists.
+
+**Supersession from document order** is the one nothing else does. Graphiti is bi-temporal too — that is their contribution and it is a real one — but expressing that a fact ended still depends on the extractor supplying the dates. post-graph-rag infers the arrow from the order documents arrive in, which is the normal condition of real corpora: contract amendments, filing sequences, a conversation history. Thirteen relationships closed across a novel trilogy, from publication order alone, with no date anywhere in the prose.
+
+**The controlled predicate vocabulary** is the unglamorous one, and it decides whether you have a graph or a picture of a graph. An LLM asked for relations returns 460 distinct labels across 421 edges. That is readable and unqueryable. Constrained extraction is what makes `WHERE relation_type = 'worked_with'` return rows.
+
+Community summarisation is Microsoft GraphRAG's contribution, adopted here rather than invented. The last two rows are architectural: everything else in this table needs a second datastore, so no transaction can span your knowledge graph and the application data it describes.
 
 This article walks through those mechanisms, along with entity resolution and concurrency. Every claim carries the measurement behind it: against LightRAG on identical corpus, model and embeddings, and against Zep's published LongMemEval numbers on the full 500-question set. Where a measurement was wrong, or an improvement failed, that is here too — the failures turned out to be the more useful half.
 
