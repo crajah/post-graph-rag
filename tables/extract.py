@@ -10,14 +10,20 @@ import csv, pathlib, re, sys
 # Positional: tables are zipped with this list in document order, so a new
 # table means inserting its name at the right index, not appending.
 NAMES = [
-    "capability-comparison", "community-detector-comparison",
+    "capability-comparison",
+    "results-at-a-glance",
+    "community-detector-comparison",
     "multi-hop-retrieval-by-depth",
-    "relation-channel-on-topic-share", "retrieval-quota-by-question-shape",
+    "relation-channel-on-topic-share",
+    "retrieval-quota-by-question-shape",
+    "longmemeval-by-question-type",
+    "longmemeval-paired-ablation",
     "lightrag-encyclopedic-prose",
-    "lightrag-narrative-prose", "lightrag-financial-filings",
-    "retrieval-recall-granularity-fix", "model-sensitivity",
-    "longmemeval-by-question-type", "longmemeval-paired-ablation",
+    "lightrag-narrative-prose",
+    "lightrag-financial-filings",
+    "retrieval-recall-granularity-fix",
     "ectqa-scoring-and-prompt-changes",
+    "model-sensitivity",
 ]
 
 

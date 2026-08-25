@@ -1,0 +1,4 @@
+,post-graph-rag,comparison
+"LongMemEval, full 500-question oracle set, all six question types",68.3% with gemini-3.7-flash,"Zep 71.2% (gpt-4o), 63.8% (gpt-4o-mini), full-context 60.2% (gpt-4o)"
+"LightRAG, three corpora, identical model and embeddings","denser graphs, supersession fires where LightRAG has no mechanism","13 contradictions closed vs 1,447 relations holding them as co-equal"
+"ECT-QA, sixteen quarters of earnings calls per company",0.353 under tolerance-based numeric F1,no published comparison; used as a defect-finding harness

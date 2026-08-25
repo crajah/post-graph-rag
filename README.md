@@ -4,11 +4,19 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-**Production-Grade, High-Performance Knowledge Graph RAG Engine Native to PostgreSQL.**
+**A Graph RAG engine that runs entirely on PostgreSQL — with a temporal model for facts that change.**
 
-`post-graph-rag` seamlessly combines **automated LLM-based entity & triple extraction**, **vector similarity search via `pgvector`**, and **graph relationship traversal** directly on PostgreSQL using the [`post-graph`](https://pypi.org/project/post-graph/) graph database library.
+`post-graph-rag` combines **LLM-based entity and triple extraction**, **vector similarity search via `pgvector`**, and **graph traversal** directly on PostgreSQL, using the [`post-graph`](https://pypi.org/project/post-graph/) graph library. No separate vector store, no separate graph engine: one database, one consistency model, one backup.
 
-It connects to **any OpenAI-compatible API** (LiteLLM, vLLM, Ollama, DeepSeek, OpenAI) for zero-shot domain-agnostic knowledge extraction, structured document metadata tracking, and context-aware answer synthesis.
+It connects to **any OpenAI-compatible API** (LiteLLM, vLLM, Ollama, DeepSeek, OpenAI) for domain-agnostic extraction, structured document metadata, and context-aware answer synthesis.
+
+### Measured
+
+On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) oracle set, all six question types, `post-graph-rag` with `gemini-3.7-flash` scores **68.3%**. Zep report **71.2%** with gpt-4o and **63.8%** with gpt-4o-mini for Graphiti ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)); their full-context gpt-4o baseline is 60.2%.
+
+Against the comparable model tier — flash against gpt-4o-mini — that is ahead on five of six question types and **+4.5 points overall**, including **+25.6 on multi-session**, the category most demanding of cross-session synthesis. Against their best configuration it is 2.9 points short.
+
+Caveats belong with the number: Zep judge with GPT-4o where this uses a three-model majority panel, their generation models are a tier above, and one question of 500 is excluded because neither extraction prompt could turn that session into triples. The [full write-up](https://crajah.github.io/post-graph-rag/) carries the per-type table, the LightRAG comparison across three corpora, and the improvements that were tested and **rejected**.
 
 ---
 
