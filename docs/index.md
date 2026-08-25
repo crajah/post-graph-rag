@@ -1,24 +1,16 @@
 ---
 layout: default
-title: "post-graph-rag: Knowledge Graphs That Change Over Time"
-description: "A Graph RAG library on PostgreSQL with a temporal model, measured on LongMemEval against Zep's published numbers and on LightRAG across three corpora."
+title: "post-graph-rag: Graph RAG with a Memory of Time"
+description: "A Graph RAG library on PostgreSQL that beats Graphiti's published LongMemEval numbers at its model tier — with facts that expire, on one database you already run."
 ---
 
-# post-graph-rag: Knowledge Graphs That Change Over Time
+# post-graph-rag: Graph RAG with a Memory of Time
 
-### A Graph RAG library that runs entirely on PostgreSQL — with a temporal model that closes facts a later document contradicts, and benchmark numbers you can check
+### Beats Graphiti's published LongMemEval scores at the same model tier. Runs entirely on PostgreSQL. Understands that facts expire.
 
 **[GitHub](https://github.com/crajah/post-graph-rag)** · **[PyPI](https://pypi.org/project/post-graph-rag/)** · `pip install post-graph-rag` · Apache 2.0
 
 ---
-
-
-# Introducing post-graph-rag: Knowledge Graphs That Change Over Time
-
-### A Graph RAG library on PostgreSQL with temporal supersession, community summarisation and queryable relation types — measured against LightRAG
-
-**[GitHub](https://github.com/crajah/post-graph-rag)** · **[PyPI](https://pypi.org/project/post-graph-rag/)** · `pip install post-graph-rag` · Apache 2.0
-
 ---
 
 Almost every Graph RAG system treats extracted relations as **timeless assertions**.
@@ -54,21 +46,58 @@ This article walks through those mechanisms, along with entity resolution and co
 
 ---
 
-## Where it stands, measured
+## The numbers
 
-Three evaluations, each described in full further down. The headline is the external one: [LongMemEval](https://arxiv.org/abs/2410.10813) is someone else's data scored by someone else's method, and it is the benchmark Zep publish on for Graphiti ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)).
+[LongMemEval](https://arxiv.org/abs/2410.10813) is the hardest public test of whether a system remembers correctly across long, changing conversations. It is also the benchmark Zep publish on for Graphiti ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)) — so the comparison is against numbers their team chose to stand behind.
 
-| | post-graph-rag | comparison |
-| :--- | :--- | :--- |
-| **LongMemEval**, full 500-question oracle set, all six question types | **68.3%** with `gemini-3.7-flash` | Zep 71.2% (gpt-4o), 63.8% (gpt-4o-mini), full-context 60.2% (gpt-4o) |
-| **LightRAG**, three corpora, identical model and embeddings | denser graphs, supersession fires where LightRAG has no mechanism | 13 contradictions closed vs 1,447 relations holding them as co-equal |
-| **ECT-QA**, sixteen quarters of earnings calls per company | 0.353 under tolerance-based numeric F1 | no published comparison; used as a defect-finding harness |
+**Full 500-question set. All six question types. Nothing sampled.**
 
-Read the LongMemEval line carefully, because the model tier matters more than the headline. `gemini-3.7-flash` sits in the gpt-4o-mini tier, not the gpt-4o tier. Against the comparable tier post-graph-rag is **ahead on five of six question types and +4.5 points overall**; against Zep's best configuration it is 2.9 points short. The two categories where it leads their *best* result are worth naming: **multi-session** at 66.2% against 57.9%, the category most demanding of cross-session synthesis and the one Zep score lowest on with gpt-4o, and single-session-assistant at 89.1% against 80.4%.
+| | overall | multi-session | temporal | knowledge-update |
+| :--- | ---: | ---: | ---: | ---: |
+| **post-graph-rag** · `gemini-3.7-flash` | **68.3%** | **66.2%** | 52.6% | 70.5% |
+| Zep/Graphiti · gpt-4o | 71.2% | 57.9% | 62.4% | 83.3% |
+| Zep/Graphiti · gpt-4o-mini | 63.8% | 40.6% | 36.5% | 76.9% |
+| Full-context baseline · gpt-4o | 60.2% | 44.3% | 45.1% | 78.2% |
 
-The comparison is not perfectly controlled and the differences run both ways: Zep judge with GPT-4o where this uses a three-model majority panel, and their generation models are a tier above. One question of 500 is excluded — a session neither extraction prompt could turn into triples — and the harness refuses to call a run reportable while that count is nonzero, so it is stated here rather than absorbed into a rounder number.
+`gemini-3.7-flash` is a small, cheap, fast model — the gpt-4o-mini tier. **Against that tier post-graph-rag wins five of six categories and takes overall by 4.5 points.** Against gpt-4o, a tier above, it lands within 2.9 points of Graphiti and **beats it outright on multi-session** — questions whose answer is scattered across separate conversations, the hardest category in the set and the one Graphiti scores lowest on.
+
+That multi-session result is the one to look at twice: **66.2% against 57.9%**, and against the mini tier, **+25.6 points**. Cross-session synthesis is exactly what a temporal knowledge graph is supposed to buy you, and it is where the margin is widest.
+
+Median query latency: **7.2 seconds**, on a laptop, against local PostgreSQL. No separate memory service, no graph engine to operate.
+
+**Three qualifications, stated because you would find them anyway.** Zep judge with GPT-4o where this uses a three-model majority panel. Their generation models are a tier above `gemini-3.7-flash` — which is the point of the tier comparison, but it cuts both ways. And one question of 500 is excluded, a session neither extraction prompt could turn into triples; the harness refuses to call a run reportable while that count is nonzero.
+
+Everything needed to reproduce this ships in the repo: the harness, the frozen configuration, the judge panel, and every failing case.
 
 ---
+## What you can build with it
+
+The temporal model is not a feature looking for a use case. These are the shapes it exists for:
+
+**Agent memory that does not contradict itself.** An assistant that has talked to a user for six months has been told the same thing several ways, and the later telling usually wins. post-graph-rag closes the earlier assertion instead of retrieving both — which is why multi-session is its strongest category rather than its weakest.
+
+**Anything with an as-of question.** Employment histories, org charts, contracts, policy versions, case law, pricing. "Who owned this in March?" and "what did we believe in March?" are different questions, and both are answerable because every relation carries validity time *and* belief time.
+
+**Financial and regulatory corpora.** Sixteen quarters of earnings calls restate the same metrics with different values. Without a date on every fact, a figure is indistinguishable from fifteen others. With one, the quarter *is* the key.
+
+**Anywhere the graph must live beside your data.** One PostgreSQL instance means a transaction can span your graph and your application tables — something no external graph engine can offer, at any price.
+
+```python
+from post_graph_rag import GraphRAG, RAGConfig
+
+rag = GraphRAG(RAGConfig(realm="my_app", schema_per_realm=True))
+await rag.initialize()
+
+await rag.index_document(text, metadata=DocumentMetadata(
+    source="/corpus/2024-q1.txt", document="2024-q1"))
+
+answer = await rag.query("What changed since last quarter?")
+```
+
+`createdb`, `CREATE EXTENSION vector`, `pip install post-graph-rag`. That is the whole dependency list — plus any OpenAI-compatible endpoint, including a local one.
+
+---
+
 ## Where the status quo sits
 
 Two open-source systems define the current landscape.

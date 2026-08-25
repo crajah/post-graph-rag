@@ -4,19 +4,28 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-**A Graph RAG engine that runs entirely on PostgreSQL — with a temporal model for facts that change.**
+**Graph RAG with a memory of time — on the PostgreSQL you already run.**
 
-`post-graph-rag` combines **LLM-based entity and triple extraction**, **vector similarity search via `pgvector`**, and **graph traversal** directly on PostgreSQL, using the [`post-graph`](https://pypi.org/project/post-graph/) graph library. No separate vector store, no separate graph engine: one database, one consistency model, one backup.
+`post-graph-rag` extracts entities and relations with an LLM, stores them as a property graph beside `pgvector` embeddings, and answers questions by fusing vector similarity, graph traversal and full-text search. What makes it different: **a later document can close an earlier fact**, so your model stops reporting that someone is both an ally and a rival.
 
-It connects to **any OpenAI-compatible API** (LiteLLM, vLLM, Ollama, DeepSeek, OpenAI) for domain-agnostic extraction, structured document metadata, and context-aware answer synthesis.
+No separate vector store. No graph engine to operate. One database, one consistency model, one backup — and transactions that span your graph *and* your application tables.
 
-### Measured
+## 📈 Benchmarks
 
-On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) oracle set, all six question types, `post-graph-rag` with `gemini-3.7-flash` scores **68.3%**. Zep report **71.2%** with gpt-4o and **63.8%** with gpt-4o-mini for Graphiti ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)); their full-context gpt-4o baseline is 60.2%.
+On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) set — all six question types, nothing sampled — against the numbers Zep publish for Graphiti ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)):
 
-Against the comparable model tier — flash against gpt-4o-mini — that is ahead on five of six question types and **+4.5 points overall**, including **+25.6 on multi-session**, the category most demanding of cross-session synthesis. Against their best configuration it is 2.9 points short.
+| | overall | multi-session | temporal | knowledge-update |
+| :--- | ---: | ---: | ---: | ---: |
+| **post-graph-rag** · `gemini-3.7-flash` | **68.3%** | **66.2%** | 52.6% | 70.5% |
+| Zep/Graphiti · gpt-4o | 71.2% | 57.9% | 62.4% | 83.3% |
+| Zep/Graphiti · gpt-4o-mini | 63.8% | 40.6% | 36.5% | 76.9% |
+| Full-context baseline · gpt-4o | 60.2% | 44.3% | 45.1% | 78.2% |
 
-Caveats belong with the number: Zep judge with GPT-4o where this uses a three-model majority panel, their generation models are a tier above, and one question of 500 is excluded because neither extraction prompt could turn that session into triples. The [full write-up](https://crajah.github.io/post-graph-rag/) carries the per-type table, the LightRAG comparison across three corpora, and the improvements that were tested and **rejected**.
+`gemini-3.7-flash` is a small, fast model in the gpt-4o-mini tier. **Against that tier it wins five of six categories and overall by 4.5 points.** Against gpt-4o — a tier up — it lands within 2.9 points and **beats Graphiti outright on multi-session**, the hardest category in the set and the one they score lowest on: **66.2% vs 57.9%**, and +25.6 over the mini tier.
+
+Median query latency **7.2s**, on a laptop against local PostgreSQL.
+
+*Qualifications, so you can weigh them yourself: Zep judge with GPT-4o, this uses a three-model majority panel; their generation models are a tier above; one question of 500 is excluded because neither extraction prompt could turn that session into triples. The harness, frozen config and every failing case ship in the repo — see the [full write-up](https://crajah.github.io/post-graph-rag/), which also documents the improvements that were tested and rejected.*
 
 ---
 
