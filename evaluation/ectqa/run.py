@@ -87,12 +87,36 @@ Every transcript begins with a header naming the company and the quarter, e.g.
 
 RULES
 
-1. `valid_from` is MANDATORY on every triple. Use the quarter-ending date from the
-   header unless the sentence names a different period, in which case use that one.
-   A triple without valid_from is useless: the same metric is restated every
-   quarter, and a figure with no date cannot be told apart from fifteen others.
+1. `valid_from` is MANDATORY on every triple. A triple without it is useless:
+   the same metric is restated every quarter, and a figure with no date cannot
+   be told apart from fifteen others.
 
-2. REPORTED ACTUALS AND GUIDANCE ARE DIFFERENT FACTS. Never use the same
+   For a figure, `valid_from` is the START of the period the figure describes
+   (see rule 2). For a narrative fact, it is the date the fact began, or the
+   quarter-ending date from the header when the sentence names no other date.
+
+2. PERIOD-SCOPED FACTS MUST CLOSE THEIR WINDOW WITH `valid_to`.
+   A quarterly figure describes one quarter and no other. Left open-ended it
+   stays valid at every later date, so sixteen quarters of the same metric all
+   answer "what was it in Q3 2022" equally well and none can be told apart.
+
+   For every reported_* and guided_* figure emit BOTH bounds, spanning the
+   period the figure describes:
+
+     Q1 ending 2022-03-31   -> valid_from 2022-01-01, valid_to 2022-03-31
+     "full year 2022"       -> valid_from 2022-01-01, valid_to 2022-12-31
+     guidance for next Q    -> the guided quarter's own start and end
+
+   Guidance is scoped to the period it describes, not to the call that issued
+   it: guidance given in Q1 for Q2 carries Q2's window.
+
+   Facts that genuinely persist keep `valid_to` ABSENT -- a person holding a
+   role, a partnership, a product still on sale, a segment that still exists.
+   Closing a window that never closed is as wrong as leaving one open. The test
+   is whether the fact stops being true at the period's end: a margin of 33.9%
+   in Q1 is not the margin in Q2, but a CEO appointed in Q1 is still the CEO.
+
+3. REPORTED ACTUALS AND GUIDANCE ARE DIFFERENT FACTS. Never use the same
    predicate for both. A question asking what a company *achieved* must not be
    answered with what it *expected*.
 
@@ -104,7 +128,7 @@ RULES
    Past tense and "was/were/came in at/delivered/achieved" mean reported.
    "expect/anticipate/guidance/outlook/we see/should be" mean guided.
 
-3. THE OBJECT OF A FIGURE TRIPLE MUST BE A NUMBER. It carries digits and a unit:
+4. THE OBJECT OF A FIGURE TRIPLE MUST BE A NUMBER. It carries digits and a unit:
    `33.9%`, `$4.1 billion`, `$2.30`, `317 million shares`.
 
    These are NOT acceptable objects for a reported_* or guided_* predicate:
@@ -114,7 +138,7 @@ RULES
    figure predicate. Put it in a narrative triple instead, or drop it.
    A directional word where a number belongs makes the metric unanswerable.
 
-4. EVERY SENTENCE STATING A NUMBER PRODUCES A TRIPLE. Work through the transcript
+5. EVERY SENTENCE STATING A NUMBER PRODUCES A TRIPLE. Work through the transcript
    sentence by sentence. If a sentence contains a figure attached to a metric,
    emit it — even when the same metric already appeared earlier in the call, and
    even when the figure is repeated from the prepared remarks in the Q&A.
@@ -124,7 +148,7 @@ RULES
    Keep the segment when the figure is segment-level:
      Client Solutions -[reported_revenue]-> $948 million
 
-5. Prefer these predicates and reuse them exactly.
+6. Prefer these predicates and reuse them exactly.
    Reported: reported_revenue, reported_revenue_growth, reported_gross_margin,
    reported_operating_margin, reported_earnings_per_share, reported_net_income,
    reported_free_cash_flow, reported_operating_cash_flow, reported_capex,
@@ -132,10 +156,10 @@ RULES
    Guidance: the same names with `guided_` instead of `reported_`.
    Invent a predicate only when a figure fits none of them.
 
-6. Record direction and comparison in the description when stated — "up 5%
+7. Record direction and comparison in the description when stated — "up 5%
    sequentially", "down 1% year over year" — but the object stays the number.
 
-7. Narrative facts (leadership, partnerships, product launches, acquisitions) are
+8. Narrative facts (leadership, partnerships, product launches, acquisitions) are
    worth extracting, but never at the expense of the figures. If a passage
    contains figures, they come first.
 

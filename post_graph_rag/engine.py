@@ -1277,9 +1277,29 @@ class GraphRAG:
         # Negated relations are rendered explicitly. Stored as a positive
         # predicate with a flag, they would otherwise read to the model as an
         # assertion that the relation holds.
+        def _validity(r: Dict[str, Any]) -> str:
+            """The stored period, rendered so the model can order and subtract.
+
+            Without this the dates reach the graph and stop there: a relation
+            carrying valid_from is indistinguishable in the prompt from one that
+            never had a date, and questions of the form "which came first" or
+            "how long between" are unanswerable from a graph that holds the
+            answer.
+            """
+            if not self.config.render_relation_validity:
+                return ""
+            vf, vt = r.get("valid_from"), r.get("valid_to")
+            if vf and vt:
+                return f" [valid {vf} to {vt}]"
+            if vf:
+                return f" [from {vf}]"
+            if vt:
+                return f" [until {vt}]"
+            return ""
+
         triple_passages = [
             f"- ({r['src_id']}) --[{'NOT ' if r.get('negated') else ''}{r['relation_type']}"
-            f" (weight={r['weight']})]--> ({r['tgt_id']}): {r['description']}"
+            f" (weight={r['weight']})]--> ({r['tgt_id']}){_validity(r)}: {r['description']}"
             for r in data["relationships"]
         ]
 
