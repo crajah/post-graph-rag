@@ -108,6 +108,15 @@ class RAGConfig:
     relation_seed_quota: float = field(
         default_factory=lambda: float(_env("RAG_RELATION_SEED_QUOTA", "0.5")))
 
+    # Validity dates are extracted, stored and indexed, and were then dropped at
+    # render time -- the model never saw them, so ordering and duration
+    # questions were unanswerable from a graph that held the answer. On
+    # LongMemEval temporal-reasoning, 58% of ordering and 51% of duration
+    # questions failed with every reader. Off only to reproduce that baseline.
+    render_relation_validity: bool = field(
+        default_factory=lambda: _env("RAG_RENDER_VALIDITY", "1").lower()
+        in ("1", "true", "yes"))
+
     # --- Reranking, applied after the channels are merged ---------------------
     # RRF fuses the channels but says nothing about redundancy, and the channels
     # correlate: traversal and relation-embedding search routinely return the
