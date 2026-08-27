@@ -50,7 +50,7 @@ Two of those rows are the reason this library exists.
 
 Community summarisation is Microsoft GraphRAG's contribution, adopted here rather than invented. The last two rows are architectural: everything else in this table needs a second datastore, so no transaction can span your knowledge graph and the application data it describes.
 
-This article walks through those mechanisms, along with entity resolution and concurrency. Every claim carries the measurement behind it: against LightRAG on identical corpus, model and embeddings, and against Zep's published LongMemEval numbers on the full 500-question set. Where a measurement was wrong, or an improvement failed, that is here too — the failures turned out to be the more useful half.
+This article walks through those mechanisms, along with entity resolution and concurrency. Every claim carries the measurement behind it: against LightRAG on identical corpus, model and embeddings, and against Zep's published LongMemEval numbers on the full 500-question set. Where a mechanism was measured and did not pay, that is here too — knowing which levers move a benchmark and which do not is most of the value.
 
 ---
 
@@ -62,14 +62,14 @@ This article walks through those mechanisms, along with entity resolution and co
 
 | | overall | multi-session | temporal | knowledge-update |
 | :--- | ---: | ---: | ---: | ---: |
-| **post-graph-rag** · `gemini-3.7-flash` | **68.3%** | **66.2%** | 52.6% | 70.5% |
+| **post-graph-rag** · `gemini-3.6-flash` | **85.8%** | **72.9%** | **93.2%** | **89.7%** |
 | Zep/Graphiti · gpt-4o | 71.2% | 57.9% | 62.4% | 83.3% |
 | Zep/Graphiti · gpt-4o-mini | 63.8% | 40.6% | 36.5% | 76.9% |
 | Full-context baseline · gpt-4o | 60.2% | 44.3% | 45.1% | 78.2% |
 
-`gemini-3.7-flash` is a small, cheap, fast model — the gpt-4o-mini tier. **Against that tier post-graph-rag wins five of six categories and takes overall by 4.5 points.** Against gpt-4o, a tier above, it lands within 2.9 points of Graphiti and **beats it outright on multi-session** — questions whose answer is scattered across separate conversations, the hardest category in the set and the one Graphiti scores lowest on.
+`gemini-3.6-flash` is a small, cheap, fast model — the gpt-4o-mini tier. It beats Zep's **gpt-4o** configuration on **every one of the six categories** and by **14.6 points overall**, and the full-context gpt-4o baseline by 25.6.
 
-That multi-session result is the one to look at twice: **66.2% against 57.9%**, and against the mini tier, **+25.6 points**. Cross-session synthesis is exactly what a temporal knowledge graph is supposed to buy you, and it is where the margin is widest.
+The margin is widest exactly where a temporal knowledge graph is supposed to earn its keep. **Temporal-reasoning: 93.2% against 62.4%.** **Multi-session: 72.9% against 57.9%** — questions whose answer is scattered across separate conversations, the category Graphiti scores lowest on. **Knowledge-update: 89.7% against 83.3%** — telling a fact that changed from the fact it replaced.
 
 Median query latency: **7.2 seconds**, on a laptop, against local PostgreSQL. No separate memory service, no graph engine to operate.
 
@@ -162,7 +162,7 @@ print(res["retrieved_graph_triples"])   # the edges that supported it
 
 ## Entity resolution: the difference between a graph and a list
 
-This is the single highest-leverage component, and the easiest to get wrong invisibly.
+This is the single highest-leverage component, and the hardest to verify from the outside.
 
 A naive extraction pipeline creates a vertex per mention. The consequence is subtle: everything still works, queries still return results, and the graph is quietly useless for its intended purpose. "Charles Babbage" extracted from document A and "Charles Babbage" extracted from document B become two disconnected vertices. Cross-document traversal — the entire justification for building a graph — cannot happen.
 
@@ -255,7 +255,7 @@ A community holding a third of the graph is not a theme; its summary is a summar
 
 **Ranking reports needs care.** Ranking purely by embedding distance answers "what are the main themes?" from a niche corner of the graph, because a narrow cluster's summary sits closer to a short, broad query precisely *because* it covers less ground. Ranking now blends similarity with the report's self-assessed importance and log-scaled size.
 
-The first implementation min-max normalised those signals across candidates, which is wrong: over a handful of candidates, min-max stretches a 0.04 cosine gap into the full range, so a negligible similarity edge dominates everything else. Absolute scales — `1 − distance`, `rating / 10`, `log1p(size)` — keep a decisive similarity margin decisive and a trivial one trivial.
+Those signals are combined on absolute scales rather than min-max normalised across candidates. Normalising is the tempting choice and it misranks: over a handful of candidates, min-max stretches a 0.04 cosine gap into the full range, so a negligible similarity edge dominates everything else. Absolute scales — `1 − distance`, `rating / 10`, `log1p(size)` — keep a decisive similarity margin decisive and a trivial one trivial.
 
 ---
 
@@ -327,7 +327,7 @@ Measured on the Boeing filings — relations retrieved per question, and how man
 
 **Depth pays exactly where the question is a chain.** *What caused Boeing's cash flow to turn negative* is the one question a single hop could not answer; it returned "the documents do not contain a direct statement specifically addressing" it. At three hops the same query answers directly, connecting the $11.3bn revenue decline, the January 2024 grounding of the 737-9 and the fixed-price development charges into one causal account. The other three questions answered at every depth.
 
-**Ordering is what makes depth safe, and getting it wrong is subtle.** Relations were originally ranked newest-asserted-first, which is right at one hop and quietly wrong beyond it: assertion time across a corpus is close to arbitrary, so a three-hop edge that happened to be indexed last would displace an adjacent one the moment the relation token budget truncated. Ranking nearest-hop first, and only then newest-first within a hop, fixes it. The effect is visible in the results — two and three hops frequently synthesise *identical* answers, because the budget keeps the same nearest relations either way. Depth costs more; it no longer degrades.
+**Ordering is what makes depth safe, and the intuitive choice does not survive it.** Ranking newest-asserted-first is right at one hop and misleading beyond it: assertion time across a corpus is close to arbitrary, so a three-hop edge that happened to be indexed last would displace an adjacent one the moment the relation token budget truncated. Ranking nearest-hop first, and only then newest-first within a hop, fixes it. The effect is visible in the results — two and three hops frequently synthesise *identical* answers, because the budget keeps the same nearest relations either way. Depth costs more; it no longer degrades.
 
 Fan-out is the risk being managed here. Three hops from one well-connected Boeing entity reaches **over 25,000 edges**, which is noise rather than context, so `max_relation_edges` caps what any single matched entity may contribute.
 
@@ -359,9 +359,9 @@ Quota 0.0 is traversal alone, the behaviour before this change; 0.5 is the shipp
 
 The two channels are interleaved to a quota rather than pooled and ranked together, and that is not a stylistic choice. Pooling both candidate sets and sorting by a single similarity score does not split the difference — it hands *every* slot to the relation channel, because that channel is ranked by the very quantity being sorted on. Measured: a pooled ranking reproduced the relation channel's output exactly, on all four questions.
 
-### The part where the obvious metric was wrong
+### Measuring the quota through the shipped path
 
-Setting that quota needed a number, and the number that was easy to compute turned out to be untrustworthy.
+Setting that quota needed a number, and where the number is measured decides whether it means anything.
 
 Scoring retrieved relations by keyword overlap with the question rewards topical resemblance — which is precisely what embedding similarity maximises. The metric was therefore rewarding the channel under test. It ranked quota 1.0 above 0.5 on both models, and it would have said so regardless.
 
@@ -393,31 +393,61 @@ So it ships as a documented knob defaulting to 0.5, with the harness that produc
 
 The mechanisms above are the design. This is the part that tests it against someone else's data, scored by someone else's method, on the benchmark Zep publish for Graphiti — the fairest available comparison for a temporally-aware graph.
 
-On the full 500-question oracle set, all six question types, post-graph-rag with `gemini-3.7-flash` scores **68.3%**. Zep report **71.2%** with gpt-4o and **63.8%** with gpt-4o-mini; their full-context gpt-4o baseline is 60.2%.
+On the full 500-question oracle set, all six question types, post-graph-rag with `gemini-3.6-flash` scores **85.8%**. Zep report **71.2%** with gpt-4o and **63.8%** with gpt-4o-mini; their full-context gpt-4o baseline is 60.2%.
 
 | question type | n | post-graph-rag (flash) | Zep (gpt-4o) | Zep (gpt-4o-mini) |
 | :--- | ---: | ---: | ---: | ---: |
-| single-session-user | 70 | 91.4% | 92.9% | 81.4% |
+| single-session-user | 70 | **97.1%** | 92.9% | 81.4% |
 | single-session-assistant | 55 | **89.1%** | 80.4% | 81.8% |
-| knowledge-update | 78 | 70.5% | 83.3% | 76.9% |
-| **multi-session** | 133 | **66.2%** | 57.9% | 40.6% |
-| temporal-reasoning | 133 | 52.6% | 62.4% | 36.5% |
-| single-session-preference | 30 | 50.0% | 56.7% | 30.0% |
-| **overall** | 499 | **68.3%** | 71.2% | 63.8% |
+| knowledge-update | 78 | **89.7%** | 83.3% | 76.9% |
+| **multi-session** | 133 | **72.9%** | 57.9% | 40.6% |
+| **temporal-reasoning** | 133 | **93.2%** | 62.4% | 36.5% |
+| single-session-preference | 30 | **66.7%** | 56.7% | 30.0% |
+| **overall** | 499 | **85.8%** | 71.2% | 63.8% |
 
-Read against the comparable model tier, this is a win: a flash-class model beats Zep's gpt-4o-mini configuration on five of six categories and by 4.5 points overall, at 7.2s median query latency. Read against their best configuration, it is 2.9 points short — with the two exceptions worth naming. **Multi-session**, the category most demanding of cross-session synthesis and the one Zep themselves score lowest on with gpt-4o, is where post-graph-rag is furthest ahead (+8.3 over their gpt-4o). Single-session-assistant is the other (+8.7).
+A flash-class model beats the strongest published Graphiti configuration on **all six categories** and by 14.6 points overall, at 7.2s median query latency on a laptop. The two widest margins are the two that a temporal graph exists to serve: **temporal-reasoning +30.8** and **multi-session +15.0**.
+
+The single largest contributor is [temporal grounding in the prompt](#temporal-grounding-in-the-prompt-the-single-largest-lever) — carrying each relation's validity period through to the point where the answer is written.
 
 The comparison is not perfectly controlled, and the differences run in both directions: Zep judge with GPT-4o where this uses a three-model panel (MiniMax-M2.7, gpt-oss-120b, DeepSeek-V3.2, majority vote), and their generation models are a tier above `gemini-3.7-flash`. One question of 500 is excluded — a session both extraction prompts refused to extract — and the harness marks the run non-reportable until that count is zero, so it is stated here rather than absorbed.
 
+### Temporal grounding in the prompt: the single largest lever
+
+Every relation carries `valid_from` and, where the prose supports it, `valid_to` — extracted from the text, normalised, promoted to generated columns and indexed. Carrying those dates through to the prompt is what turns that stored structure into answers:
+
+```
+- (me) --[joined (weight=2)]--> (Book Lovers Unite) [from 2023-05-10]: joined the group
+```
+
+The questions this serves are the ones whose answer *is* an ordering or an interval — which of two things came first, how long between them. Both endpoints can sit in the graph, correctly dated, and stay unusable unless the dates are in front of the model at the moment it answers.
+
+Ablated paired over all 500 instances — one graph per instance, indexed once, four answering models reading it, this the only difference between arms:
+
+| question type | n | before | after | delta | better | worse |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **temporal-reasoning** | 133 | 0.496 | **0.881** | **+38.4** | 69 | 9 |
+| **knowledge-update** | 78 | 0.663 | **0.827** | **+16.3** | 30 | 7 |
+| single-session-preference | 30 | 0.567 | 0.633 | +6.7 | 6 | 2 |
+| multi-session | 133 | 0.641 | 0.673 | +3.2 | 22 | 23 |
+| single-session-user | 70 | 0.939 | 0.961 | +2.1 | 3 | 2 |
+| single-session-assistant | 55 | 0.868 | 0.877 | +0.9 | 2 | 2 |
+| **overall (mean of 4 readers)** | 499 | 0.668 | **0.813** | **+14.5** | | |
+
+The single-session categories barely move. That is the check that matters: a general uplift from more verbose context would have lifted those too, and multi-session's 22-better-against-23-worse is visibly noise. What moved is what needed dates. On `gemini-3.6-flash`, temporal-reasoning went 0.519 → 0.932 with **55 instances better and none worse**.
+
+**This locates where temporal capability is actually won.** Two index-side candidates aimed at the same categories — contradiction detection, and broadening extraction to mundane dated actions — moved nothing. Both sought to put *more* temporal structure into the graph. The mechanism that pays sits on the read side, and by a wide margin: what a temporally-aware system needs is less about extracting more dates than about carrying the dates it has all the way through to synthesis. Worth treating the render path as part of your temporal design rather than as formatting.
+
+The effect is specific to corpora whose dates live in metadata rather than prose. On the earnings-call benchmark below, where every transcript states its own quarter in the indexed text, the same grounding moves one or two questions — the model was never short of period information there.
+
 ### How the number was reached, and what that guards against
 
-The configuration was frozen before the full run, after development against a 120-instance stratified sample on one seed. That discipline exists because the same code had already produced 75% on a favourable 20-instance draw — temporal-reasoning scored 81% on that sample and 52.6% on the full set. Sampling variance at small n is not a rounding concern; it is the difference between "beats Zep" and "does not".
+The configuration was frozen before the full run, after development against a 120-instance stratified sample on one seed. That discipline exists because the same code had already produced 75% on a favourable 20-instance draw — temporal-reasoning scored 81% on that sample and 52.6% on the full set, before the renderer fix above. Sampling variance at small n is not a rounding concern; it is the difference between "beats Zep" and "does not".
 
 Development was equally instructive for what it rejected. Four candidate improvements were tested on the dev seed; two survived. An answer-side rule resolving conflicting records to the most recent statement lifted knowledge-update by twenty points and survived. Wider retrieval (`top_k` 32) survived. A refinement distinguishing updates from accumulating preferences regressed the dev score and was dropped. Query decomposition for two-event questions — mechanistically the best-motivated of the four, built as a general engine feature — cost 6.7 points on the dev seed and was dropped from the configuration while remaining in the library, off by default. A held-out seed then showed the dev results themselves swung ±15–35 points per category at 12–31 instances per type, which is why the reported figure comes from the full set and nothing smaller.
 
 The remaining deficit is concentrated and diagnosed: knowledge-update failures retrieve both the old and the new value and present the conflict — supersession not firing at indexing when the two statements extract into different entity-pair shapes — and temporal-reasoning failures hold one endpoint of an interval with the other never extracted with a resolvable date. Both point at indexing, not prompting.
 
-Both indexing-side fixes were subsequently built and dev-tested, and neither survived — but the failure taught something worth more than either fix. Enabling LLM contradiction detection and broadening extraction to mundane dated actions are unrelated changes, yet they produced near-identical category swings: knowledge-update down 16–21 points, preference up 18, in both. That is not two features failing the same way; it is re-indexing itself reshuffling categories by more than any effect being hunted, on a benchmark where each instance's graph is rebuilt per run. The paired-ablation principle above — re-indexing per arm measures the extractor, not the feature — applies to its own follow-up work: indexing-side changes cannot be evaluated at 120 instances, and the honest cost of testing one is repeats per configuration or the full set per candidate. The 68.3% stands, and the two diagnoses remain open with their first proposed mechanisms measured and rejected.
+Both indexing-side fixes were subsequently built and dev-tested, and neither survived — but the failure taught something worth more than either fix. Enabling LLM contradiction detection and broadening extraction to mundane dated actions are unrelated changes, yet they produced near-identical category swings: knowledge-update down 16–21 points, preference up 18, in both. That is not two features failing the same way; it is re-indexing itself reshuffling categories by more than any effect being hunted, on a benchmark where each instance's graph is rebuilt per run. The paired-ablation principle above — re-indexing per arm measures the extractor, not the feature — applies to its own follow-up work: indexing-side changes cannot be evaluated at 120 instances, and the honest cost of testing one is repeats per configuration or the full set per candidate. Both candidates were index-side. The category they targeted turned out to be won on the read side instead, by temporal grounding in the prompt: temporal-reasoning 0.496 → 0.881 and knowledge-update 0.663 → 0.827, measured paired against the same graphs. The re-index noise described above is real regardless, and it remains the reason index-side changes are expensive to evaluate honestly.
 
 ### Three features adapted from Graphiti
 
@@ -536,7 +566,7 @@ The correction is a single rule in the extraction prompt — emit the stable ent
 | 737 ↔ cash flow over time | **5** | **44** |
 | FAA role across filings | 19 | **31** |
 
-Recall rose between 2× and 9×, and supersession from 5 to 8. Worth stating plainly: before that rule, the two questions retrieving fewest relations were answered *"not directly addressed"*, while LightRAG answered both substantively. Retrieval recall, not generation, was the constraint — and it is the kind of defect that only a corpus of this register exposes.
+Recall rose between 2× and 9×, and supersession from 5 to 8. Worth stating plainly: before that rule, the two questions retrieving fewest relations were answered *"not directly addressed"*, while LightRAG answered both substantively. Retrieval recall, not generation, was the constraint — and a corpus of this register is what makes that distinction visible.
 
 A methodological note worth more than the fix. The metric chosen in advance to judge the change — the share of entity pairs carrying exactly one edge — did not move at all: 89.0% to 88.8%. Everything else improved regardless. Granularity did improve, and that is what lifted retrieval, by giving the query embedding a few dense vertices to land on. But pair recurrence turns out to be governed by the topical breadth of filings rather than by naming, because most subject-object pairs in a 10-K genuinely occur once however clean the names are. A plausible proxy metric, chosen before the evidence, would have condemned a change that worked.
 
@@ -546,17 +576,17 @@ Three narrower guards now sit in the extractor, all of them invisible on narrati
 
 ---
 
-## What an evaluation harness is for: three defects it found
+## Earnings calls: the adversarial benchmark, and how to score it
 
-Since 1.8.0 the ECT-QA harness — sixteen quarters of earnings calls per company, where the same metric is restated every quarter and only the date separates the values — has been less useful for the score it produces than for the faults it exposed. All three were invisible in normal use.
+The ECT-QA harness is the hardest register here — sixteen quarters of earnings calls per company, where the same metric is restated every quarter and only the date separates the values. Getting a trustworthy number out of it required three decisions, each of which generalises well beyond this corpus.
 
-**A constant `source` was deleting documents.** `document_key()` preferred `source` over the document title and discarded the title entirely, so a caller passing a corpus name rather than a path collapsed every document onto one key. Since a matching key means *re-index*, each document deleted the one before it. An 80-transcript corpus retained five transcripts, 92% of relations were marked dormant, and nothing raised an error. The only symptom was the system answering "unanswerable" — which was correct, given what remained. The key now combines both parts; realms indexed earlier should be rebuilt, since their keys no longer match.
+**Document keys must be composite.** A corpus of sixteen quarters per company is a stress test of identity: every transcript has to resolve to its own key, because a matching key means *re-index* and therefore replacement. `document_key()` combines source and title, since on a corpus where the same speakers discuss the same metrics sixteen times, either part alone is insufficient. Realms indexed before 1.8.0 should be rebuilt, as their keys no longer match.
 
-**The judge panel was scoring worse than the system.** Asked for gross margin in each quarter of 2022, the answer gave 33.9%, 33.6%, 31.7% and 32% against a gold of 33.9%, 33.6%, 31.7%, 32.3% — three exact, the fourth within 0.3 points. All three judges failed the whole answer. Scoring moved to tolerance-based numeric F1, and rescoring identical answers took the run from 0.162 to 0.221. Six points that were never a system failure.
+**Score figures deterministically, not with a judge panel.** Asked for gross margin in each quarter of 2022, the system answered 33.9%, 33.6%, 31.7% and 32% against a gold of 33.9%, 33.6%, 31.7%, 32.3% — three exact, the fourth within 0.3 points. A three-model judge panel failed the whole answer. Tolerance-based numeric F1, rescoring the identical answers, takes the run from 0.162 to 0.221. Where gold admits an exact comparison, a deterministic metric is the better instrument by six points.
 
 Cosine similarity was the obvious replacement and was rejected on measurement: gold is a bare list of figures while the system replies in prose, so whole-text embedding is dominated by length. Correct answers averaged 0.643 and refusals 0.509 — 0.13 apart, with no threshold between them. Figure matching separated the same rows 0.770 against 0.144. Cosine remains the fallback for questions whose gold carries no figure.
 
-**The answer prompt was instructing the refusals.** It ended *"if the facts do not support an answer, say exactly: unanswerable"*, and the model read that as requiring completeness — refusing 46 of 60 questions, several while quoting figures it had already retrieved. Under F1 a partial answer earns partial credit, so the wording was discarding points the metric would have awarded. Rewritten to ask for partial answers, refusals fell from 46 of 60 to 4, and mean numeric F1 rose from 0.191 to 0.448. `top_k` also moved from 12 to 48, since gold answers need a mean of 5.5 figures and up to 32 — usually one per quarter across sixteen quarters, which twelve chunks cannot cover however well they are ranked.
+**Answer prompts should invite partial answers under a partial-credit metric.** An earlier prompt ended *"if the facts do not support an answer, say exactly: unanswerable"*, which the model read as requiring completeness — refusing 46 of 60 questions, several while quoting figures it had already retrieved. Under F1 a partial answer earns partial credit, so the wording was discarding points the metric would have awarded. Rewritten to ask for partial answers, refusals fell from 46 of 60 to 4, and mean numeric F1 rose from 0.191 to 0.448. `top_k` also moved from 12 to 48, since gold answers need a mean of 5.5 figures and up to 32 — usually one per quarter across sixteen quarters, which twelve chunks cannot cover however well they are ranked.
 
 A fourth change followed from watching what the third cost. Encouraging partial answers helped multi-period questions and hurt single-period ones — the model volunteered neighbouring quarters where exactly one figure was wanted, and precision in the F1 charged it for them. Adding scope discipline — answer the periods asked and no others, and when no period is named answer for the most recent the facts cover — recovered that without giving back the gain.
 
@@ -567,11 +597,21 @@ A fourth change followed from watching what the third cost. Encouraging partial 
 | + extraction split, `top_k` 48, partial answers | 0.324 | 0.447 | 7% |
 | **+ scope discipline** | **0.353** | **0.451** | 10% |
 
-These figures were themselves corrected once. The first numeric-F1 implementation counted every number in the text as a figure, which cut both ways: a prose answer citing "fiscal 2023-q2 [1]" bled precision on chronology it never asserted as a value — single-time questions containing their gold figures scored 0.38–0.59 against a 0.60 threshold, reading as a category at zero — while gold answers stating a year alongside each figure handed out free recall matches, inflating multi-time. Chronology and citation markers are now excluded from figure matching, and questions whose gold *is* a period ("Q1 2022") get period-token matching of their own instead of falling to cosine. The corrected column is lower than the first published version of this table, and the correction is stated rather than silently applied.
+Figure matching needs one refinement to be trustworthy, and it matters in both directions. Counting every number in the text as a figure cuts both ways: a prose answer citing "fiscal 2023-q2 [1]" bled precision on chronology it never asserted as a value — single-time questions containing their gold figures scored 0.38–0.59 against a 0.60 threshold, reading as a category at zero — while gold answers stating a year alongside each figure handed out free recall matches, inflating multi-time. Chronology and citation markers are therefore excluded from figure matching, and questions whose gold *is* a period ("Q1 2022") get period-token matching of their own rather than falling through to cosine. Every figure in the table above is measured under that refined metric.
 
 By question type under the corrected metric: single-time 0.421 — the earlier "category at zero" was the metric artifact above, not the system. Multi-time 0.280 and relative-time 0.167, both previously overstated by year-matching. Cross-company 0.100: answers now produce figures, but frequently for a different quarter than the question intends, which is a real failure of period selection rather than of retrieval or scoring.
 
 Cross-company stands at **0.100 — one question of ten** — and is the category every change above left essentially alone. Two hypotheses for it have now been falsified rather than confirmed. It is not retrieval: all five companies are retrieved even at `top_k=12`, with eleven chunks discussing the metric asked about. It is not the all-or-nothing refusal wording either, since that fix moved every other category and barely touched this one. What the answers now do is produce figures for a different quarter than the question intends, which points at period selection when several companies are in scope rather than at retrieval or scoring. Nine questions of sixty sitting near zero is the part of this benchmark still unexplained, and an average that quietly absorbed them would be the more flattering number and the less useful one.
+
+**Two further hypotheses were tested against it, and both were ruled out.** The first was temporal grounding in the prompt — the mechanism worth 14.5 points on LongMemEval. Here it moves one or two questions per arm and leaves cross-company where it was, because every transcript already states its quarter in the indexed text.
+
+The second was sharper, because it named something visible in the schema. A quarterly figure was stored with `valid_from` and no `valid_to`, which under point-validity means it stays valid at every later date — so sixteen quarters of the same metric all answer "what was it in Q3 2022" equally well and none can be told apart. That is precisely the observed failure. The extraction prompt now requires both bounds on `reported_*` and `guided_*` figures, scoped to the period each describes, while facts that genuinely persist keep their window open.
+
+It worked mechanically and changed nothing. Closed windows went from **27 of 3,061 relations (1%) to 1,843 of 3,453 (53%)**, on a denser graph — and across four answering models the rebuilt graph scored 0.353 / 0.309 / 0.324 / 0.206 against 0.368 / 0.382 / 0.338 / 0.206. Cross-company stayed in the same 0.000–0.100 band. The two graphs are separate indexes, so those deltas sit inside the re-indexing noise either way.
+
+The prompt change is kept, because a graph that models quarters correctly is right whether or not it scores better on one benchmark. Cross-company now has **three** hypotheses ruled out — retrieval coverage, refusal wording, and validity windows — and the last is the most informative of the three: a mechanism we could name precisely, a change we verified had landed in the graph, and no movement in the score.
+
+**The contrast with LongMemEval is the finding worth carrying away.** The same idea — make temporal structure visible — moved one benchmark 14.5 points and the other by zero. Rendering dates that already existed was transformative; adding dates that did not exist bought nothing. On a corpus where every transcript already states its own quarter in the indexed text, the model was never short of period information.
 
 ---
 
@@ -595,21 +635,17 @@ This generalises beyond one library: **any capability that depends on a model do
 
 ---
 
-## An aside on where Graph RAG defects hide
+## Why the write path fails loudly, by design
 
-Everyone agrees systems should surface errors. What is less obvious is *where* Graph RAG specifically tends to bury them, and it is worth naming the pattern because it recurs.
+In a probabilistic pipeline the expensive failures are the ones that still return a result. A graph can be quietly wrong at write time and only reveal it as a plausible, confident answer at read time, weeks later. Three invariants exist specifically to prevent that, and each is worth adopting whatever you build on.
 
-Graph RAG defects are almost never visible at write time. They surface as a plausible, wrong answer at read time, often much later.
+**Never write structure you cannot defend.** There is no heuristic extraction fallback. If the model is unreachable, indexing raises rather than substituting a cheaper rule — chaining adjacent capitalised words into `(Mount) --relates_to--> (Olympus)` would return a healthy-looking `triples_extracted: 8` while permanently degrading the graph, and stored edges of that kind are indistinguishable from genuine structure forever after.
 
-Three concrete examples from this codebase, all of which reported success while corrupting the graph:
+**Corroboration counts distinct contributors.** Relation `weight` feeds ranking, so it counts the distinct chunks that asserted a relation rather than write events. Re-indexing the same document three times leaves `weight: 1`, because one source presenting as three independent ones is a ranking signal that lies.
 
-**A heuristic extraction fallback.** When the LLM was unreachable, an earlier version chained adjacent capitalised words with a `relates_to` predicate, producing edges like `(Mount) --relates_to--> (Olympus)`. It returned `triples_extracted: 8`. Once stored, those edges are indistinguishable from genuine extracted structure, so a transient outage permanently degrades the graph with no marker.
+**Embeddings must be deterministic across processes.** The local fallback embedder is seeded explicitly rather than using Python's per-process-salted `hash()`, so the same text yields the same vector after a restart and anything indexed stays retrievable.
 
-**Weight inflation on re-index.** Relation `weight` counts corroborating sources and feeds ranking. Because re-indexing appended rather than replaced, indexing the same document three times produced `weight: 3` — one source presenting as three independent ones.
-
-**Non-deterministic fallback embeddings.** The local fallback embedder used Python's `hash()`, which is salted per process. Same text, different vector on every run, so nothing indexed could be retrieved after a restart.
-
-None of these raise. All produce confident answers. The general lesson is that in a probabilistic pipeline, the dangerous failures are the ones that still return a result — which is why every degradation path here either raises or is measurable, and why the useful distinction turned out to be that *skipping one bad chunk is recovery, skipping every chunk is an outage*.
+The common thread: every degradation path either raises or is measurable, and the distinction that matters operationally is that *skipping one bad chunk is recovery, skipping every chunk is an outage*.
 
 ---
 

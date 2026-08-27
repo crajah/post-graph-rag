@@ -17,6 +17,7 @@ NAMES = [
     "relation-channel-on-topic-share",
     "retrieval-quota-by-question-shape",
     "longmemeval-by-question-type",
+    "longmemeval-validity-rendering",
     "longmemeval-paired-ablation",
     "lightrag-encyclopedic-prose",
     "lightrag-narrative-prose",

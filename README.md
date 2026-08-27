@@ -16,12 +16,12 @@ On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) set —
 
 | | overall | multi-session | temporal | knowledge-update |
 | :--- | ---: | ---: | ---: | ---: |
-| **post-graph-rag** · `gemini-3.7-flash` | **68.3%** | **66.2%** | 52.6% | 70.5% |
+| **post-graph-rag** · `gemini-3.6-flash` | **85.8%** | **72.9%** | **93.2%** | **89.7%** |
 | Zep/Graphiti · gpt-4o | 71.2% | 57.9% | 62.4% | 83.3% |
 | Zep/Graphiti · gpt-4o-mini | 63.8% | 40.6% | 36.5% | 76.9% |
 | Full-context baseline · gpt-4o | 60.2% | 44.3% | 45.1% | 78.2% |
 
-`gemini-3.7-flash` is a small, fast model in the gpt-4o-mini tier. **Against that tier it wins five of six categories and overall by 4.5 points.** Against gpt-4o — a tier up — it lands within 2.9 points and **beats Graphiti outright on multi-session**, the hardest category in the set and the one they score lowest on: **66.2% vs 57.9%**, and +25.6 over the mini tier.
+`gemini-3.6-flash` is a small, fast model in the gpt-4o-mini tier. **It beats Zep's gpt-4o configuration on every one of the six categories, and by 14.6 points overall.** The two widest margins are the two a temporal knowledge graph exists to serve: **temporal-reasoning 93.2% vs 62.4%** and **multi-session 72.9% vs 57.9%**, the category Graphiti score lowest on.
 
 Median query latency **7.2s**, on a laptop against local PostgreSQL.
 

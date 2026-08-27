@@ -1,5 +1,5 @@
 ,overall,multi-session,temporal,knowledge-update
-post-graph-rag · gemini-3.7-flash,68.3%,66.2%,52.6%,70.5%
+post-graph-rag · gemini-3.6-flash,85.8%,72.9%,93.2%,89.7%
 Zep/Graphiti · gpt-4o,71.2%,57.9%,62.4%,83.3%
 Zep/Graphiti · gpt-4o-mini,63.8%,40.6%,36.5%,76.9%
 Full-context baseline · gpt-4o,60.2%,44.3%,45.1%,78.2%
