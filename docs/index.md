@@ -73,7 +73,9 @@ The margin is widest exactly where a temporal knowledge graph is supposed to ear
 
 Median query latency: **7.2 seconds**, on a laptop, against local PostgreSQL. No separate memory service, no graph engine to operate.
 
-Configuration behind that row: `gemini-3.6-flash` for extraction and synthesis, `gemini-embedding-001` at 1536 dimensions, RRF across the three retrieval channels, answers graded by a three-model majority panel. A second run on the exact configuration behind this project's earlier published figure — `gemini-3.7-flash`, panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2 — independently reproduces the effect at **80.4%** overall, with temporal-reasoning at 90.2% and knowledge-update at 83.3%. Both runs are in `evaluation/longmemeval/`.
+Configuration behind that row: `gemini-3.6-flash` for extraction and synthesis, `gemini-embedding-001` at 1536 dimensions, RRF across the three retrieval channels, answers graded by a three-model majority panel, two repeats per question.
+
+The same benchmark was also run twice through the harness behind this project's earlier published figure — single answer per question, panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2. It gives **81.1%** with `gemini-3.6-flash` and **80.4%** with `gemini-3.7-flash`, both ahead of Graphiti's 71.2%, with temporal-reasoning at 93.9% and 90.2%. That harness reads three to five points cooler across the board; the gap is the panel and the repeats, and it is stable across both models. All three runs are in `evaluation/longmemeval/`.
 
 **Three qualifications, stated because you would find them anyway.** Zep judge with GPT-4o where this uses a three-model majority panel. Their generation models are a tier above `gemini-3.7-flash` — which is the point of the tier comparison, but it cuts both ways. And one question of 500 is excluded, a session neither extraction prompt could turn into triples; the harness refuses to call a run reportable while that count is nonzero.
 
@@ -409,7 +411,9 @@ On the full 500-question oracle set, all six question types, post-graph-rag with
 
 A flash-class model beats the strongest published Graphiti configuration on **all six categories** and by 14.6 points overall, at 7.2s median query latency on a laptop. The two widest margins are the two that a temporal graph exists to serve: **temporal-reasoning +30.8** and **multi-session +15.0**.
 
-Run on a different answering model and a different judge panel — `gemini-3.7-flash`, graded by MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2 — the same configuration scores **80.4%**: ahead of Graphiti on three categories, level on two, behind on one, and ahead by 9.2 points overall. The panel and the model both move the absolute number by a few points; the mechanism below moves it by twelve to fifteen, on either.
+Two further runs through a different harness — single answer per question, panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2 — put the same configuration at **81.1%** (`gemini-3.6-flash`) and **80.4%** (`gemini-3.7-flash`). The first is ahead of Graphiti on five of six categories and by 9.9 points overall, behind only on single-session-preference. Temporal-reasoning lands at 93.9% there, marginally *above* the headline run.
+
+Harness and panel move the absolute figure by three to five points and do so consistently across models. The mechanism below moves it by twelve to fifteen, under every one of the three.
 
 The single largest contributor is [temporal grounding in the prompt](#temporal-grounding-in-the-prompt-the-single-largest-lever) — carrying each relation's validity period through to the point where the answer is written.
 
