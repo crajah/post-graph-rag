@@ -701,7 +701,7 @@ python evaluation/temporal_eval.py --corpus evaluation/sec_boeing \
 
 That reports supersessions, validity intervals, dormant entities and as-of retrieval on a corpus whose facts genuinely change. Alongside it: corpus fetching, indexing with configurable models and vocabularies, a graph analysis report covering cross-document resolution and predicate distribution, a realm-diffing tool, the blind A/B judge used to set the retrieval quota, and the LightRAG comparison script. Every table here is reproducible rather than asserted.
 
-A paper covering the architecture and evaluation methodology is going to arXiv — link to follow.
+The architecture and evaluation methodology are written up at [arXiv:2608.24921](https://arxiv.org/abs/2608.24921). That version covers the design, the extraction-time gates, the temporal model and the LightRAG comparison; a revision adding the LongMemEval and ECT-QA evaluations on this page is in preparation.
 
 **GitHub:** https://github.com/crajah/post-graph-rag · **PyPI:** `pip install post-graph-rag`
 

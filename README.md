@@ -12,6 +12,8 @@ No separate vector store. No graph engine to operate. One database, one consiste
 
 ## 📈 Benchmarks
 
+Paper: [arXiv:2608.24921](https://arxiv.org/abs/2608.24921).
+
 On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) set — all six question types, nothing sampled — against the numbers Zep publish for Graphiti ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)):
 
 | | overall | multi-session | temporal | knowledge-update |
