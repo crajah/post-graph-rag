@@ -71,7 +71,7 @@ This article walks through those mechanisms, along with entity resolution and co
 
 The margin is widest exactly where a temporal knowledge graph is supposed to earn its keep. **Temporal-reasoning: 93.2% against 62.4%.** **Multi-session: 72.9% against 57.9%** — questions whose answer is scattered across separate conversations, the category Graphiti scores lowest on. **Knowledge-update: 89.7% against 83.3%** — telling a fact that changed from the fact it replaced.
 
-Median query latency: **7.2 seconds**, on a laptop, against local PostgreSQL. No separate memory service, no graph engine to operate.
+All of it on a laptop against local PostgreSQL. No separate memory service, no graph engine to operate.
 
 Configuration behind that row: `gemini-3.6-flash` for extraction and synthesis, `gemini-embedding-001` at 1536 dimensions, RRF across the three retrieval channels, answers graded by a three-model majority panel, two repeats per question.
 
@@ -409,7 +409,7 @@ On the full 500-question oracle set, all six question types, post-graph-rag with
 | single-session-preference | 30 | **66.7%** | 56.7% | 30.0% |
 | **overall** | 499 | **85.8%** | 71.2% | 63.8% |
 
-A flash-class model beats the strongest published Graphiti configuration on **all six categories** and by 14.6 points overall, at 7.2s median query latency on a laptop. The two widest margins are the two that a temporal graph exists to serve: **temporal-reasoning +30.8** and **multi-session +15.0**.
+A flash-class model beats the strongest published Graphiti configuration on **all six categories** and by 14.6 points overall. The two widest margins are the two that a temporal graph exists to serve: **temporal-reasoning +30.8** and **multi-session +15.0**.
 
 Two further runs through a different harness — single answer per question, panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2 — put the same configuration at **81.1%** (`gemini-3.6-flash`) and **80.4%** (`gemini-3.7-flash`). The first is ahead of Graphiti on five of six categories and by 9.9 points overall, behind only on single-session-preference. Temporal-reasoning lands at 93.9% there, marginally *above* the headline run.
 
