@@ -1,7 +1,7 @@
 ---
 layout: default
 title: "post-graph-rag: A Knowledge Graph That Can Change Its Mind"
-description: "Every production knowledge graph only grows. post-graph-rag closes facts a later document contradicts — bi-temporal, queryable predicates, entirely on PostgreSQL — and beats Graphiti's published LongMemEval scores at its model tier."
+description: "Every production knowledge graph only grows. post-graph-rag closes facts a later document contradicts — bi-temporal, queryable predicates, entirely on PostgreSQL — and beats Graphiti's strongest published LongMemEval configuration on all six question types."
 ---
 
 # post-graph-rag: A Knowledge Graph That Can Change Its Mind
@@ -77,7 +77,7 @@ Configuration behind that row: `gemini-3.6-flash` for extraction and synthesis, 
 
 The same benchmark was also run twice through the harness behind this project's earlier published figure — single answer per question, panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2. It gives **81.1%** with `gemini-3.6-flash` and **80.4%** with `gemini-3.7-flash`, both ahead of Graphiti's 71.2%, with temporal-reasoning at 93.9% and 90.2%. That harness reads three to five points cooler across the board; the gap is the panel and the repeats, and it is stable across both models. All three runs are in `evaluation/longmemeval/`.
 
-**Three qualifications, stated because you would find them anyway.** Zep judge with GPT-4o where this uses a three-model majority panel. Their generation models are a tier above `gemini-3.7-flash` — which is the point of the tier comparison, but it cuts both ways. And one question of 500 is excluded, a session neither extraction prompt could turn into triples; the harness refuses to call a run reportable while that count is nonzero.
+**Three qualifications, stated because you would find them anyway.** Zep judge with GPT-4o where this uses a three-model majority panel. The model comparison is uncontrolled in a direction that cannot be signed: their gpt-4o was the frontier tier of its generation, the flash models are the cheap tier of theirs, and roughly two years separate the two — a newer small model beating an older frontier one is routine, so no claim is made about which side the model gap favours. And one question of 500 is excluded, a session neither extraction prompt could turn into triples; the harness refuses to call a run reportable while that count is nonzero.
 
 Everything needed to reproduce this ships in the repo: the harness, the frozen configuration, the judge panel, and every failing case.
 
@@ -417,7 +417,7 @@ Harness and panel move the absolute figure by three to five points and do so con
 
 The single largest contributor is [temporal grounding in the prompt](#temporal-grounding-in-the-prompt-the-single-largest-lever) — carrying each relation's validity period through to the point where the answer is written.
 
-The comparison is not perfectly controlled, and the differences run in both directions: Zep judge with GPT-4o where this uses a three-model panel (MiniMax-M2.7, gpt-oss-120b, DeepSeek-V3.2, majority vote), and their generation models are a tier above `gemini-3.7-flash`. One question of 500 is excluded — a session both extraction prompts refused to extract — and the harness marks the run non-reportable until that count is zero, so it is stated here rather than absorbed.
+The comparison is not perfectly controlled, and the differences run in both directions: Zep judge with GPT-4o where this uses a three-model panel (MiniMax-M2.7, gpt-oss-120b, DeepSeek-V3.2, majority vote), and the generation models differ in both cost class and vintage — their gpt-4o against flash models two years its junior — in a direction that cannot be signed. One question of 500 is excluded — a session both extraction prompts refused to extract — and the harness marks the run non-reportable until that count is zero, so it is stated here rather than absorbed.
 
 ### Temporal grounding in the prompt: the single largest lever
 

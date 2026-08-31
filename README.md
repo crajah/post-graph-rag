@@ -27,7 +27,7 @@ On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) set —
 
 Median query latency **7.2s**, on a laptop against local PostgreSQL.
 
-*Qualifications, so you can weigh them yourself: Zep judge with GPT-4o, this uses a three-model majority panel; their generation models are a tier above; one question of 500 is excluded because neither extraction prompt could turn that session into triples. The harness, frozen config and every failing case ship in the repo — see the [full write-up](https://crajah.github.io/post-graph-rag/), which also documents the improvements that were tested and rejected.*
+*Qualifications, so you can weigh them yourself: Zep judge with GPT-4o, this uses a three-model majority panel; the generation models differ in cost class and vintage (their gpt-4o against flash models two years newer) in a direction that cannot be signed; one question of 500 is excluded because neither extraction prompt could turn that session into triples. The harness, frozen config and every failing case ship in the repo — see the [full write-up](https://crajah.github.io/post-graph-rag/), which also documents the improvements that were tested and rejected.*
 
 ---
 
