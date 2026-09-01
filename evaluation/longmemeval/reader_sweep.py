@@ -130,6 +130,17 @@ async def main():
     ap.add_argument("--f1-threshold", type=float, default=0.60)
     ap.add_argument("--similarity-threshold", type=float, default=0.62)
     ap.add_argument("--out", default=str(HERE / "reader_sweep.json"))
+    # A long run interrupted by an outage leaves most instances scored and some
+    # degraded. Retry re-runs ONLY the instances missing from the prior file's
+    # successful set, against their already-indexed realms (indexing is
+    # idempotent, so re-indexing an intact realm is a no-op), and merges the
+    # prior successes into the output unchanged.
+    ap.add_argument("--retry-deadline", type=int, default=1800,
+                    help="per-call retry deadline in seconds; lower it when one "
+                         "arm's provider is down so holes are recorded quickly")
+    ap.add_argument("--retry-from", default=None,
+                    help="a previous output file; only its degraded/missing "
+                         "instances are re-run and the rest are carried over")
     args = ap.parse_args()
 
     data = json.loads(pathlib.Path(args.data).read_text())
@@ -137,6 +148,30 @@ async def main():
         data = [d for d in data if d["question_type"] in args.types]
     random.Random(args.seed).shuffle(data)
     data = data[:args.limit]
+
+    carried = []
+    if args.retry_from:
+        prev_path = pathlib.Path(args.retry_from)
+        if not prev_path.is_absolute():
+            prev_path = HERE / prev_path
+        prev = json.loads(prev_path.read_text())
+        if prev["arms"] != args.arms:
+            raise SystemExit(f"retry arms {args.arms} != prior {prev['arms']}")
+        def complete(inst):
+            return all(inst["arms"].get(a, {}).get("judge") is not None
+                       for a in args.arms)
+        ok_ids = {i["question_id"] for i in prev["instances"] if complete(i)}
+        carried = [i for i in prev["instances"] if complete(i)]
+        holes = {i["question_id"]: i for i in prev["instances"] if not complete(i)}
+        # Positions must be preserved: realm names are rsweep_{seed}_{i} with i
+        # the position in the shuffled list, so retried instances are filtered
+        # AFTER the shuffle+limit, keeping (i, instance) pairs identical.
+        data = [(i, d) for i, d in enumerate(data) if d["question_id"] not in ok_ids]
+        print(f"retry: {len(carried)} carried over, {len(data)} to re-run "
+              f"({len(holes)} partially — holes only)")
+    else:
+        holes = {}
+        data = list(enumerate(data))
 
     judge_llms = {n: LLMService(RAGConfig(model=n, max_retries=25,
                                           retry_deadline_secs=900))
@@ -167,7 +202,7 @@ async def main():
                 max_concurrent_chunks=args.chunk_concurrency,
                 pool_min_size=args.pool_min, pool_max_size=args.pool_max,
                 extraction_prompt=CONVERSATIONAL_PROMPT,
-                max_retries=40, retry_deadline_secs=1800))
+                max_retries=40, retry_deadline_secs=args.retry_deadline))
             async with init_lock:
                 await rag.initialize()
             try:
@@ -181,33 +216,61 @@ async def main():
                 asked = (f"Today is {parse_date(inst.get('question_date',''))}. "
                          f"{inst['question']}") if inst.get("question_date") else inst["question"]
                 gold = str(inst["answer"])
-                row = {"question_id": inst["question_id"], "type": inst["question_type"],
-                       "gold": gold, "arms": {}}
+                prior = holes.get(inst["question_id"])
+                row = prior if prior is not None else {
+                    "question_id": inst["question_id"],
+                    "type": inst["question_type"], "gold": gold, "arms": {}}
+                for a, v in list(row["arms"].items()):
+                    # Arms already scored in the prior run count toward the
+                    # summary and are not re-run; only the holes are filled.
+                    if v.get("judge") is not None:
+                        judged[a].append(v["judge"])
+                        if v.get("layered") is not None:
+                            layered[a].append(v["layered"])
 
                 for arm in args.arms:
+                    if row["arms"].get(arm, {}).get("judge") is not None:
+                        continue
                     # The graph is already built; this only changes who reads it.
                     rag.config.model = arm
                     lmarks, jmarks, detail = [], [], []
+                    arm_error = None
                     for _ in range(args.repeats):
-                        out = await rag.query(asked, param=QueryParam(mode="mix", top_k=8))
-                        answer = (out["answer"] if isinstance(out, dict) else str(out)).strip()
-                        metric, value, ok = await layered_score(
-                            score_llm, gold, answer,
-                            args.f1_threshold, args.similarity_threshold)
-                        arm_judges = {n: judge_llms[n] for n in panels[arm]}
-                        jok, votes = await judge_panel(arm_judges, inst["question"],
-                                                       gold, answer)
+                        try:
+                            out = await rag.query(asked, param=QueryParam(mode="mix", top_k=8))
+                            answer = (out["answer"] if isinstance(out, dict) else str(out)).strip()
+                            metric, value, ok = await layered_score(
+                                score_llm, gold, answer,
+                                args.f1_threshold, args.similarity_threshold)
+                            arm_judges = {n: judge_llms[n] for n in panels[arm]}
+                            jok, votes = await judge_panel(arm_judges, inst["question"],
+                                                           gold, answer)
+                        except Exception as e:
+                            # One arm's provider being down must not discard the
+                            # other arms' finished work on this instance. The
+                            # hole is recorded and refillable via --retry-from.
+                            arm_error = f"{type(e).__name__}: {e}"
+                            break
                         lmarks.append(bool(ok)); jmarks.append(bool(jok))
                         detail.append({"answer": answer[:400], "metric": metric,
                                        "value": value, "layered": bool(ok),
                                        "judge": bool(jok), "votes": votes})
+                    if arm_error is not None:
+                        row["arms"][arm] = {"layered": None, "judge": None,
+                                            "runs": detail, "error": arm_error[:160]}
+                        continue
                     ls, js = sum(lmarks)/len(lmarks), sum(jmarks)/len(jmarks)
                     layered[arm].append(ls); judged[arm].append(js)
                     row["arms"][arm] = {"layered": ls, "judge": js, "runs": detail}
 
                 per_instance.append(row)
+                if any(v.get("judge") is None for v in row["arms"].values()):
+                    degraded.append({"question_id": inst["question_id"],
+                                     "reason": "arm-level failure; refillable via --retry-from"})
                 print(f"{inst['question_id']:<16} " + "  ".join(
-                    f"{a.split('/')[-1][:14]}={row['arms'][a]['layered']:.2f}"
+                    (f"{a.split('/')[-1][:14]}={row['arms'][a]['layered']:.2f}"
+                     if row["arms"].get(a, {}).get("layered") is not None
+                     else f"{a.split('/')[-1][:14]}=ERR")
                     for a in args.arms), flush=True)
             except Exception as e:
                 degraded.append({"question_id": inst["question_id"],
@@ -217,8 +280,14 @@ async def main():
             finally:
                 await rag.close()
 
-    await asyncio.gather(*(one(i, inst) for i, inst in enumerate(data)))
+    await asyncio.gather(*(one(i, inst) for i, inst in data))
 
+    for inst in carried:
+        for arm in args.arms:
+            judged[arm].append(inst["arms"][arm]["judge"])
+            det = inst["arms"][arm].get("layered")
+            if det is not None:
+                layered[arm].append(det)
     print("\n" + "-" * 68)
     print(f"  {'arm':<32} {'layered':>8} {'judge':>8}   n")
     for arm in args.arms:
@@ -240,7 +309,8 @@ async def main():
         "means_layered": {a: (sum(v)/len(v) if v else None) for a, v in layered.items()},
         "means_judge": {a: (sum(v)/len(v) if v else None) for a, v in judged.items()},
         "degraded": degraded, "degraded_count": len(degraded),
-        "reportable": not degraded, "instances": per_instance}, indent=2))
+        "reportable": not degraded,
+        "instances": carried + per_instance}, indent=2))
     print(f"  wrote {args.out}")
 
 
