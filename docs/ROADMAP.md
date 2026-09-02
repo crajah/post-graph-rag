@@ -6,7 +6,7 @@ post-graph-rag stays an engine — no agent loops enter the library — but each
 feature below turns something an exploration consumer would otherwise build
 badly on top of us into one engine call.
 
-**Status: all three shipped in 1.10.0** (tasks #132–#134), with the noted
+**Status: §1–§3 shipped in 1.10.0; §4 is open (task #135)** (tasks #132–#134), with the noted
 deviations closed properly: the level predicate is expression-indexed on all
 realms, level filtering runs inside the vector search (post-graph 1.4.0
 predicate pushdown), and the telemetry table lazy-creates on first write.
@@ -198,6 +198,50 @@ global-mode regression (guarded by the paired eval gate before defaults move).
 Effort: ~3–4 days including eval.
 
 ---
+
+## 4. Importance-scored archiving — bounded growth as demotion (task #135)
+
+**Goal.** Nothing currently bounds growth: dormancy is mention-driven and
+supersession contradiction-driven, so a long-running agent memory accumulates
+low-value nodes forever. Rusu et al. (arXiv:2608.28978) show ~10% of a
+conversational graph is prunable at no measured quality cost, scoring nodes by
+recency, access frequency, degree centrality and age. Their ingredients are
+exactly what 1.10.0 shipped: coverage telemetry supplies last-hit recency and
+access frequency, degree is one SQL aggregate, belief time supplies age.
+
+**Adapt, don't adopt: demotion, never silent deletion.** Physical pruning
+contradicts the audit and sovereignty positioning — history being kept is the
+pitch. The retention policy therefore *archives*:
+
+```python
+report = await rag.apply_retention(dry_run=True)     # score + preview, no writes
+report = await rag.apply_retention(threshold=0.10)   # mark archived_at
+await rag.restore_archived(entity_ids=[...])         # reversible by design
+```
+
+- Score = w_r·recency(last_hit) + w_f·log(hits) + w_c·log(degree) + w_a·age
+  decay over belief time; weights in config, defaults from their paper
+  (0.35/0.25/0.20/0.20), threshold 0.10.
+- `archived_at` behaves exactly like `dormant_since`: excluded from retrieval
+  and community builds, revived by a new mention, visible to `changes_since`
+  as its own delta bucket.
+- Requires `record_retrieval_events`; without telemetry the frequency and
+  recency terms are undefined and `apply_retention` refuses rather than
+  scoring on structure alone.
+- Hard eviction (move rows to a `*_archive` shadow table) is a separate,
+  explicit opt-in for agent-memory deployments where storage genuinely binds —
+  never the default, and never silent.
+
+**Validation target.** Reproduce their Experiment 2 shape on our own harness:
+archive to the threshold, re-run a fixed-graph paired evaluation, and require
+the quality delta to sit inside the noise band before the feature is
+documented as safe. ~10% archived at no measured cost is the bar their data
+sets.
+
+**Tests.** Dry-run writes nothing; scoring refuses without telemetry;
+archived entities vanish from retrieval and community builds but survive in
+the table; restore reverses; a new mention revives; `changes_since` reports
+archived transitions; eviction moves rather than deletes and is reversible.
 
 ## Explicitly out of scope
 
