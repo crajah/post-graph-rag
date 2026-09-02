@@ -1000,7 +1000,9 @@ class GraphRAG:
         # necessarily the one that best answers a broad question.
         candidates = max(p.top_k, p.top_k * max(1, self.config.community_candidate_multiplier))
         try:
-            hits = await self.store.search_similar_communities(query_vec, top_k=candidates, space=space)
+            hits = await self.store.search_similar_communities(
+                query_vec, top_k=candidates, space=space,
+                level=getattr(p, "community_level", None))
         except Exception as e:
             logger.warning("Community search failed (%s); continuing without reports.", e)
             return []
@@ -1008,13 +1010,8 @@ class GraphRAG:
             return []
 
         out = []
-        community_level = getattr(p, "community_level", None)
         for vertex, distance in hits:
             payload = vertex.payload or {}
-            if community_level is not None and int(payload.get("level", 0)) != community_level:
-                # Level filtering post-search: the vector index has no level
-                # predicate, so candidates are over-fetched and trimmed here.
-                continue
             out.append({
                 "community_id": vertex.id,
                 "level": int(payload.get("level", 0)),

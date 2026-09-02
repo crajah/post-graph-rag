@@ -113,6 +113,11 @@ class RAGGraphStore:
         for key in ("t_created", "t_expired"):
             await self.client.create_payload_index("relations", realm=self.realm, key=key)
         await self.client.create_payload_index("entities", realm=self.realm, key="dormant_since")
+        # Hierarchy level: numeric expression index matching the numeric cast
+        # the level predicate compiles to. Expression indexes apply to
+        # existing tables, so realms created before the hierarchy gain it too.
+        await self.client.create_payload_index("communities", realm=self.realm,
+                                               key="level", numeric=True)
 
         await self._verify_vector_columns()
         await self._ensure_entity_name_index()
@@ -994,11 +999,19 @@ class RAGGraphStore:
         return vertex
 
     async def search_similar_communities(
-        self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None
+        self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None,
+        level: Optional[int] = None,
     ) -> List[Tuple[Vertex, float]]:
-        """Vector similarity search over community reports."""
+        """Vector similarity search over community reports.
+
+        *level* filters inside the search rather than trimming its result, so
+        a level-restricted top-k is a genuine top-k even when another level
+        dominates the query's neighbourhood.
+        """
+        where = [("level", "=", int(level))] if level is not None else None
         return await self.client.vector_search(
-            "communities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+            "communities", realm=self.realm, space=space, query_vector=query_vec,
+            top_k=top_k, where=where
         )
 
     async def latest_graph_write(self, space: Optional[str] = None) -> Optional[str]:
@@ -1064,6 +1077,15 @@ class RAGGraphStore:
         describes, so failures are logged and swallowed."""
         try:
             import hashlib
+            if not getattr(self, "_events_table_ready", False):
+                # The flag can be turned on after a realm was initialised, and
+                # a missing table would otherwise make every event write a
+                # silent no-op forever -- the worst failure shape for
+                # telemetry. Same lazy-create idiom as the lexical index.
+                await self.client.create_vertex_table("retrieval_events", realm=self.realm)
+                await self.client.create_payload_index("retrieval_events",
+                                                       realm=self.realm, key="ts")
+                self._events_table_ready = True
             await self.client.add_vertex(
                 "retrieval_events", realm=self.realm, space=space or self.space,
                 payload={

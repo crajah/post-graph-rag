@@ -119,3 +119,15 @@ class TestCoverageQueries:
         await rag.query_data("who worked with Ada?")
         after = await rag.dark_entities()
         assert len(after) < 3
+
+
+class TestLazyEventsTable:
+    async def test_flag_enabled_after_init_still_records(self, rag_factory):
+        """Turning telemetry on post-init must not become a silent no-op."""
+        rag = await rag_factory()                       # flag off at init
+        await _seed_graph(rag)
+        rag.config.record_retrieval_events = True       # enabled later
+        await rag.query_data("who worked with Ada?")
+        n = await rag.store.client.count_vertices(
+            "retrieval_events", realm=rag.config.realm)
+        assert n == 1                                   # lazily created + recorded

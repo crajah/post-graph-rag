@@ -134,6 +134,7 @@ class TestLevelFilteredRetrieval:
         got0 = await rag.query_data("themes?", param=QueryParam(mode="global",
                                                                 community_level=0))
         levels0 = {c.get("level", 0) for c in got0["data"]["communities"]}
-        # whatever is returned respects the requested level
-        assert levels in (set(), {1})
-        assert levels0 in (set(), {0})
+        # in-search filtering: a level-restricted query returns that level,
+        # never an empty remainder, even when the other level dominates
+        assert levels == {1}, d1["data"]["communities"]
+        assert levels0 == {0}
