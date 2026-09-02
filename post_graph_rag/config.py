@@ -314,6 +314,13 @@ class RAGConfig:
     # Smallest cluster worth summarising. Pairs and singletons produce reports
     # that say nothing their members' own descriptions do not.
     community_min_size: int = field(default_factory=lambda: int(_env("RAG_COMMUNITY_MIN_SIZE", "3")))
+    # Levels of the community hierarchy. 1 is today's single-level behaviour
+    # and the default, so the hierarchy is opt-in. Above 1, each level
+    # re-clusters the supergraph of the level below -- recursion is what
+    # guarantees nesting, which independent runs at different resolutions do
+    # not -- and its reports are summarised from child REPORTS, not raw
+    # relations, which is what caps the cost growth.
+    community_levels: int = field(default_factory=lambda: int(_env("RAG_COMMUNITY_LEVELS", "1")))
     # Higher values yield more, smaller communities (Leiden only).
     community_resolution: float = field(default_factory=lambda: float(_env("RAG_COMMUNITY_RESOLUTION", "1.0")))
     # Cap on communities summarised per build; each costs one LLM call.

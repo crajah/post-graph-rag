@@ -145,6 +145,41 @@ class GraphRAG:
         return await DeltaReader(self.store).changes_since(
             since, space=space, include=include, limit=limit, summary=summary)
 
+    async def get_community_tree(self, space=None):
+        """The community hierarchy as nested dicts, deepest level at the root.
+
+        Single-level realms return their communities as roots with no
+        children, so consumers can treat every realm as a tree.
+        """
+        levels = {}
+        lvl = 0
+        while True:
+            vs = await self.store.communities_at_level(lvl, space=space)
+            if not vs:
+                break
+            levels[lvl] = vs
+            lvl += 1
+        if not levels:
+            return {"levels": 0, "roots": []}
+        top = max(levels)
+        by_id = {str(c.id): c for l in levels.values() for c in l}
+
+        async def node(v):
+            child_ids = await self.store.community_children(v.id, space=space)
+            return {
+                "community_id": str(v.id),
+                "title": (v.payload or {}).get("title"),
+                "level": int((v.payload or {}).get("level", 0)),
+                "rating": (v.payload or {}).get("rating"),
+                "children": [await node(by_id[str(c)]) for c in child_ids
+                             if str(c) in by_id],
+            }
+        return {"levels": top + 1,
+                "roots": [await node(v) for v in levels[top]]}
+
+    async def children_of(self, community_id, space=None):
+        return await self.store.community_children(community_id, space=space)
+
     async def coverage(self, space=None):
         """Per-community retrieval coverage, least-explored first.
 
@@ -554,6 +589,7 @@ class GraphRAG:
             rels_by_member.setdefault(r["from_id"], []).append(r)
 
         built, skipped = 0, 0
+        built_vertices: Dict[Any, Any] = {}
         first_failure: Optional[BaseException] = None
         used_titles: Dict[str, int] = {}
         for community_id, member_ids in capped:
@@ -574,7 +610,7 @@ class GraphRAG:
                 report = await self.reporter.summarise(member_entities, member_relations)
                 text = report_to_text(report)
                 embedding = await self.llm.get_embedding(text)
-                await self.store.add_community(
+                vertex = await self.store.add_community(
                     key=f"c{community_id}",
                     title=self._disambiguate_title(report.title, member_entities, used_titles),
                     summary=report.summary,
@@ -584,6 +620,7 @@ class GraphRAG:
                     entity_ids=member_ids,
                     space=target_space,
                 )
+                built_vertices[community_id] = (vertex, report)
                 built += 1
             except RAGError as e:
                 # One unusable report should not abandon the whole build.
@@ -596,13 +633,106 @@ class GraphRAG:
         if capped and built == 0 and first_failure is not None:
             raise first_failure
 
+        levels_built = {0: built}
+        if self.config.community_levels > 1 and built > 1:
+            levels_built.update(await self._build_community_hierarchy(
+                assignment, edges, built_vertices, target_space))
+
         return {
-            "communities": built,
+            "communities": sum(levels_built.values()),
+            "levels": levels_built,
             "skipped": skipped,
             "detected": len(ordered),
             "entities": len(entities),
             "relations": len(relations),
         }
+
+    async def _build_community_hierarchy(self, assignment, edges,
+                                         built_vertices, target_space):
+        """Levels above L0 by recursive supergraph clustering.
+
+        Each level clusters the supergraph of the one below -- one node per
+        cluster, edge weights summed across the cut -- which is what makes the
+        hierarchy genuinely nested: a resolution ladder over the original
+        graph carries no such guarantee, and a non-nested "hierarchy" poisons
+        every drill-down. Parent reports are synthesised from child reports,
+        and a parent is as important as its most important child.
+        """
+        levels: Dict[int, int] = {}
+        # supergraph of L0: node per built cluster label
+        label_of = dict(assignment)                     # entity -> L0 label
+        current: Dict[Any, Any] = dict(built_vertices)  # label -> (vertex, report)
+        current_edges: Dict[tuple, float] = {}
+        for a, b, w in edges:
+            la, lb = label_of.get(a), label_of.get(b)
+            if la is None or lb is None or la == lb:
+                continue
+            if la not in current or lb not in current:
+                continue
+            k = (la, lb) if str(la) <= str(lb) else (lb, la)
+            current_edges[k] = current_edges.get(k, 0.0) + float(w)
+
+        for level in range(1, self.config.community_levels):
+            nodes = list(current.keys())
+            if len(nodes) <= 1:
+                break
+            super_edges = [(a, b, w) for (a, b), w in sorted(
+                current_edges.items(), key=lambda kv: str(kv[0]))]
+            sub_assignment = self.community_detector(nodes, super_edges,
+                resolution=self.config.community_resolution)                 if _accepts_resolution(self.community_detector)                 else self.community_detector(nodes, super_edges)
+            groups = group_by_community(sub_assignment, min_size=2)
+            if not groups or len(groups) >= len(nodes):
+                break                                   # no real coarsening
+            built_here = 0
+            next_level: Dict[Any, Any] = {}
+            parent_of: Dict[Any, Any] = {}
+            used: Dict[str, int] = {}
+            for gid, member_labels in sorted(groups.items(),
+                                             key=lambda kv: -len(kv[1])):
+                children = [current[m] for m in member_labels if m in current]
+                if len(children) < 2:
+                    continue
+                try:
+                    parent_report = await self.reporter.summarise_reports(
+                        [rep for _v, rep in children])
+                    parent_report.rating = max(
+                        (rep.rating for _v, rep in children), default=parent_report.rating)
+                    text = report_to_text(parent_report)
+                    embedding = await self.llm.get_embedding(text)
+                    parent_vertex = await self.store.add_community(
+                        key=f"l{level}c{gid}",
+                        title=self._disambiguate_title(parent_report.title, [], used),
+                        summary=parent_report.summary,
+                        embedding=embedding,
+                        level=level,
+                        rating=parent_report.rating,
+                        findings=[f.model_dump() for f in parent_report.findings],
+                        entity_ids=[],
+                        space=target_space,
+                    )
+                    for child_vertex, _rep in children:
+                        await self.store.add_community_child(
+                            parent_vertex, child_vertex, space=target_space)
+                    next_level[gid] = (parent_vertex, parent_report)
+                    for m in member_labels:
+                        parent_of[m] = gid
+                    built_here += 1
+                except RAGError as ex:
+                    logger.warning("Skipping level-%d community %s: %s", level, gid, ex)
+            if not built_here:
+                break
+            levels[level] = built_here
+            # collapse edges onto the new level; orphans (unparented labels)
+            # simply do not participate in higher levels
+            collapsed: Dict[tuple, float] = {}
+            for (a, b), w in current_edges.items():
+                pa, pb = parent_of.get(a), parent_of.get(b)
+                if pa is None or pb is None or pa == pb:
+                    continue
+                k = (pa, pb) if str(pa) <= str(pb) else (pb, pa)
+                collapsed[k] = collapsed.get(k, 0.0) + w
+            current, current_edges = next_level, collapsed
+        return levels
 
     @staticmethod
     def _disambiguate_title(
@@ -878,10 +1008,16 @@ class GraphRAG:
             return []
 
         out = []
+        community_level = getattr(p, "community_level", None)
         for vertex, distance in hits:
             payload = vertex.payload or {}
+            if community_level is not None and int(payload.get("level", 0)) != community_level:
+                # Level filtering post-search: the vector index has no level
+                # predicate, so candidates are over-fetched and trimmed here.
+                continue
             out.append({
                 "community_id": vertex.id,
+                "level": int(payload.get("level", 0)),
                 "title": payload.get("title"),
                 "summary": payload.get("summary"),
                 "findings": payload.get("findings") or [],

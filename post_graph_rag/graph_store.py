@@ -89,6 +89,15 @@ class RAGGraphStore:
                 to_vertex_table="entities",
                 realm=self.realm
             )
+            # Hierarchy edges: parent community -> child community. Deleting a
+            # community cascades these away with it, so clear_communities needs
+            # no special handling for levels.
+            await self.client.create_edge_table(
+                "community_children",
+                from_vertex_table="communities",
+                to_vertex_table="communities",
+                realm=self.realm
+            )
         except Exception as e:
             raise SchemaError(f"Failed to create edge tables: {e}") from e
 
@@ -1025,6 +1034,27 @@ class RAGGraphStore:
             f"SELECT min(payload->>'built_at') AS built FROM {comm} WHERE realm = $1{clause}", *args
         )
         return rows[0]["built"] if rows else None
+
+    async def add_community_child(self, parent: Vertex, child: Vertex,
+                                  space: Optional[str] = None) -> None:
+        await self.client.add_edge(
+            "community_children", realm=self.realm,
+            from_id=parent.id, to_id=child.id,
+            relation_type="has_child", space=space or self.space,
+            payload={})
+
+    async def communities_at_level(self, level: int, space: Optional[str] = None):
+        """Community vertices at one hierarchy level, via an indexed predicate."""
+        return await self.client.find_vertices(
+            "communities", realm=self.realm, space=space or self.space,
+            where=[("level", "=", level)])
+
+    async def community_children(self, community_id: str,
+                                 space: Optional[str] = None) -> List[str]:
+        edges = await self.client.find_edges(
+            "community_children", realm=self.realm, space=space or self.space,
+            filters={}, relation_type="has_child")
+        return [e.to_id for e in edges if str(e.from_id) == str(community_id)]
 
     async def record_retrieval_event(self, mode: str, query_text: str,
                                      entity_ids: List[str], community_ids: List[str],

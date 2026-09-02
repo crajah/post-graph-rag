@@ -87,6 +87,25 @@ class CommunityReporter:
         self.llm_service = llm_service
         self.system_prompt = system_prompt or REPORT_SYSTEM_PROMPT
 
+    async def summarise_reports(self, children: Sequence[CommunityReport]) -> CommunityReport:
+        """Synthesise a parent report from child reports.
+
+        A theme-level report should synthesise findings, not re-derive them
+        from raw relations -- and summarising reports rather than subgraphs is
+        what keeps the hierarchy's LLM cost proportional to the number of
+        clusters, not to the graph.
+        """
+        lines = []
+        for c in children:
+            finds = "; ".join(f"{f.summary}: {f.explanation}" for f in c.findings)
+            lines.append(f"- {c.title} (importance {c.rating}): {c.summary} {finds}".strip())
+        pseudo_entities = [{"name": c.title, "type": "Community",
+                           "description": c.summary} for c in children]
+        pseudo_relations = [{"src": "theme", "tgt": c.title, "predicate": "includes",
+                            "description": line, "weight": c.rating, "negated": False}
+                           for c, line in zip(children, lines)]
+        return await self.summarise(pseudo_entities, pseudo_relations)
+
     async def summarise(
         self,
         entities: Sequence[Dict[str, object]],

@@ -127,6 +127,7 @@ class QueryParam:
     stream: bool = False                        # Stream response chunks if True
     only_need_context: bool = False             # Return raw context without synthesis if True
     space: Optional[str] = None                 # Optional space filter ("production", "sandbox")
+    community_level: Optional[int] = None       # Restrict community retrieval to one hierarchy level; None = all levels
     as_of: Optional[str] = None                 # Only relations VALID at this date ("1625", "1625-06-12")
     # The second temporal axis: the graph as this system believed it at an
     # instant, rather than the world as it was. A filing published in 2024 can
