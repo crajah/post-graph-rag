@@ -92,6 +92,13 @@ class RAGGraphStore:
         except Exception as e:
             raise SchemaError(f"Failed to create edge tables: {e}") from e
 
+        if self.config.record_retrieval_events:
+            # Coverage telemetry table: plain rows, no vector column. Created
+            # only when the flag is on, so realms of non-telemetry users gain
+            # nothing.
+            await self.client.create_vertex_table("retrieval_events", realm=self.realm)
+            await self.client.create_payload_index("retrieval_events", realm=self.realm, key="ts")
+
         # Belief-time delta polls run range predicates over these payload
         # keys; the expression indexes make them index scans. Idempotent.
         for key in ("t_created", "t_expired"):
@@ -1018,6 +1025,101 @@ class RAGGraphStore:
             f"SELECT min(payload->>'built_at') AS built FROM {comm} WHERE realm = $1{clause}", *args
         )
         return rows[0]["built"] if rows else None
+
+    async def record_retrieval_event(self, mode: str, query_text: str,
+                                     entity_ids: List[str], community_ids: List[str],
+                                     space: Optional[str] = None) -> None:
+        """Best-effort coverage telemetry; the one declared exception to
+        fail-loud. Read-side bookkeeping must never fail the query it
+        describes, so failures are logged and swallowed."""
+        try:
+            import hashlib
+            await self.client.add_vertex(
+                "retrieval_events", realm=self.realm, space=space or self.space,
+                payload={
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "mode": mode,
+                    "query_sha256": hashlib.sha256(query_text.encode()).hexdigest(),
+                    "entity_ids": [str(i) for i in entity_ids],
+                    "community_ids": [str(i) for i in community_ids],
+                })
+        except Exception as e:                                   # noqa: BLE001
+            logger.warning("retrieval event write failed (telemetry only): %s", e)
+
+    async def coverage_stats(self, space: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Per-community member count, retrieval hits and last hit.
+
+        Hits combine direct community retrieval with entity-level touches
+        joined through community_members, so a community counts as explored
+        when retrieval reached its members even if no report was returned.
+        """
+        target_space = space or self.space
+        comm = self.client._get_table_ref("communities", self.realm)
+        cm = self.client._get_table_ref("community_members", self.realm)
+        ev = self.client._get_table_ref("retrieval_events", self.realm)
+        args: List[Any] = [self.realm]
+        clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            clause = f" AND c.space = ${len(args)}"
+        rows = await self.client._fetch(f"""
+            WITH ent_hits AS (
+                SELECT cm.from_id AS community_id,
+                       count(*) AS hits, max(e.payload->>'ts') AS last_hit
+                FROM {ev} e
+                JOIN LATERAL jsonb_array_elements_text(e.payload->'entity_ids') AS x(eid) ON true
+                JOIN {cm} cm ON cm.realm = e.realm AND cm.to_id = x.eid::bigint
+                WHERE e.realm = $1
+                GROUP BY cm.from_id
+            ), direct_hits AS (
+                SELECT x.cid::bigint AS community_id,
+                       count(*) AS hits, max(e.payload->>'ts') AS last_hit
+                FROM {ev} e
+                JOIN LATERAL jsonb_array_elements_text(e.payload->'community_ids') AS x(cid) ON true
+                WHERE e.realm = $1
+                GROUP BY x.cid::bigint
+            ), members AS (
+                SELECT cm.from_id AS community_id, count(*) AS members
+                FROM {cm} cm WHERE cm.realm = $1 GROUP BY cm.from_id
+            )
+            SELECT c.id, c.payload->>'title' AS title,
+                   COALESCE(m.members, 0) AS members,
+                   COALESCE(eh.hits, 0) + COALESCE(dh.hits, 0) AS hits,
+                   GREATEST(eh.last_hit, dh.last_hit) AS last_hit
+            FROM {comm} c
+            LEFT JOIN members m ON m.community_id = c.id
+            LEFT JOIN ent_hits eh ON eh.community_id = c.id
+            LEFT JOIN direct_hits dh ON dh.community_id = c.id
+            WHERE c.realm = $1{clause}
+            ORDER BY hits ASC, members DESC
+        """, *args)
+        return [{"community_id": str(r["id"]), "title": r["title"],
+                 "members": int(r["members"]), "retrieval_hits": int(r["hits"]),
+                 "last_hit_at": r["last_hit"]} for r in rows]
+
+    async def dark_entities(self, space: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+        """Active entities no retrieval event has ever touched: the frontier."""
+        target_space = space or self.space
+        ents = self.client._get_table_ref("entities", self.realm)
+        ev = self.client._get_table_ref("retrieval_events", self.realm)
+        args: List[Any] = [self.realm]
+        clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            clause = f" AND en.space = ${len(args)}"
+        args.append(limit)
+        rows = await self.client._fetch(f"""
+            SELECT en.id, en.payload->>'name' AS name
+            FROM {ents} en
+            WHERE en.realm = $1{clause}
+              AND en.payload->>'dormant_since' IS NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM {ev} e
+                JOIN LATERAL jsonb_array_elements_text(e.payload->'entity_ids') AS x(eid) ON true
+                WHERE e.realm = en.realm AND x.eid::bigint = en.id)
+            ORDER BY en.id ASC LIMIT ${len(args)}
+        """, *args)
+        return [{"entity_id": str(r["id"]), "name": r["name"]} for r in rows]
 
     async def entities_changed_since(self, since: str, space: Optional[str] = None,
                                      limit: int = 500, count_only: bool = False):

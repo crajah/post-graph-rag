@@ -14,6 +14,7 @@ from post_graph_rag.communities import (
 )
 from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
 from post_graph_rag.deltas import CorpusDelta
+from post_graph_rag.models import CommunityCoverage
 from post_graph_rag.models import DocumentContext, DocumentMetadata, QueryParam, KeywordResult
 from post_graph_rag.llm import LLMService
 from post_graph_rag.extractor import GraphExtractor, Entity, Triple, ExtractionResult
@@ -23,6 +24,7 @@ from post_graph_rag.engine import GraphRAG
 __version__ = "1.9.1"
 __all__ = [
     "CorpusDelta",
+    "CommunityCoverage",
     "RAGConfig",
     "RAGError",
     "SchemaError",

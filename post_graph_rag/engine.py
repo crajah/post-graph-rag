@@ -145,6 +145,42 @@ class GraphRAG:
         return await DeltaReader(self.store).changes_since(
             since, space=space, include=include, limit=limit, summary=summary)
 
+    async def coverage(self, space=None):
+        """Per-community retrieval coverage, least-explored first.
+
+        Requires record_retrieval_events; without events every community
+        reports zero hits, which is accurate rather than an error.
+        """
+        from post_graph_rag.models import CommunityCoverage
+        rows = await self.store.coverage_stats(space=space)
+        return [CommunityCoverage(
+            community_id=r["community_id"], title=r["title"],
+            members=r["members"], retrieval_hits=r["retrieval_hits"],
+            last_hit_at=r["last_hit_at"],
+            hit_share=(r["retrieval_hits"] / r["members"]) if r["members"] else 0.0,
+        ) for r in rows]
+
+    async def least_explored_communities(self, space=None, k: int = 5):
+        """The k communities retrieval has touched least -- breadth-first
+        topic selection as one call."""
+        return (await self.coverage(space=space))[:k]
+
+    async def dark_entities(self, space=None, limit: int = 100):
+        """Active entities never touched by any recorded retrieval."""
+        return await self.store.dark_entities(space=space, limit=limit)
+
+    async def purge_retrieval_events(self, before: str, space=None) -> int:
+        """Retention for the telemetry table; returns rows deleted.
+
+        Delegates to post-graph delete_vertices, inheriting its refusal of an
+        empty predicate -- `before` is required by signature here for the same
+        reason.
+        """
+        return await self.store.client.delete_vertices(
+            "retrieval_events", realm=self.config.realm,
+            space=space or self.store.space,
+            where=[("ts", "<", before)])
+
     async def close(self):
         """Close database connection."""
         await self.store.close()
@@ -788,6 +824,14 @@ class GraphRAG:
             "reference_id": f"[{idx + 1}]",
             "document": v.payload.get("document") or f"Doc Chunk {v.id}"
         } for idx, (v, _dist) in enumerate(similar_docs)]
+
+        if self.config.record_retrieval_events:
+            await self.store.record_retrieval_event(
+                mode=mode, query_text=question,
+                entity_ids=[v.id for v, _d in similar_entities],
+                community_ids=[str(c.get("community_id")) for c in communities
+                               if c.get("community_id") is not None],
+                space=p.space)
 
         return {
             "status": "success",

@@ -108,6 +108,15 @@ class RAGConfig:
     relation_seed_quota: float = field(
         default_factory=lambda: float(_env("RAG_RELATION_SEED_QUOTA", "0.5")))
 
+    # Coverage telemetry: one small event row per query recording which
+    # entities and communities retrieval touched (query text is never stored,
+    # only its hash). Off by default -- it adds a write to every query -- and
+    # best-effort by declared exception: a failed event write must never fail
+    # the query it describes.
+    record_retrieval_events: bool = field(
+        default_factory=lambda: _env("RAG_RECORD_RETRIEVAL_EVENTS", "0").lower()
+        in ("1", "true", "yes"))
+
     # Validity dates are extracted, stored and indexed, and were then dropped at
     # render time -- the model never saw them, so ordering and duration
     # questions were unanswerable from a graph that held the answer. On

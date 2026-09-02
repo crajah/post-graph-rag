@@ -10,7 +10,9 @@ import pytest
 
 pytestmark = pytest.mark.asyncio
 
-EMB = [0.1] * 8
+from conftest import VOCAB_DIM
+
+EMB = [0.1] * VOCAB_DIM
 
 
 async def _ent(rag, name):
@@ -20,7 +22,7 @@ async def _ent(rag, name):
 
 class TestChangesSince:
     async def test_new_relation_appears_once_across_watermarks(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         a, b = await _ent(rag, "Alpha"), await _ent(rag, "Beta")
         d0 = await rag.changes_since("1970-01-01T00:00:00+00:00", summary=True)
         base = d0.as_of
@@ -36,7 +38,7 @@ class TestChangesSince:
         assert d2.counts["new_relations"] == 0
 
     async def test_supersession_lands_in_superseded_bucket(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         a, b = await _ent(rag, "Gamma"), await _ent(rag, "Delta")
         await rag.store.add_relation(a, b, "ally_of", description="then")
         d0 = await rag.changes_since("1970-01-01T00:00:00+00:00", summary=True)
@@ -57,7 +59,7 @@ class TestChangesSince:
         assert sup.payload.get("t_expired") is not None
 
     async def test_new_entities_and_documents(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         d0 = await rag.changes_since("1970-01-01T00:00:00+00:00", summary=True)
         await _ent(rag, "Epsilon")
         await rag.store.add_document("some text", embedding=EMB,
@@ -70,7 +72,7 @@ class TestChangesSince:
         assert d1.new_documents[0]["chunks"] == 1
 
     async def test_summary_counts_match_detail(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         a, b = await _ent(rag, "Zeta"), await _ent(rag, "Eta")
         d0 = await rag.changes_since("1970-01-01T00:00:00+00:00", summary=True)
         await rag.store.add_relation(a, b, "knows", description="k")
@@ -80,14 +82,14 @@ class TestChangesSince:
         assert s.new_relations == []                     # summary transfers no rows
 
     async def test_empty_delta_is_empty(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         await _ent(rag, "Theta")
         d0 = await rag.changes_since("1970-01-01T00:00:00+00:00", summary=True)
         d1 = await rag.changes_since(d0.as_of, summary=True)
         assert d1.empty, d1.counts
 
     async def test_communities_stale_flag(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         a, b = await _ent(rag, "Iota"), await _ent(rag, "Kappa")
         await rag.store.add_relation(a, b, "linked_to", description="l")
         d = await rag.changes_since("1970-01-01T00:00:00+00:00", summary=True)
@@ -95,7 +97,7 @@ class TestChangesSince:
         assert d.communities_stale is False
 
     async def test_include_scoping_and_bad_include(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         d = await rag.changes_since("1970-01-01T00:00:00+00:00",
                                     include=("relations",), summary=True)
         assert "new_entities" not in d.counts
@@ -103,6 +105,6 @@ class TestChangesSince:
             await rag.changes_since("1970-01-01T00:00:00+00:00", include=("bogus",))
 
     async def test_watermark_is_utc_isoformat(self, rag_factory):
-        rag = await rag_factory(embedding_dim=8)
+        rag = await rag_factory()
         d = await rag.changes_since("1970-01-01T00:00:00+00:00", summary=True)
         assert "+00:00" in d.as_of or d.as_of.endswith("Z")

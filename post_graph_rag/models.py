@@ -147,3 +147,14 @@ class QueryParam:
     conversation_history: List[Dict[str, str]] = field(default_factory=list) # Multi-turn chat history
     hl_keywords: List[str] = field(default_factory=list) # Custom high-level search terms
     ll_keywords: List[str] = field(default_factory=list) # Custom low-level search terms
+
+
+@dataclass
+class CommunityCoverage:
+    """How much retrieval attention a community has received."""
+    community_id: str
+    title: str
+    members: int
+    retrieval_hits: int
+    last_hit_at: Optional[str]
+    hit_share: float          # hits normalised by member count
