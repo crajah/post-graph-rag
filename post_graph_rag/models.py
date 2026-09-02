@@ -120,9 +120,15 @@ class QueryParam:
     """Configuration parameters controlling RAG retrieval and synthesis behavior."""
     mode: str = "mix"                           # "mix", "local", "global", "hybrid", "naive", or "bypass"
     top_k: int = 5                              # Top items to retrieve
-    max_total_tokens: int = 4000                # Total context token budget
-    max_entity_tokens: int = 1500               # Max entity context token budget
-    max_relation_tokens: int = 1500             # Max relation context token budget
+    # Context budgets, in tokens. None -- the default -- means unlimited:
+    # everything retrieved is sent. The former 4000-token default silently
+    # withheld evidence the retriever had already found, which is the worse
+    # failure: a model answering "no information available" while the answer
+    # sat in a discarded passage. Set an integer to cap context for cost or
+    # for a model with a small window.
+    max_total_tokens: Optional[int] = None      # Total context token budget
+    max_entity_tokens: Optional[int] = None     # Max entity context token budget
+    max_relation_tokens: Optional[int] = None   # Max relation context token budget
     response_type: str = "Multiple Paragraphs"  # Expected answer formatting
     stream: bool = False                        # Stream response chunks if True
     only_need_context: bool = False             # Return raw context without synthesis if True

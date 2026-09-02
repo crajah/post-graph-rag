@@ -75,16 +75,43 @@ def _valid_at(valid_from: Optional[str], valid_to: Optional[str], as_of: str) ->
     return True
 
 
-def _truncate_by_tokens(text_items: List[str], max_tokens: int) -> str:
-    """Helper to truncate a list of string passages to respect max token budget."""
+# Below this many tokens a clipped fragment carries no usable content, so the
+# passage is dropped instead.
+_MIN_CLIP_TOKENS = 32
+
+
+def _share(total: Optional[int], denom: int) -> Optional[int]:
+    """A channel's slice of the overall budget; None stays unlimited."""
+    return None if total is None else total // denom
+
+
+def _truncate_by_tokens(text_items: List[str], max_tokens: Optional[int]) -> str:
+    """Fit passages into a token budget, clipping the first that overflows.
+
+    Clipping rather than dropping matters: a single passage larger than the
+    budget used to break the loop before anything was selected, so one long
+    document produced an *empty* context and the model answered "no
+    information available" while holding none of the text it had retrieved.
+    Long chunks are common -- a conversation session or a filing section
+    easily exceeds a per-channel share of the default 4000-token budget -- so
+    the failure was silent and total rather than graceful.
+    """
+    if max_tokens is None:
+        return "\n".join(text_items)
     current_tokens = 0
     selected = []
     for item in text_items:
         item_tokens = max(1, len(item) // 4)
-        if current_tokens + item_tokens > max_tokens:
-            break
-        selected.append(item)
-        current_tokens += item_tokens
+        if current_tokens + item_tokens <= max_tokens:
+            selected.append(item)
+            current_tokens += item_tokens
+            continue
+        remaining = max_tokens - current_tokens
+        if remaining >= _MIN_CLIP_TOKENS:
+            marker = " [truncated]"
+            keep = max(0, remaining * 4 - len(marker))
+            selected.append(item[:keep].rstrip() + marker)
+        break
     return "\n".join(selected)
 
 
@@ -1522,11 +1549,11 @@ class GraphRAG:
                 f"{c.get('summary')} {findings}".strip()
             )
         community_context = (
-            _truncate_by_tokens(community_passages, p.max_total_tokens // 3)
+            _truncate_by_tokens(community_passages, _share(p.max_total_tokens, 3))
             if community_passages else "None"
         )
 
-        doc_context = _truncate_by_tokens(doc_passages, p.max_total_tokens // 2) if doc_passages else "None"
+        doc_context = _truncate_by_tokens(doc_passages, _share(p.max_total_tokens, 2)) if doc_passages else "None"
         entity_context = _truncate_by_tokens(entity_passages, p.max_entity_tokens) if entity_passages else "None"
         graph_context = _truncate_by_tokens(triple_passages, p.max_relation_tokens) if triple_passages else "None"
 

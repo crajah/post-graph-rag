@@ -406,6 +406,7 @@ The main orchestrator class for indexing and querying.
 
 - `mode`: one of `mix`, `local`, `global`, `hybrid`, `naive`, `bypass`. An unknown mode raises `ValueError`.
 - `top_k`, `max_total_tokens`, `max_entity_tokens`, `max_relation_tokens`, `response_type`
+  - The three token budgets default to `None` — **unlimited** — as of 1.11.1: everything retrieved reaches the model. Set an integer to cap context for cost or for a model with a small window.
 - `stream`: return an async iterator of tokens instead of a dict.
 - `only_need_context`: return retrieval output without calling the LLM.
 - `space`: restrict retrieval to one space; `__all__` queries across all spaces.

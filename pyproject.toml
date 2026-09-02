@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "post-graph-rag"
-version = "1.10.0"
+version = "1.11.1"
 description = "Graph RAG library leveraging post-graph space sub-grouping and pgvector on PostgreSQL with OpenAI-compatible LLMs."
 readme = "README.md"
 requires-python = ">=3.9"

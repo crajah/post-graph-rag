@@ -22,7 +22,7 @@ from post_graph_rag.extractor import GraphExtractor, Entity, Triple, ExtractionR
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.engine import GraphRAG
 
-__version__ = "1.10.0"
+__version__ = "1.11.1"
 __all__ = [
     "CorpusDelta",
     "RetentionReport",
