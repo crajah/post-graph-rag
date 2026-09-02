@@ -133,6 +133,18 @@ class GraphRAG:
         await self.store.connect()
         await self.store.initialize_schema()
 
+    async def changes_since(self, since, space=None,
+                            include=("relations", "entities", "documents", "communities"),
+                            limit=500, summary=True):
+        """What changed after *since*, from belief time. See deltas.CorpusDelta.
+
+        Defaults to summary=True -- counts only, no row transfer -- because the
+        intended caller is a poller deciding whether to fetch detail at all.
+        """
+        from post_graph_rag.deltas import DeltaReader
+        return await DeltaReader(self.store).changes_since(
+            since, space=space, include=include, limit=limit, summary=summary)
+
     async def close(self):
         """Close database connection."""
         await self.store.close()

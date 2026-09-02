@@ -92,6 +92,12 @@ class RAGGraphStore:
         except Exception as e:
             raise SchemaError(f"Failed to create edge tables: {e}") from e
 
+        # Belief-time delta polls run range predicates over these payload
+        # keys; the expression indexes make them index scans. Idempotent.
+        for key in ("t_created", "t_expired"):
+            await self.client.create_payload_index("relations", realm=self.realm, key=key)
+        await self.client.create_payload_index("entities", realm=self.realm, key="dormant_since")
+
         await self._verify_vector_columns()
         await self._ensure_entity_name_index()
 
@@ -244,7 +250,10 @@ class RAGGraphStore:
             payload["sources"] = remaining
             payload["weight"] = max(1, len(remaining))
             if remaining:
-                payload.pop("dormant_since", None)
+                if payload.pop("dormant_since", None) is not None:
+                    # A revival is an event, not just an absence: stamping it is
+                    # what lets changes_since() report it from belief time.
+                    payload["revived_at"] = datetime.now(timezone.utc).isoformat()
             else:
                 payload["dormant_since"] = datetime.now(timezone.utc).isoformat()
             await self.client._execute(
@@ -283,6 +292,7 @@ class RAGGraphStore:
 
             if has_mentions and was_dormant:
                 payload.pop("dormant_since", None)          # revived by a new mention
+                payload["revived_at"] = datetime.now(timezone.utc).isoformat()
             elif not has_mentions and not was_dormant:
                 payload["dormant_since"] = datetime.now(timezone.utc).isoformat()
                 marked += 1
@@ -1008,6 +1018,77 @@ class RAGGraphStore:
             f"SELECT min(payload->>'built_at') AS built FROM {comm} WHERE realm = $1{clause}", *args
         )
         return rows[0]["built"] if rows else None
+
+    async def entities_changed_since(self, since: str, space: Optional[str] = None,
+                                     limit: int = 500, count_only: bool = False):
+        """New entities (row creation) and revived entities (revived_at stamp)
+        after *since*. Returns (new, revived) as row-dicts, or counts when
+        *count_only*."""
+        target_space = space or self.space
+        ents = self.client._get_table_ref("entities", self.realm)
+        # asyncpg types $2 from the timestamptz comparison, so the row-clock
+        # predicates need a datetime; the payload-stamp predicates compare the
+        # ISO string as text and take `since` unchanged.
+        since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        args: List[Any] = [self.realm, since_dt]
+        clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            clause = f" AND space = ${len(args)}"
+        if count_only:
+            new_n = await self.client._fetch(
+                f"SELECT count(*) AS n FROM {ents} WHERE realm = $1 AND created_at > $2::timestamptz{clause}", *args)
+            rev_args = [self.realm, since] + args[2:]
+            rev_n = await self.client._fetch(
+                f"SELECT count(*) AS n FROM {ents} WHERE realm = $1 AND payload->>'revived_at' > $2{clause}", *rev_args)
+            return int(new_n[0]["n"]), int(rev_n[0]["n"])
+        args.append(limit)
+        new_rows = await self.client._fetch(
+            f"SELECT id, fqid, payload, created_at FROM {ents} "
+            f"WHERE realm = $1 AND created_at > $2::timestamptz{clause} "
+            f"ORDER BY created_at ASC LIMIT ${len(args)}", *args)
+        rev_args = [self.realm, since] + args[2:]
+        rev_rows = await self.client._fetch(
+            f"SELECT id, fqid, payload, created_at FROM {ents} "
+            f"WHERE realm = $1 AND payload->>'revived_at' > $2{clause} "
+            f"ORDER BY payload->>'revived_at' ASC LIMIT ${len(rev_args)}", *rev_args)
+        def rows(rs):
+            out = []
+            for r in rs:
+                p = r["payload"] if isinstance(r["payload"], dict) else json.loads(r["payload"])
+                out.append({"id": str(r["id"]), "fqid": r["fqid"], "payload": p,
+                            "created_at": r["created_at"].isoformat()})
+            return out
+        return rows(new_rows), rows(rev_rows)
+
+    async def documents_created_since(self, since: str, space: Optional[str] = None,
+                                      limit: int = 500, count_only: bool = False):
+        """Documents (grouped by doc_key) whose first chunk arrived after
+        *since*. Returns (rows, total_count); rows empty when *count_only*."""
+        target_space = space or self.space
+        docs = self.client._get_table_ref("documents", self.realm)
+        since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        args: List[Any] = [self.realm, since_dt]
+        clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            clause = f" AND space = ${len(args)}"
+        grouped = (
+            f"SELECT payload->>'doc_key' AS doc_key, count(*) AS chunks, "
+            f"       min(created_at) AS first_created "
+            f"FROM {docs} WHERE realm = $1{clause} "
+            f"GROUP BY payload->>'doc_key' "
+            f"HAVING min(created_at) > $2::timestamptz")
+        n_rows = await self.client._fetch(
+            f"SELECT count(*) AS n FROM ({grouped}) g", *args)
+        total = int(n_rows[0]["n"])
+        if count_only:
+            return [], total
+        args.append(limit)
+        rows = await self.client._fetch(
+            grouped + f" ORDER BY min(created_at) ASC LIMIT ${len(args)}", *args)
+        return [{"doc_key": r["doc_key"], "chunks": int(r["chunks"]),
+                 "first_created": r["first_created"].isoformat()} for r in rows], total
 
     async def count_communities(self, space: Optional[str] = None) -> int:
         target_space = space or self.space
