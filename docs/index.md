@@ -657,9 +657,68 @@ The common thread: every degradation path either raises or is measurable, and th
 
 ---
 
+## Exploration support (1.10.0): structure, coverage, change
+
+Exploration-first systems — the kind that decide *what to look at next* rather
+than answer a given question — need three things from a corpus substrate, and
+1.10.0 exposes each as one engine call. No agent loop enters the library; what
+explores stays the consumer's.
+
+**A topic tree.** `community_levels > 1` builds a hierarchy above the flat
+clusters by recursive supergraph clustering — one node per cluster, edge
+weights summed across the cut, re-clustered per level. Recursion is what
+guarantees nesting; a resolution ladder over the original graph carries no
+such guarantee, and a non-nested hierarchy poisons every drill-down. Parent
+reports are summarised from child *reports*, which caps the LLM cost at
+roughly the cluster count per level, and a parent is as important as its most
+important child. The default is 1 — exactly the previous behaviour, asserted
+by a test.
+
+```python
+tree = await rag.get_community_tree()
+themes = await rag.query(q, param=QueryParam(mode="global", community_level=1))
+```
+
+Level-restricted retrieval filters *inside* the vector search (post-graph
+1.4.0's predicate pushdown), so a level-filtered top-k is a genuine top-k
+rather than a post-filtered remainder that can come back empty.
+
+**Coverage.** Opt-in telemetry (`record_retrieval_events`, off by default)
+records which entities and communities each query touched — the query itself
+is stored only as a hash. On top of it:
+
+```python
+frontier = await rag.least_explored_communities(k=5)   # breadth-first pick
+dark = await rag.dark_entities(limit=100)              # never-retrieved corpus
+await rag.purge_retrieval_events(before=cutoff)        # retention
+```
+
+Telemetry is the one declared exception to fail-loud: read-side bookkeeping
+must never fail the query it describes, so a failed event write logs and is
+swallowed — and a test poisons the write path to prove the query survives.
+
+**Change.** `changes_since(T)` answers "what moved" from belief time: new
+relations, superseded relations with the superseding id, new, dormant and
+revived entities, new documents, and a communities-stale flag. The default
+`summary=True` transfers counts only, so a poller pays one cheap round trip
+per tick. Watermarks come from the database clock, making the poll chain
+exactly-once under clock skew — and re-indexing an unchanged document yields
+an empty delta, which turns the idempotence claim into an assertion.
+
+```python
+delta = await rag.changes_since(watermark)             # counts only
+if not delta.empty:
+    detail = await rag.changes_since(watermark, summary=False)
+watermark = delta.as_of
+```
+
+Together these compose into exactly the loop an autonomous explorer runs —
+pick the least-covered region of the tree, investigate, poll for change —
+with the engine supplying structure, coverage and change, and nothing else.
+
 ## Limitations
 
-**Community summarisation is single-level.** GraphRAG's hierarchical levels are not implemented, so semantically overlapping clusters can coexist. Leiden at resolution 2.0 keeps the largest cluster to 17% of the graph, which makes this tolerable rather than solved.
+**Community hierarchy quality is unevaluated.** Multi-level communities exist as of 1.10.0 (opt-in), resolving the long-standing single-level limitation structurally — but whether hierarchical reports *answer better* than the flat layer has not yet been measured, which is why `community_levels` still defaults to 1. The paired evaluation gate is on the roadmap.
 
 **Entity resolution is name and alias based.** There is no embedding-space clustering of near-duplicates, so `Science Museum` and `London Science Museum` remain distinct. Canonical-name and alias matching covers the common cases; near-duplicate clustering is the obvious next increment.
 

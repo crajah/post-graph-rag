@@ -137,6 +137,33 @@ increments, not several edges. Weight then breaks ties when ranking relations.
 
 ---
 
+## 🧭 Exploration Support (1.10.0)
+
+Three engine calls for exploration-first consumers — structure, coverage,
+change — with the agent loop staying yours:
+
+```python
+# Structure: an opt-in topic tree above the flat communities
+rag = GraphRAG(RAGConfig(community_levels=2))
+tree = await rag.get_community_tree()
+
+# Coverage: where has retrieval never looked? (opt-in telemetry, hash-only)
+frontier = await rag.least_explored_communities(k=5)
+dark = await rag.dark_entities(limit=100)
+
+# Change: what moved since the last poll, from belief time
+delta = await rag.changes_since(watermark)          # counts only, one round trip
+if not delta.empty:
+    detail = await rag.changes_since(watermark, summary=False)
+watermark = delta.as_of
+```
+
+Hierarchy levels nest by construction (recursive supergraph clustering);
+level-filtered retrieval happens inside the vector search, not as a post-hoc
+trim; deltas are exactly-once under clock skew via database-clock watermarks;
+and re-indexing an unchanged document yields an empty delta. `community_levels`
+defaults to 1 — existing behaviour is untouched.
+
 ## 🏗️ Architecture Workflow
 
 ```mermaid

@@ -6,8 +6,14 @@ post-graph-rag stays an engine — no agent loops enter the library — but each
 feature below turns something an exploration consumer would otherwise build
 badly on top of us into one engine call.
 
-Build order: §1 → §2 → §3. The first is smallest and uniquely ours; the last is
-largest and benefits from the other two existing.
+**Status: all three shipped in 1.10.0** (tasks #132–#134), with the noted
+deviations closed properly: the level predicate is expression-indexed on all
+realms, level filtering runs inside the vector search (post-graph 1.4.0
+predicate pushdown), and the telemetry table lazy-creates on first write.
+Still open from §3: the paired evaluation gate before `community_levels`
+changes its default.
+
+Build order was §1 → §2 → §3 as planned.
 
 ---
 
