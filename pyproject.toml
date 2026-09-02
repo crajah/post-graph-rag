@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "post-graph-rag"
-version = "1.9.0"
+version = "1.9.1"
 description = "Graph RAG library leveraging post-graph space sub-grouping and pgvector on PostgreSQL with OpenAI-compatible LLMs."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -30,7 +30,7 @@ classifiers = [
     "Topic :: Text Processing :: Indexing",
 ]
 dependencies = [
-    "post-graph>=1.1.0",
+    "post-graph>=1.2.0",
     "openai>=1.0.0",
     "pydantic>=2.0.0",
     # Leiden clustering for community detection. The library falls back to label
