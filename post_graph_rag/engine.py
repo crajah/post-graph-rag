@@ -180,6 +180,24 @@ class GraphRAG:
     async def children_of(self, community_id, space=None):
         return await self.store.community_children(community_id, space=space)
 
+    async def apply_retention(self, threshold: float = 0.10, dry_run: bool = True,
+                              space=None):
+        """Score entities by importance and archive those below *threshold*.
+
+        Archiving is demotion, not deletion: archived entities are withheld
+        from retrieval and community builds like dormant ones, and
+        restore_archived reverses it. Requires record_retrieval_events.
+        dry_run=True (the default) scores and previews without writing.
+        """
+        from post_graph_rag.retention import RetentionManager
+        return await RetentionManager(self.store).apply(
+            threshold=threshold, dry_run=dry_run, space=space)
+
+    async def restore_archived(self, entity_ids, space=None):
+        """Return archived entities to active retrieval."""
+        from post_graph_rag.retention import RetentionManager
+        return await RetentionManager(self.store).restore(entity_ids, space=space)
+
     async def coverage(self, space=None):
         """Per-community retrieval coverage, least-explored first.
 

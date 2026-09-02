@@ -916,6 +916,8 @@ class RAGGraphStore:
             p = payload(r)
             if self.config.exclude_dormant_entities and p.get("dormant_since"):
                 continue
+            if p.get("archived_at"):
+                continue
             entities.append({
                 "id": str(r["id"]), "name": p.get("name"), "type": p.get("type"),
                 "description": p.get("description"), "aliases": p.get("aliases") or [],
@@ -1068,6 +1070,85 @@ class RAGGraphStore:
             "community_children", realm=self.realm, space=space or self.space,
             filters={}, relation_type="has_child")
         return [e.to_id for e in edges if str(e.from_id) == str(community_id)]
+
+    async def entity_retention_stats(self, space: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Per-entity signals for retention scoring: retrieval hits, last hit,
+        relation degree, creation time, and current archived/dormant flags.
+
+        Hits and last-hit come from the coverage telemetry (retrieval_events);
+        degree is counted over relations incident to the entity in either
+        direction; entities with no events simply score zero on those terms.
+        """
+        target_space = space or self.space
+        ents = self.client._get_table_ref("entities", self.realm)
+        rels = self.client._get_table_ref("relations", self.realm)
+        ev = self.client._get_table_ref("retrieval_events", self.realm)
+        args: List[Any] = [self.realm]
+        clause = ""
+        if target_space and target_space != RESERVED_SPACE_ALL:
+            args.append(target_space)
+            clause = f" AND en.space = ${len(args)}"
+        # retrieval_events may not exist if telemetry was never on; the caller
+        # (RetentionManager) guarantees it is, but guard with to_regclass so a
+        # misconfig raises cleanly rather than as an undefined-table error.
+        rows = await self.client._fetch(f"""
+            WITH hits AS (
+                SELECT x.eid::bigint AS id, count(*) AS hits,
+                       max(e.payload->>'ts') AS last_hit
+                FROM {ev} e
+                JOIN LATERAL jsonb_array_elements_text(e.payload->'entity_ids') AS x(eid) ON true
+                WHERE e.realm = $1
+                GROUP BY x.eid::bigint
+            ), deg AS (
+                SELECT id, count(*) AS degree FROM (
+                    SELECT from_id AS id FROM {rels} WHERE realm = $1
+                    UNION ALL
+                    SELECT to_id AS id FROM {rels} WHERE realm = $1
+                ) d GROUP BY id
+            )
+            SELECT en.id,
+                   en.payload->>'archived_at' AS archived_at,
+                   en.payload->>'dormant_since' AS dormant_since,
+                   en.created_at,
+                   COALESCE(h.hits, 0) AS hits, h.last_hit,
+                   COALESCE(g.degree, 0) AS degree
+            FROM {ents} en
+            LEFT JOIN hits h ON h.id = en.id
+            LEFT JOIN deg g ON g.id = en.id
+            WHERE en.realm = $1{clause}
+        """, *args)
+        return [{"id": str(r["id"]), "archived_at": r["archived_at"],
+                 "dormant_since": r["dormant_since"],
+                 "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                 "hits": int(r["hits"]), "last_hit": r["last_hit"],
+                 "degree": int(r["degree"])} for r in rows]
+
+    async def set_entities_archived(self, entity_ids: List[str], when: str,
+                                    space: Optional[str] = None) -> int:
+        """Mark entities archived (demotion, not deletion): withheld from
+        retrieval and community builds, fully preserved and reversible."""
+        if not entity_ids:
+            return 0
+        ents = self.client._get_table_ref("entities", self.realm)
+        ids = [int(i) for i in entity_ids]
+        await self.client._execute(
+            f"UPDATE {ents} SET payload = jsonb_set(payload, '{{archived_at}}', "
+            f"to_jsonb($2::text)) WHERE realm = $1 AND id = ANY($3::bigint[])",
+            self.realm, when, ids)
+        return len(ids)
+
+    async def clear_entities_archived(self, entity_ids: List[str],
+                                      space: Optional[str] = None) -> int:
+        """Reverse archiving: an archived entity returns to retrieval."""
+        if not entity_ids:
+            return 0
+        ents = self.client._get_table_ref("entities", self.realm)
+        ids = [int(i) for i in entity_ids]
+        await self.client._execute(
+            f"UPDATE {ents} SET payload = payload - 'archived_at' "
+            f"WHERE realm = $1 AND id = ANY($2::bigint[])",
+            self.realm, ids)
+        return len(ids)
 
     async def record_retrieval_event(self, mode: str, query_text: str,
                                      entity_ids: List[str], community_ids: List[str],
@@ -1266,15 +1347,17 @@ class RAGGraphStore:
         dropped. pgvector cannot filter on a JSONB field, so this over-fetches and
         post-filters rather than pushing the predicate into the query.
         """
-        if not self.config.exclude_dormant_entities:
-            return await self.client.vector_search(
-                "entities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
-            )
-        hits = await self.client.vector_search(
-            "entities", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k * 3
+        # Both dormant and archived entities are withheld from retrieval.
+        # post-graph 1.4.0 filters inside the vector search, so this is a
+        # genuine top_k rather than an over-fetch-and-trim that could come
+        # back short when withheld entities dominate the neighbourhood.
+        where = [("archived_at", "is_null", None)]
+        if self.config.exclude_dormant_entities:
+            where.append(("dormant_since", "is_null", None))
+        return await self.client.vector_search(
+            "entities", realm=self.realm, space=space, query_vector=query_vec,
+            top_k=top_k, where=where
         )
-        live = [(v, d) for v, d in hits if not (v.payload or {}).get("dormant_since")]
-        return live[:top_k]
 
     async def search_similar_documents(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Vertex, float]]:
         """Vector similarity search over document vertices, optionally scoped by space."""
