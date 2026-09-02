@@ -234,9 +234,9 @@ async def test_global_mode_overfetches_then_reranks(rag_factory):
     seen = {}
     original = rag.store.search_similar_communities
 
-    async def spy(vec, top_k=5, space=None):
+    async def spy(vec, top_k=5, space=None, **kw):
         seen["top_k"] = top_k
-        return await original(vec, top_k=top_k, space=space)
+        return await original(vec, top_k=top_k, space=space, **kw)
 
     rag.store.search_similar_communities = spy
     await rag.query_data("themes", param=QueryParam(mode="global", top_k=3))
