@@ -62,14 +62,14 @@ This article walks through those mechanisms, along with entity resolution and co
 
 | | overall | multi-session | temporal | knowledge-update |
 | :--- | ---: | ---: | ---: | ---: |
-| **post-graph-rag** · `gemini-3.6-flash` | **85.8%** | **72.9%** | **93.2%** | **89.7%** |
+| **post-graph-rag** · `gemini-3.6-flash` | **94.0%** | **90.2%** | **96.2%** | **94.9%** |
 | Zep/Graphiti · gpt-4o | 71.2% | 57.9% | 62.4% | 83.3% |
 | Zep/Graphiti · gpt-4o-mini | 63.8% | 40.6% | 36.5% | 76.9% |
 | Full-context baseline · gpt-4o | 60.2% | 44.3% | 45.1% | 78.2% |
 
-`gemini-3.6-flash` is a small, cheap, fast model — the gpt-4o-mini tier. It beats Zep's **gpt-4o** configuration on **every one of the six categories** and by **14.6 points overall**, and the full-context gpt-4o baseline by 25.6.
+`gemini-3.6-flash` is a small, cheap, fast model — the gpt-4o-mini tier. It beats Zep's **gpt-4o** configuration on **every one of the six categories** and by **22.8 points overall**, and the full-context gpt-4o baseline by 33.8.
 
-The margin is widest exactly where a temporal knowledge graph is supposed to earn its keep. **Temporal-reasoning: 93.2% against 62.4%.** **Multi-session: 72.9% against 57.9%** — questions whose answer is scattered across separate conversations, the category Graphiti scores lowest on. **Knowledge-update: 89.7% against 83.3%** — telling a fact that changed from the fact it replaced.
+The margin is widest exactly where a temporal knowledge graph is supposed to earn its keep. **Temporal-reasoning: 96.2% against 62.4%.** **Multi-session: 90.2% against 57.9%** — questions whose answer is scattered across separate conversations, the category Graphiti scores lowest on. **Knowledge-update: 94.9% against 83.3%** — telling a fact that changed from the fact it replaced.
 
 All of it on a laptop against local PostgreSQL. No separate memory service, no graph engine to operate.
 
@@ -397,21 +397,21 @@ So it ships as a documented knob defaulting to 0.5, with the harness that produc
 
 The mechanisms above are the design. This is the part that tests it against someone else's data, scored by someone else's method, on the benchmark Zep publish for Graphiti — the fairest available comparison for a temporally-aware graph.
 
-On the full 500-question oracle set, all six question types, post-graph-rag with `gemini-3.6-flash` scores **85.8%**. Zep report **71.2%** with gpt-4o and **63.8%** with gpt-4o-mini; their full-context gpt-4o baseline is 60.2%.
+On the full 500-question oracle set, all six question types, post-graph-rag with `gemini-3.6-flash` scores **94.0%**. Zep report **71.2%** with gpt-4o and **63.8%** with gpt-4o-mini; their full-context gpt-4o baseline is 60.2%.
 
 | question type | n | post-graph-rag (flash) | Zep (gpt-4o) | Zep (gpt-4o-mini) |
 | :--- | ---: | ---: | ---: | ---: |
-| single-session-user | 70 | **97.1%** | 92.9% | 81.4% |
-| single-session-assistant | 55 | **89.1%** | 80.4% | 81.8% |
-| knowledge-update | 78 | **89.7%** | 83.3% | 76.9% |
-| **multi-session** | 133 | **72.9%** | 57.9% | 40.6% |
-| **temporal-reasoning** | 133 | **93.2%** | 62.4% | 36.5% |
-| single-session-preference | 30 | **66.7%** | 56.7% | 30.0% |
-| **overall** | 499 | **85.8%** | 71.2% | 63.8% |
+| single-session-user | 70 | **95.7%** | 92.9% | 81.4% |
+| single-session-assistant | 55 | **100.0%** | 80.4% | 81.8% |
+| knowledge-update | 78 | **94.9%** | 83.3% | 76.9% |
+| **multi-session** | 133 | **90.2%** | 57.9% | 40.6% |
+| **temporal-reasoning** | 133 | **96.2%** | 62.4% | 36.5% |
+| single-session-preference | 30 | **83.3%** | 56.7% | 30.0% |
+| **overall** | 499 | **94.0%** | 71.2% | 63.8% |
 
-A flash-class model beats the strongest published Graphiti configuration on **all six categories** and by 14.6 points overall. The two widest margins are the two that a temporal graph exists to serve: **temporal-reasoning +30.8** and **multi-session +15.0**.
+A flash-class model beats the strongest published Graphiti configuration on **all six categories** and by 22.8 points overall. The two widest margins are the two that a temporal graph exists to serve: **temporal-reasoning +33.8** and **multi-session +32.3**.
 
-Two further runs through a different harness — single answer per question, panel of MiniMax-M2.7, gpt-oss-120b and DeepSeek-V3.2 — put the same configuration at **81.1%** (`gemini-3.6-flash`) and **80.4%** (`gemini-3.7-flash`). The first is ahead of Graphiti on five of six categories and by 9.9 points overall, behind only on single-session-preference. Temporal-reasoning lands at 93.9% there, marginally *above* the headline run.
+These figures replace the 85.8% reported earlier, and the difference is worth being plain about: context assembly was discarding passages the retriever had already found, so the engine was answering with evidence it never saw. Every model gained five to nine points once that was fixed — `gemini-3.7-flash` 84.2 → 93.5, `gpt-oss-120b` 80.0 → 89.2, `gemma-4-26b` 75.3 → 80.7 — measured on the same graphs, questions and judges.
 
 Harness and panel move the absolute figure by three to five points and do so consistently across models. The mechanism below moves it by twelve to fifteen, under every one of the three.
 
@@ -607,13 +607,22 @@ A fourth change followed from watching what the third cost. Encouraging partial 
 
 Figure matching needs one refinement to be trustworthy, and it matters in both directions. Counting every number in the text as a figure cuts both ways: a prose answer citing "fiscal 2023-q2 [1]" bled precision on chronology it never asserted as a value — single-time questions containing their gold figures scored 0.38–0.59 against a 0.60 threshold, reading as a category at zero — while gold answers stating a year alongside each figure handed out free recall matches, inflating multi-time. Chronology and citation markers are therefore excluded from figure matching, and questions whose gold *is* a period ("Q1 2022") get period-token matching of their own rather than falling through to cosine. Every figure in the table above is measured under that refined metric.
 
-By question type under the corrected metric: single-time 0.421 — the earlier "category at zero" was the metric artifact above, not the system. Multi-time 0.280 and relative-time 0.167, both previously overstated by year-matching. Cross-company 0.100: answers now produce figures, but frequently for a different quarter than the question intends, which is a real failure of period selection rather than of retrieval or scoring.
+Two further scoring corrections followed, and both were larger than the first.
 
-Cross-company stands at **0.100 — one question of ten** — and is the category every change above left essentially alone. Two hypotheses for it have now been falsified rather than confirmed. It is not retrieval: all five companies are retrieved even at `top_k=12`, with eleven chunks discussing the metric asked about. It is not the all-or-nothing refusal wording either, since that fix moved every other category and barely touched this one. What the answers now do is produce figures for a different quarter than the question intends, which points at period selection when several companies are in scope rather than at retrieval or scoring. Nine questions of sixty sitting near zero is the part of this benchmark still unexplained, and an average that quietly absorbed them would be the more flattering number and the less useful one.
+**Superlative questions were being scored against the model's own reasoning.** "In which quarter was the margin highest?" has a one-quarter gold answer — but answering it well means naming the window searched and the quarters compared, and period matching counted every one of those against precision. Thirteen answers that named the correct quarter scored 0.25–0.50 and were marked wrong. Classifying all 46 failures of that run: **twenty contained the full gold answer.** Extracting the answer a reply *asserts* — the practice FinQA, ConvFinQA and TAT-QA all follow — before scoring it moves the set from 0.41 to 0.58 with no regressions, and a fresh run reads **0.64**.
 
-**Two further hypotheses were tested against it, and both were ruled out.** The first was temporal grounding in the prompt — the mechanism worth 14.5 points on LongMemEval. Here it moves one or two questions per arm and leaves cross-company where it was, because every transcript already states its quarter in the indexed text.
+**And the benchmark's own authors score it differently.** ECT-QA comes from TG-RAG, who use an LLM judge comparing element-wise and report three rates summing to one per query — Correct, Refusal, Incorrect. That is a fairer instrument for this material: three of four quarters right scores 0.75 rather than zero, and a refusal is not counted as a wrong answer. Scored that way, post-graph-rag reads **0.677 Correct** against their published **0.599**, with GraphRAG at 0.405 and LightRAG at 0.406. A second judge from a different model family reads 0.668 on the same answers — agreement within a point, which matters more than either number, because the standing objection to a judged rate is that it moves with the judge.
 
-The second was sharper, because it named something visible in the schema. A quarterly figure was stored with `valid_from` and no `valid_to`, which under point-validity means it stays valid at every later date — so sixteen quarters of the same metric all answer "what was it in Q3 2022" equally well and none can be told apart. That is precisely the observed failure. The extraction prompt now requires both bounds on `reported_*` and `guided_*` figures, scoped to the period each describes, while facts that genuinely persist keep their window open.
+| ECT-QA, element-wise | Correct | Refusal | Incorrect |
+| :--- | ---: | ---: | ---: |
+| **post-graph-rag** · `gemini-3.6-flash` | **0.677** | 0.173 | 0.150 |
+| TG-RAG (published) | 0.599 | — | — |
+| GraphRAG (published) | 0.405 | — | — |
+| LightRAG (published) | 0.406 | — | — |
+
+The shape is as useful as the total. Incorrect elements sit at 0.15 and relative-time questions produce none at all: when this system commits to a figure, it is usually right. What separates it from a higher score is refusal at 0.17 — evidence it did not retrieve, rather than reasoning it got wrong. That is a coverage problem, and a strict metric could never have said so, because under it a decline and a wrong answer score identically.
+
+**Cross-company, previously the unexplained category, is resolved.** It read 0.100 and had survived three falsified hypotheses. It now reads 0.500 strict and 0.675 element-wise — and none of that came from the retrieval or synthesis code. About half was context assembly; the rest was scoring, since three of its ten questions have golds naming a company rather than a figure. A fourth idea — scatter-gather retrieval, querying each company separately and merging — was built and measured, and made it *worse*. It is reported here as falsified rather than quietly dropped.
 
 It worked mechanically and changed nothing. Closed windows went from **27 of 3,061 relations (1%) to 1,843 of 3,453 (53%)**, on a denser graph — and across four answering models the rebuilt graph scored 0.353 / 0.309 / 0.324 / 0.206 against 0.368 / 0.382 / 0.338 / 0.206. Cross-company stayed in the same 0.000–0.100 band. The two graphs are separate indexes, so those deltas sit inside the re-indexing noise either way.
 
