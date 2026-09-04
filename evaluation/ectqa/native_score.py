@@ -23,8 +23,11 @@ ones, so the native and strict protocols describe exactly the same
 generations and can be reported side by side.
 
 Deviations from the paper, stated so nobody has to guess:
-  * Their judge is GPT-4o-mini. It is not on this router; gpt-4o is, and is
-    used here -- same family, stronger grader.
+  * Their judge is GPT-4o-mini, which this router does not serve. The judge
+    here is gemini-3.7-flash. It shares a family with the default answering
+    model (gemini-3.6-flash), which the LongMemEval protocol in this
+    repository deliberately avoids; judge_family_excluded is recorded as
+    false in the output so the caveat travels with the number.
   * Their verbatim prompt is in an appendix that is truncated in the public
     HTML. The rubric below follows their description of the three categories
     but is not their text, so absolute comparability is approximate.
@@ -89,7 +92,7 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", required=True,
                     help="a prior results file whose stored answers are re-scored")
-    ap.add_argument("--judge", default="gpt-4o")
+    ap.add_argument("--judge", default="gemini-3.7-flash")
     ap.add_argument("--concurrency", type=int, default=4)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
@@ -171,6 +174,7 @@ async def main():
         "benchmark": "ECT-QA (native element-wise protocol)",
         "source_results": args.results, "judge": args.judge,
         "judge_in_paper": "gpt-4o-mini (unavailable on this router)",
+        "judge_family_excluded": False,
         "protocol": "element-wise Correct/Refusal/Incorrect, rates sum to 1 per query",
         "rubric_is_verbatim_from_paper": False,
         "means": {k: sum(v) / len(v) for k, v in tot.items()},
