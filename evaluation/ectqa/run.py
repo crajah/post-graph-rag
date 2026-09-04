@@ -361,6 +361,13 @@ async def main():
     ap.add_argument("--f1-threshold", type=float, default=0.60,
                     help="numeric F1 at or above which a figure answer counts as "
                          "correct; the primary metric")
+    ap.add_argument("--allow-cosine", action="store_true",
+                    help="Score narrative golds by embedding similarity. Off by "
+                         "default: cosine is the weakest scorer in the stack, "
+                         "agreeing with a figure match only loosely, and a "
+                         "headline built partly on it is not a figure "
+                         "measurement. Without it, narrative-gold questions are "
+                         "reported as unscored rather than guessed at.")
     ap.add_argument("--similarity-threshold", type=float, default=0.62,
                     help="cosine similarity at or above which an answer counts as "
                          "correct; gold is terse and answers are prose, so this "
@@ -499,6 +506,7 @@ async def main():
             await asyncio.gather(*(index_one(c) for c, _ in ranked))
             print(f"indexing done in {time.time()-started:.0f}s\n", flush=True)
 
+        unscored = []
         qsem = asyncio.Semaphore(args.query_concurrency)
 
         async def ask(space, label, q):
@@ -546,11 +554,20 @@ async def main():
                         # Gold is a period ("Q1 2022"): match periods as tokens.
                         ok = pf1 >= args.f1_threshold
                         votes = {"period_f1": round(pf1, 4)}
-                    else:
+                    elif args.allow_cosine:
                         # Narrative gold with no figure to match; fall back.
                         sim = await answer_similarity(embed_llm, gold, answer)
                         ok = sim >= args.similarity_threshold
                         votes = {"cosine": round(sim, 4)}
+                    else:
+                        # Numeric F1 is the judge. A gold with no figure in it
+                        # is outside what that judge can measure, so it is
+                        # excluded and counted rather than scored by a weaker
+                        # proxy that would then be averaged into the headline.
+                        unscored.append({"question": q["question"][:80],
+                                         "gold": gold[:80], "answer": answer[:200]})
+                        print(f"  {'unscored':<18} (narrative gold)", flush=True)
+                        return
                     kind = ("cross-company" if space == RESERVED_SPACE_ALL
                             else q["question_type"].split("|")[0])
 
@@ -570,6 +587,9 @@ async def main():
         await rag.close()
 
     print("\n" + "-" * 60)
+    if unscored:
+        print(f"  {len(unscored)} question(s) unscored: gold asserts no figure, "
+              f"and numeric F1 is the judge (pass --allow-cosine to score them)")
     total = sum(1 for r in results if r["correct"])
     for kind, marks in sorted(by_type.items()):
         print(f"  {kind:<20} {sum(marks):>3}/{len(marks):<3} "
@@ -591,6 +611,8 @@ async def main():
          "accuracy": total / max(1, len(results)),
          "by_type": {k: sum(v) / len(v) for k, v in by_type.items()},
          "degraded": degraded, "degraded_count": len(degraded),
+         "judge": "numeric_f1" if not args.allow_cosine else "numeric_f1+cosine",
+         "unscored": unscored, "unscored_count": len(unscored),
          "reportable": not degraded, "results": results}, indent=2))
     print("\n  models that served extraction and answering:")
     for name, n in rag.llm.served.most_common():
