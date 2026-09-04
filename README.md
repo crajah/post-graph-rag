@@ -14,6 +14,8 @@ No separate vector store. No graph engine to operate. One database, one consiste
 
 Paper: [arXiv:2608.24921](https://arxiv.org/abs/2608.24921).
 
+### LongMemEval: long-horizon chat memory
+
 On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) set — all six question types, nothing sampled — against the numbers Zep publish for Graphiti ([arXiv:2501.13956](https://arxiv.org/abs/2501.13956)):
 
 | | overall | multi-session | temporal | knowledge-update |
@@ -24,6 +26,26 @@ On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) set —
 | Full-context baseline · gpt-4o | 60.2% | 44.3% | 45.1% | 78.2% |
 
 *Qualifications, so you can weigh them yourself: Zep judge with GPT-4o, this uses a three-model majority panel with the answering model excluded from its own jury; the generation models differ in cost class and vintage in a direction that cannot be signed; one question of 500 is excluded because neither extraction prompt could turn that session into triples. The harness, frozen config and every failing case ship in the repo — see the [full write-up](https://crajah.github.io/post-graph-rag/), which also documents the improvements that were tested and rejected.*
+
+
+### ECT-QA: the adversarial corpus
+
+Chat memory is the easy register. [ECT-QA](https://arxiv.org/abs/2510.13590) is the hard one — earnings call transcripts, sixteen quarters per company, **every metric restated every quarter with only the date to tell the values apart.** A store that merely accumulates cannot answer these at all; it has four values for "gross margin" and no way to choose.
+
+Scored under the protocol ECT-QA's own authors use — an LLM judge comparing element-wise, with a refusal counted separately from a wrong answer:
+
+| | Correct ↑ |
+| :--- | ---: |
+| **post-graph-rag** · `gemini-3.6-flash` | **0.677** |
+| TG-RAG *(published)* | 0.599 |
+| GraphRAG *(published)* | 0.405 |
+| LightRAG *(published)* | 0.406 |
+
+A second judge from a different model family scores the same answers at 0.668 — agreement within a point, which matters more than either figure, since the usual objection to a judged rate is that it moves with the judge.
+
+The breakdown is more useful than the total: **incorrect elements sit at 0.15**, and relative-time questions produce none at all — when this system commits to a figure, it is usually right. The gap to a higher score is *refusal*, evidence not retrieved rather than reasoning gone wrong.
+
+*Same qualifications apply, plus two specific to this comparison: their judge model is not available on our router, and their verbatim rubric is truncated in the public HTML, so ours reproduces their described categories rather than their text. Their figures are on their corpus slice; ours is 78 questions over 6 companies. Read a few points of margin as approximate rather than decisive.*
 
 ---
 
