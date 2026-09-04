@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import math
 import logging
+from datetime import datetime, timezone
 import re
 from typing import Callable, List, Dict, Any, Optional, Sequence, Set, Tuple, Union
 from post_graph import Vertex
@@ -85,6 +86,31 @@ def _share(total: Optional[int], denom: int) -> Optional[int]:
     return None if total is None else total // denom
 
 
+def _parse_instant(value):
+    """An ISO instant as an aware datetime, or None when unparseable."""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _created_at_or_before(vertex, cutoff) -> bool:
+    """Whether a row existed at *cutoff*. Rows with no clock are kept.
+
+    Keeping unstamped rows is deliberate: a missing timestamp is unknown, not
+    "after", and silently dropping evidence would be the worse error.
+    """
+    created = getattr(vertex, "created_at", None)
+    if created is None:
+        return True
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return created <= cutoff
+
+
 def _truncate_by_tokens(text_items: List[str], max_tokens: Optional[int]) -> str:
     """Fit passages into a token budget, clipping the first that overflows.
 
@@ -159,6 +185,17 @@ class GraphRAG:
         """Initialize database connection and schema."""
         await self.store.connect()
         await self.store.initialize_schema()
+
+    async def watermark(self, space=None):
+        """The database clock now, as an ISO instant.
+
+        The starting point for a poll chain: a first caller has nothing to
+        pass to changes_since, and taking the instant from the application
+        server instead would reintroduce the clock skew the database-clock
+        watermark exists to eliminate.
+        """
+        from post_graph_rag.deltas import DeltaReader
+        return await DeltaReader(self.store)._db_now()
 
     async def changes_since(self, since, space=None,
                             include=("relations", "entities", "documents", "communities"),
@@ -982,6 +1019,17 @@ class GraphRAG:
             graph_triples = self._rerank_by_node_distance(graph_triples, node_distances)
         if self.config.mmr_enabled:
             graph_triples = self._apply_mmr(graph_triples, self.config.mmr_lambda)
+
+        if p.as_believed_at:
+            # Belief time governs the document channel too. Filtering only the
+            # relations left post-watermark text in the answer, so "what did we
+            # believe in March" could quote an April restatement -- the audit
+            # guarantee failing precisely where it is relied upon. Chunk rows
+            # carry the belief clock in created_at.
+            cutoff = _parse_instant(p.as_believed_at)
+            if cutoff is not None:
+                similar_docs = [(v, d) for v, d in similar_docs
+                                if _created_at_or_before(v, cutoff)]
 
         formatted_entities = [{
             "entity_name": v.payload.get("name"),

@@ -18,14 +18,12 @@ On the full 500-question [LongMemEval](https://arxiv.org/abs/2410.10813) set —
 
 | | overall | multi-session | temporal | knowledge-update |
 | :--- | ---: | ---: | ---: | ---: |
-| **post-graph-rag** · `gemini-3.6-flash` | **85.8%** | **72.9%** | **93.2%** | **89.7%** |
+| **post-graph-rag** · `gemini-3.6-flash` | **94.0%** | **90.2%** | **96.2%** | **94.9%** |
 | Zep/Graphiti · gpt-4o | 71.2% | 57.9% | 62.4% | 83.3% |
 | Zep/Graphiti · gpt-4o-mini | 63.8% | 40.6% | 36.5% | 76.9% |
 | Full-context baseline · gpt-4o | 60.2% | 44.3% | 45.1% | 78.2% |
 
-`gemini-3.6-flash` is a small, fast model in the gpt-4o-mini tier. **It beats Zep's gpt-4o configuration on every one of the six categories, and by 14.6 points overall.** The two widest margins are the two a temporal knowledge graph exists to serve: **temporal-reasoning 93.2% vs 62.4%** and **multi-session 72.9% vs 57.9%**, the category Graphiti score lowest on.
-
-*Qualifications, so you can weigh them yourself: Zep judge with GPT-4o, this uses a three-model majority panel; the generation models differ in cost class and vintage (their gpt-4o against flash models two years newer) in a direction that cannot be signed; one question of 500 is excluded because neither extraction prompt could turn that session into triples. The harness, frozen config and every failing case ship in the repo — see the [full write-up](https://crajah.github.io/post-graph-rag/), which also documents the improvements that were tested and rejected.*
+*Qualifications, so you can weigh them yourself: Zep judge with GPT-4o, this uses a three-model majority panel with the answering model excluded from its own jury; the generation models differ in cost class and vintage in a direction that cannot be signed; one question of 500 is excluded because neither extraction prompt could turn that session into triples. The harness, frozen config and every failing case ship in the repo — see the [full write-up](https://crajah.github.io/post-graph-rag/), which also documents the improvements that were tested and rejected.*
 
 ---
 
@@ -195,6 +193,25 @@ graph TD
 ```
 
 ---
+
+## 🧪 Runnable Examples
+
+Seven scripts in [`examples/`](examples/), each one capability, all runnable:
+
+```bash
+export OPENAI_API_KEY=...  OPENAI_API_BASE=...  POSTGRES_URI=...
+cd examples && python 01_quickstart.py
+```
+
+| | shows |
+| :--- | :--- |
+| [`01_quickstart.py`](examples/01_quickstart.py) | Three documents, one question that needs all three |
+| [`02_supersession.py`](examples/02_supersession.py) | A later filing closes an earlier fact; history stays queryable |
+| [`03_bitemporal_audit.py`](examples/03_bitemporal_audit.py) | Reproduce what the system believed before a restatement |
+| [`04_multi_tenant_spaces.py`](examples/04_multi_tenant_spaces.py) | Per-tenant isolation, plus deliberate cross-tenant views |
+| [`05_incremental_and_deltas.py`](examples/05_incremental_and_deltas.py) | Idempotent re-indexing and change polling |
+| [`06_communities_and_exploration.py`](examples/06_communities_and_exploration.py) | Topic tree, corpus themes, coverage gaps |
+| [`07_retrieval_modes.py`](examples/07_retrieval_modes.py) | `local`, `global` and `mix` retrieval, same question |
 
 ## 📦 Installation
 
