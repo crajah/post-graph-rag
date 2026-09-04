@@ -167,13 +167,6 @@ Return the same JSON schema as usual: entities, then triples with subject,
 predicate, object, description, valid_from.
 """
 
-def _cosine(a, b):
-    dot = sum(x * y for x, y in zip(a, b))
-    na = sum(x * x for x in a) ** 0.5
-    nb = sum(y * y for y in b) ** 0.5
-    return 0.0 if not na or not nb else dot / (na * nb)
-
-
 NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 
 # Text that reads as chronology or citation rather than as a figure. Without
@@ -191,6 +184,10 @@ _NOT_A_FIGURE = re.compile(
     r"|\b(?:fy\s*)?(?:19|20)\d{2}\b"            # bare years, FY2023
     r"|\bq[1-4]\b",                              # bare quarter labels
     re.I)
+
+
+def _numbers(text: str):
+    return [float(x) for x in NUMBER.findall(_NOT_A_FIGURE.sub(" ", text or ""))]
 
 
 def _numbers(text: str):
@@ -235,7 +232,7 @@ def numeric_f1(gold: str, answer: str, rel_tol: float = 0.01, abs_tol: float = 0
 
     ECT-QA answers are lists of numbers, so matching numbers is the measurement
     and everything else is proxy. Two things this gets right that whole-text
-    cosine does not:
+    similarity does not:
 
     Tolerance. The system answered 32% where gold said 32.3% — three other
     figures exact — and a judge panel failed the whole answer. A near miss on
@@ -244,8 +241,8 @@ def numeric_f1(gold: str, answer: str, rel_tol: float = 0.01, abs_tol: float = 0
     Precision as well as recall. Recall alone rewards an answer that lists every
     number in the transcript, which is not an answer.
 
-    Returns None when gold contains no figure, so the caller can fall back to
-    cosine for the narrative questions.
+    Returns None when gold contains no figure -- a gold naming a company, say --
+    so the caller can hand those few questions to the judge instead.
     """
     g = _numbers(gold)
     if not g:
@@ -258,22 +255,6 @@ def numeric_f1(gold: str, answer: str, rel_tol: float = 0.01, abs_tol: float = 0
     recall = sum(1 for x in g if near(x, a)) / len(g)
     precision = sum(1 for y in a if near(y, g)) / len(a)
     return 0.0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
-
-
-async def answer_similarity(llm, gold: str, answer: str) -> float:
-    """Cosine between gold and answer in embedding space.
-
-    Kept for questions whose gold carries no figure. On numeric answers it
-    separates poorly — measured on a full run, correct answers averaged 0.643
-    and refusals 0.509, because a refusal shares almost all its vocabulary with
-    an answer. numeric_f1 separated the same rows 0.770 against 0.144.
-    """
-    if not (answer or "").strip():
-        return 0.0
-    ge = await llm.get_embedding(gold)
-    ae = await llm.get_embedding(answer)
-    return _cosine(ge, ae)
-
 
 ANSWER_INSTRUCTION = (
     "You are answering a question about earnings call transcripts. The facts "
@@ -361,19 +342,7 @@ async def main():
     ap.add_argument("--f1-threshold", type=float, default=0.60,
                     help="numeric F1 at or above which a figure answer counts as "
                          "correct; the primary metric")
-    ap.add_argument("--allow-cosine", action="store_true",
-                    help="Score narrative golds by embedding similarity. Off by "
-                         "default: cosine is the weakest scorer in the stack, "
-                         "agreeing with a figure match only loosely, and a "
-                         "headline built partly on it is not a figure "
-                         "measurement. Without it, narrative-gold questions are "
-                         "reported as unscored rather than guessed at.")
-    ap.add_argument("--similarity-threshold", type=float, default=0.62,
-                    help="cosine similarity at or above which an answer counts as "
-                         "correct; gold is terse and answers are prose, so this "
-                         "sits well below the 0.8 a like-for-like pair would need")
-    ap.add_argument("--judges", nargs="*",
-                    default=["MiniMax-M2.7", "gpt-oss-120b", "DeepSeek-V3.2"])
+    ap.add_argument("--judges", nargs="*", default=["gemini-3.7-flash"])
     # The router puts models into hour-long cooldowns and exhausts provider
     # credits mid-run. Fallbacks are what let a multi-hour indexing job survive
     # that instead of dying an hour in with nothing written.
@@ -463,10 +432,9 @@ async def main():
         print(f"  {code:<10} space={spaces[code]:<10} "
               f"{len(corpus[corpus_key(code)]):>3} quarters, {len(qs):>3} questions")
     print(f"  cross-company eligible: {len(eligible)} (asking {min(len(eligible), args.cross_company)})")
-    print(f"judges: {', '.join(args.judges)}\n")
+    print(f"scoring: numeric F1 for figures; "
+          f"judge {', '.join(args.judges)} for narrative golds\n")
 
-    embed_llm = LLMService(RAGConfig(embedding_model=args.embedding_model,
-                                     max_retries=args.max_retries))
     judge_llms = {n: LLMService(RAGConfig(model=n, max_retries=args.max_retries,
                                           fallback_models=args.fallback_models,
                                           retry_deadline_secs=900))
@@ -506,7 +474,6 @@ async def main():
             await asyncio.gather(*(index_one(c) for c, _ in ranked))
             print(f"indexing done in {time.time()-started:.0f}s\n", flush=True)
 
-        unscored = []
         qsem = asyncio.Semaphore(args.query_concurrency)
 
         async def ask(space, label, q):
@@ -554,20 +521,15 @@ async def main():
                         # Gold is a period ("Q1 2022"): match periods as tokens.
                         ok = pf1 >= args.f1_threshold
                         votes = {"period_f1": round(pf1, 4)}
-                    elif args.allow_cosine:
-                        # Narrative gold with no figure to match; fall back.
-                        sim = await answer_similarity(embed_llm, gold, answer)
-                        ok = sim >= args.similarity_threshold
-                        votes = {"cosine": round(sim, 4)}
                     else:
-                        # Numeric F1 is the judge. A gold with no figure in it
-                        # is outside what that judge can measure, so it is
-                        # excluded and counted rather than scored by a weaker
-                        # proxy that would then be averaged into the headline.
-                        unscored.append({"question": q["question"][:80],
-                                         "gold": gold[:80], "answer": answer[:200]})
-                        print(f"  {'unscored':<18} (narrative gold)", flush=True)
-                        return
+                        # Gold names a company or states a fact rather than a
+                        # figure, so there is nothing for numeric F1 to match.
+                        # A judge reads it. Cosine used to sit here and scored
+                        # these badly -- on a full run correct answers averaged
+                        # 0.643 against refusals at 0.509, because a refusal
+                        # shares almost all its vocabulary with an answer.
+                        ok, votes = await judge_panel(judge_llms, q["question"],
+                                                      gold, answer)
                     kind = ("cross-company" if space == RESERVED_SPACE_ALL
                             else q["question_type"].split("|")[0])
 
@@ -587,9 +549,6 @@ async def main():
         await rag.close()
 
     print("\n" + "-" * 60)
-    if unscored:
-        print(f"  {len(unscored)} question(s) unscored: gold asserts no figure, "
-              f"and numeric F1 is the judge (pass --allow-cosine to score them)")
     total = sum(1 for r in results if r["correct"])
     for kind, marks in sorted(by_type.items()):
         print(f"  {kind:<20} {sum(marks):>3}/{len(marks):<3} "
@@ -611,8 +570,9 @@ async def main():
          "accuracy": total / max(1, len(results)),
          "by_type": {k: sum(v) / len(v) for k, v in by_type.items()},
          "degraded": degraded, "degraded_count": len(degraded),
-         "judge": "numeric_f1" if not args.allow_cosine else "numeric_f1+cosine",
-         "unscored": unscored, "unscored_count": len(unscored),
+         "scoring": {"figures": "numeric_f1", "periods": "period_f1",
+                     "refusals": "rule", "narrative_golds": args.judges},
+         "judge_family_excluded": False,
          "reportable": not degraded, "results": results}, indent=2))
     print("\n  models that served extraction and answering:")
     for name, n in rag.llm.served.most_common():

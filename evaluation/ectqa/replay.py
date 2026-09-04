@@ -18,7 +18,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1]))
 
-from run import (ANSWER_INSTRUCTION, answer_similarity, numeric_f1,  # noqa: E402
+from run import (ANSWER_INSTRUCTION, judge_panel, numeric_f1,  # noqa: E402
                  period_f1)
 
 from post_graph import RESERVED_SPACE_ALL                            # noqa: E402
@@ -34,7 +34,7 @@ async def main():
     ap.add_argument("--embedding-model", default="gemini-embedding-001")
     ap.add_argument("--top-k", type=int, default=48)
     ap.add_argument("--f1-threshold", type=float, default=0.60)
-    ap.add_argument("--similarity-threshold", type=float, default=0.62)
+    ap.add_argument("--judges", nargs="*", default=["gemini-3.7-flash"])
     ap.add_argument("--query-concurrency", type=int, default=4)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
@@ -50,9 +50,9 @@ async def main():
         embed_relations=True, merge_strategy="rrf",
         pool_min_size=1, pool_max_size=4, max_retries=40))
     await rag.initialize()
-    embed_llm = LLMService(RAGConfig(model=args.model,
-                                     embedding_model=args.embedding_model,
-                                     embedding_dim=1536))
+    judge_llms = {n: LLMService(RAGConfig(model=n, max_retries=25,
+                                          retry_deadline_secs=900))
+                  for n in args.judges}
     sem = asyncio.Semaphore(args.query_concurrency)
     results, degraded = [], []
 
@@ -83,8 +83,9 @@ async def main():
                 elif pf1 is not None:
                     ok = pf1 >= args.f1_threshold; votes = {"period_f1": round(pf1, 4)}
                 else:
-                    sim = await answer_similarity(embed_llm, gold, answer)
-                    ok = sim >= args.similarity_threshold; votes = {"cosine": round(sim, 4)}
+                    # No figure in gold: the judge reads it.
+                    ok, votes = await judge_panel(judge_llms, rec["question"],
+                                                  gold, answer)
             results.append({**{k: rec[k] for k in ("space", "companies", "type",
                                                    "question", "gold")},
                             "correct": bool(ok), "votes": votes,

@@ -33,7 +33,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1]))
 
-from run import (ANSWER_INSTRUCTION, answer_similarity, numeric_f1,  # noqa: E402
+from run import (ANSWER_INSTRUCTION, judge_panel, numeric_f1,  # noqa: E402
                  period_f1)
 
 from post_graph import RESERVED_SPACE_ALL                            # noqa: E402
@@ -82,7 +82,7 @@ async def main():
                     default=["control", "answerline", "decompose", "scatter"])
     ap.add_argument("--top-k", type=int, default=48)
     ap.add_argument("--f1-threshold", type=float, default=0.60)
-    ap.add_argument("--similarity-threshold", type=float, default=0.62)
+    ap.add_argument("--judges", nargs="*", default=["gemini-3.7-flash"])
     ap.add_argument("--query-concurrency", type=int, default=4)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
@@ -91,9 +91,9 @@ async def main():
     print(f"{len(old)} questions | arms: {', '.join(args.arms)} | realm {args.realm}\n",
           flush=True)
 
-    embed_llm = LLMService(RAGConfig(model=args.model,
-                                     embedding_model=args.embedding_model,
-                                     embedding_dim=1536))
+    judge_llms = {n: LLMService(RAGConfig(model=n, max_retries=25,
+                                          retry_deadline_secs=900))
+                  for n in args.judges}
     rows = collections.defaultdict(dict)     # question -> arm -> record
     sem = asyncio.Semaphore(args.query_concurrency)
 
@@ -151,10 +151,9 @@ async def main():
                 full_ok, full_v = score(rec["gold"], answer, args.f1_threshold)
                 line = answer_line(answer)
                 line_ok, line_v = score(rec["gold"], line, args.f1_threshold)
-                if full_ok is None:              # narrative gold: cosine fallback
-                    sim = await answer_similarity(embed_llm, rec["gold"], answer)
-                    full_ok = sim >= args.similarity_threshold
-                    full_v = {"cosine": round(sim, 4)}
+                if full_ok is None:              # narrative gold: judge reads it
+                    full_ok, full_v = await judge_panel(
+                        judge_llms, q, rec["gold"], answer)
                     line_ok, line_v = full_ok, full_v
                 rows[q][arm] = {"type": rec["type"], "gold": rec["gold"],
                                 "full_correct": bool(full_ok),
