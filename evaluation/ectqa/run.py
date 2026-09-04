@@ -214,6 +214,52 @@ def _periods(text: str):
     return out
 
 
+_SUPERLATIVE = re.compile(
+    r"\b(highest|lowest|greatest|largest|smallest|peak|best|worst|maximum|"
+    r"minimum|strongest|weakest|most|least)\b", re.I)
+
+# "prior to Q2 2021", "from Q1 2020 to ..." bound the window the question asks
+# about. The quarter inside such a clause is the constraint, not the answer.
+_CONSTRAINT = re.compile(
+    r"\b(prior to|before|after|between|from|during the period|in the period|"
+    r"spanning|through|up to|since)\b[^.]{0,40}?$", re.I)
+
+
+def _norm_period(m):
+    q = m.group(1) or m.group(4)
+    y = m.group(2) or m.group(3)
+    return f"{y}-q{q}"
+
+
+def asserted_period(answer: str):
+    """The quarter an answer names AS its answer, not the ones it compares.
+
+    "In which quarter was the margin highest" is answered by one quarter, but
+    answering it well means naming the window and the runners-up. Scoring the
+    whole prose then counts the model's own justification against it: measured
+    on the standing set, thirteen answers that named the correct quarter scored
+    0.25 to 0.5 on period F1 and were marked wrong, which is most of what made
+    multi-time the weakest category.
+
+    Extracting the asserted answer before scoring it is what the field does --
+    FinQA and ConvFinQA score an executed final answer, TAT-QA an answer span --
+    rather than running F1 over every figure in a generation.
+    """
+    if not answer:
+        return set()
+    for seg in re.findall(r"\*\*(.+?)\*\*", answer):     # the model emphasises its pick
+        m = _PERIOD.search(seg)
+        if m:
+            return {_norm_period(m)}
+    for s in _SUPERLATIVE.finditer(answer):
+        tail = answer[s.end(): s.end() + 300]
+        for m in _PERIOD.finditer(tail):
+            if _CONSTRAINT.search(tail[:m.start()]):
+                continue
+            return {_norm_period(m)}
+    return _periods(re.split(r"(?<=[.!?])\s", answer.strip())[0])
+
+
 def period_f1(gold: str, answer: str):
     """F1 over quarter-year tokens; None when gold names no period."""
     g = _periods(gold)
@@ -518,9 +564,18 @@ async def main():
                         ok = f1 >= args.f1_threshold
                         votes = {"numeric_f1": round(f1, 4)}
                     elif pf1 is not None:
-                        # Gold is a period ("Q1 2022"): match periods as tokens.
-                        ok = pf1 >= args.f1_threshold
-                        votes = {"period_f1": round(pf1, 4)}
+                        gp = _periods(gold)
+                        if len(gp) == 1:
+                            # A single quarter is an argmax answer: score the
+                            # quarter the answer asserts, not its justification.
+                            hit = bool(gp & asserted_period(answer))
+                            ok = hit
+                            votes = {"asserted_period": hit,
+                                     "period_f1": round(pf1, 4)}
+                        else:
+                            # Gold names several quarters: match them as tokens.
+                            ok = pf1 >= args.f1_threshold
+                            votes = {"period_f1": round(pf1, 4)}
                     else:
                         # Gold names a company or states a fact rather than a
                         # figure, so there is nothing for numeric F1 to match.
