@@ -10,7 +10,19 @@
 
 No separate vector store. No graph engine to operate. One database, one consistency model, one backup — and transactions that span your graph *and* your application tables.
 
-Built on **[post-graph](https://github.com/crajah/post-graph)** — the property-graph layer underneath, usable on its own if you want the graph without the RAG.
+### Built on [post-graph](https://github.com/crajah/post-graph)
+
+The property-graph layer underneath, and a standalone library if you want the graph without the RAG. It makes PostgreSQL behave like a graph database rather than emulating one:
+
+- **Table-per-vertex, table-per-edge** — real foreign keys, real indexes, real constraints, so your graph is queryable by anything that speaks SQL
+- **Recursive CTE traversals** — neighbours, paths and shortest-path with cycle detection, executed in the database rather than in your application
+- **Two levels of tenancy** — `realm` for hard isolation (optionally schema-per-tenant), `space` for sub-grouping inside it
+- **pgvector on vertices and edges**, searchable across live and historical rows
+- **Append-only history and trigger-based audit logging** on every table, capturing old and new state with the acting user
+- **Promoted payload columns and server-side range queries** — filter, order and bulk-delete on JSONB fields at the database, not in Python
+
+[`pip install post-graph`](https://github.com/crajah/post-graph) · Apache 2.0 · 635 tests
+
 
 ## ⚡ Try it
 
@@ -216,31 +228,46 @@ defaults to 1 — existing behaviour is untouched.
 
 ```mermaid
 graph TD
-    subgraph INDEXING ["1. Knowledge Graph & Vector Indexing"]
-        A[Document Text + Metadata] --> B[Embedding Service]
-        A --> C[LLM GraphExtractor]
-        
-        B -->|Vectors| D[post-graph Store]
-        C -->|Entities & Triples| D
-        
-        D --> E[(PostgreSQL + pgvector)]
-        E -->|Tables| E1[documents]
-        E -->|Tables| E2[entities]
-        E -->|Edges| E3[relations]
-        E -->|Edges| E4[doc_mentions]
+    subgraph INDEXING ["1. Indexing"]
+        A[Document + Metadata] --> B[Chunker]
+        B --> C[Embedding Service]
+        B --> D[LLM GraphExtractor<br/>validate · glean · normalise]
+        C -->|chunk vectors| S[(PostgreSQL + pgvector<br/>via post-graph)]
+        D -->|entities · triples · validity| S
+        D -.->|later doc contradicts earlier| SUP[Supersession<br/>closes the old edge]
+        SUP --> S
     end
 
-    subgraph RETRIEVAL ["2. Hybrid Retrieval & Synthesis"]
-        Q[User Question] --> R[GraphRAG Query Engine]
-        R -->|Embedding| S[pgvector Similarity Search]
-        E1 & E2 -->|Top-K Passages & Entities| S
-        S --> T[1-Hop Graph Relationship Traversal]
-        E3 -->|Subject-Predicate-Object| T
-        
-        S & T --> U[LLM Answer Synthesis]
-        U --> V[Final Answer + Citations + Graph Triples]
+    subgraph SCHEMA ["Tables in one database"]
+        S --- V1[documents]
+        S --- V2[entities]
+        S --- V3[communities]
+        S --- E1[relations<br/>valid_from/to · t_created/expired]
+        S --- E2[doc_mentions]
+        S --- E3[community_members / _children]
+    end
+
+    subgraph RETRIEVAL ["2. Retrieval — three channels, fused by RRF"]
+        Q[Question] --> K[Keyword + subquery expansion]
+        K --> C1[Entity vector search<br/>→ multi-hop traversal]
+        K --> C2[Relation embedding search]
+        K --> C3[Lexical / BM25 over relations]
+        V2 --> C1
+        E1 --> C1 & C2 & C3
+        C1 & C2 & C3 --> F[RRF fusion<br/>MMR · node-distance rerank]
+        V3 -->|global mode| F
+        V1 -->|chunks| F
+    end
+
+    subgraph SYNTHESIS ["3. Synthesis"]
+        F --> G[Temporal filter<br/>as_of · as_believed_at]
+        G --> H[Prompt assembly<br/>renders each relation's validity]
+        H --> I[LLM]
+        I --> J[Answer + citations + triples]
     end
 ```
+
+Three things in that diagram are the whole argument: **supersession** at write time, **three retrieval channels fused rather than one**, and **validity rendered into the prompt** — the last being worth +38 points on temporal reasoning on its own.
 
 ---
 
