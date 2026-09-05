@@ -1,0 +1,1235 @@
+{
+  "benchmark": "ECT-QA",
+  "model": "gpt-oss-120b",
+  "judges": [
+    "gemini-3.7-flash"
+  ],
+  "served": {
+    "gpt-oss-120b": 156
+  },
+  "judges_served": {
+    "gemini-3.7-flash": {
+      "gemini-3.7-flash": 3
+    }
+  },
+  "realm": "ectqa_g36",
+  "spaces": {
+    "WDC": "wdc",
+    "ADSK US": "adsk_us",
+    "EPAM US": "epam_us",
+    "DXC": "dxc",
+    "BIDU US": "bidu_us",
+    "HD US": "hd_us"
+  },
+  "n": 78,
+  "accuracy": 0.5256410256410257,
+  "by_type": {
+    "single-time query": 0.42857142857142855,
+    "multi-time query": 0.45161290322580644,
+    "relative-time query": 0.625,
+    "cross-company": 0.6,
+    "unanswerable": 0.875
+  },
+  "degraded": [],
+  "degraded_count": 0,
+  "scoring": {
+    "figures": "numeric_f1",
+    "periods": "period_f1",
+    "refusals": "rule",
+    "narrative_golds": [
+      "gemini-3.7-flash"
+    ]
+  },
+  "judge_family_excluded": false,
+  "reportable": true,
+  "results": [
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation\u2019s revenue guidance, operating expenses guidance, actual revenue, and actual operating expenses in the last quarter of 2020?",
+      "gold": "$4.25 billion to $4.45 billion, $740 million to $760 million, $4.3 billion, and $713 million.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.7059
+      },
+      "query_secs": 8.9,
+      "answer": "**Western Digital\u202fCorporation \u2013 FY\u202f2020\u202fQ4 (the last quarter of 2020)**  \n\n| Metric | Figure |\n|--------|--------|\n| **Revenue guidance** | **$4.25\u202fbillion\u202f\u2013\u202f$4.45\u202fbillion** (non\u2011GAAP)\u301071\u3011 |\n| **Operating\u2011expenses guidance** | **$740\u202fmillion\u202f\u2013\u202f$760\u202fmillion** (non\u2011GAAP)\u301071\u3011 |\n| **Actual revenue** | **$4.3\u202fbillion** (reported for Q4\u202f2020)\u30101\u3011\u301019\u3011 |\n| **Actual operating expenses** | **$713\u202fmillion** (reported for Q4\u202f2020)\u301019\u3011 |\n\nThese figures correspond to the fourth fiscal quarter of 2020, which is the final quarter of the calendar year\u202f2020 for Western Digital."
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "multi-time query",
+      "question": "What was Western Digital Corporation's non-GAAP gross margin in each quarter in 2022?",
+      "gold": "33.9% in 2022 Q1, 33.6% in 2022 Q2, 31.7% in 2022 Q3, and 32.3% in 2022 Q4.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.2424
+      },
+      "query_secs": 8.9,
+      "answer": "**Western Digital\u202fCorporation \u2013 Non\u2011GAAP Gross Margin (2022)**  \n\n| 2022 Quarter | Non\u2011GAAP Gross Margin |\n|--------------|-----------------------|\n| Q1\u202fFY2022 (ended\u202fMar\u202f31\u202f2022) | **33.9\u202f%**\u30101\u2020L9-L11\u3011\u301024\u2020L13-L15\u3011 |\n| Q2\u202fFY2022 (ended\u202fJun\u202f30\u202f2022) | **33.6\u202f%**\u30102\u2020L9-L11\u3011 |\n| Q3\u202fFY2022 (ended\u202fSep\u202f30\u202f2022) | **31.7\u202f%**\u30104\u2020L9-L11\u3011\u301029\u2020L13-L15\u3011 |\n| Q4\u202fFY2022 (ended\u202fDec\u202f31\u202f2022) | **32\u202f%** (reported as non\u2011GAAP)\u30103\u2020L9-L11\u3011\u30109\u2020L13-L15\u3011 |\n\nThese are the non\u2011GAAP gross\u2011margin percentages that were disclosed for each of the four quarters of calendar\u2011year\u202f2022."
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "multi-time query",
+      "question": "What was Western Digital Corporation's gross margin in each quarter of 2022?",
+      "gold": "33.9%, 33.6%, 31.7%, and 32.3%.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.3243
+      },
+      "query_secs": 11.3,
+      "answer": "**Western Digital Corporation \u2013 Gross Margin (2022)**  \n\n| 2022 Quarter | Gross Margin (non\u2011GAAP) |\n|--------------|------------------------|\n| Q1\u202fFY2022 (ended\u202fMar\u202f31\u202f2022) | **33.9\u202f%**\u30101\u2020L9-L11\u3011\u301020\u2020L13-L15\u3011 |\n| Q2\u202fFY2022 (ended\u202fJun\u202f30\u202f2022) | **33.6\u202f%**\u30102\u2020L9-L11\u3011 |\n| Q3\u202fFY2022 (ended\u202fSep\u202f30\u202f2022) | **31.7\u202f%**\u30107\u2020L9-L11\u3011\u301021\u2020L13-L15\u3011 |\n| Q4\u202fFY2022 (ended\u202fDec\u202f31\u202f2022) | **\u2248\u202f32\u202f%** (reported as 32\u202f% in the earnings call; a detailed slide later gave 32.3\u202f%)\u30103\u2020L9-L11\u3011\u30105\u2020L13-L15\u3011 |\n\nThese are the gross\u2011margin percentages that Western Digital disclosed for each of the four quarters of calendar\u2011year\u202f2022."
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation's operating expenses guidance, product launch, enterprise and client SSD revenue growth, year-over-year revenue growth, non-GAAP EPS, gaming revenue growth, debt repayment, and cash position in 2020-Q4?",
+      "gold": "$740 million to $760 million, BiCS5 112-layer flash product launch, nearly 70% sequential growth and revenue share in the low double digits, 18% year-over-year revenue growth, $1.23 non-GAAP EPS, flash solutions shipment for new game consoles, $63 million debt repayment, and $3 billion in cash and cash equivalents with $9.7 billion gross debt outstanding.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.8654
+      },
+      "query_secs": 16.8,
+      "answer": "**Western Digital\u202fCorporation \u2013 FY\u202f2020\u202fQ4 (quarter ending\u202f31\u202fDec\u202f2020)**  \n\n| Metric | Figure (2020\u2011Q4) | Source |\n|--------|------------------|--------|\n| **Operating\u2011expenses guidance (non\u2011GAAP)** | **$740\u202fmillion\u202f\u2013\u202f$760\u202fmillion** (range) | Graph relationship \u201coperating expenses of $740\u202fmillion to $760\u202fmillion\u201d (FY\u202f2020\u202fQ4 guidance) |\n| **Product launch** | **BiCS5\u202f(112\u2011layer 3D NAND) launched in retail**; also began shipping **flash solutions for the upcoming new game\u2011console launches** |\u202f[45]\u202f\u2013\u202fproduct\u2011transition discussion;\u202f[66]\u202f\u2013\u202fBiCS5 launch and console\u2011flash rollout |\n| **Enterprise\u2011SSD revenue growth** | **\u2248\u202f+70\u202f% sequentially** (enterprise SSD revenue grew nearly 70\u202f% sequentially and more than doubled YoY) |\u202f[1] |\n| **Client\u2011SSD revenue growth** | **Record\u2011level client\u2011SSD reve"
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "multi-time query",
+      "question": "What was Western Digital Corporation's non-GAAP gross margin in each quarter from Q4 of 2021 to Q4 of 2022?",
+      "gold": "33%, 33.9%, 33.6%, 31.7%, and 32.3%.",
+      "num_hops": 5,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5
+      },
+      "query_secs": 8.0,
+      "answer": "**Western Digital\u202fCorporation \u2013 Non\u2011GAAP Gross Margin**\n\n- **Q4\u202f2021 (fiscal quarter ended\u202fDec\u202f31\u202f2021)** \u2013 33\u202f% non\u2011GAAP gross margin\u301017\u3011.  \n- **Q1\u202f2022 (fiscal quarter ended\u202fMar\u202f31\u202f2022)** \u2013 33.9\u202f% non\u2011GAAP gross margin\u30101\u3011.  \n- **Q2\u202f2022 (fiscal quarter ended\u202fJun\u202f30\u202f2022)** \u2013 33.6\u202f% non\u2011GAAP gross margin\u30106\u3011.  \n- **Q3\u202f2022 (fiscal quarter ended\u202fSep\u202f30\u202f2022)** \u2013 31.7\u202f% non\u2011GAAP gross margin\u301010\u3011.  \n- **Q4\u202f2022 (fiscal quarter ended\u202fDec\u202f31\u202f2022)** \u2013 32\u202f% non\u2011GAAP gross margin\u30102\u3011."
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "multi-time query",
+      "question": "What were Western Digital Corporation's non-GAAP earnings per share in each quarter of 2021?",
+      "gold": "$0.65, $0.69, $1.02, and $2.16.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5
+      },
+      "query_secs": 9.1,
+      "answer": "**Western Digital Corporation \u2013 Non\u2011GAAP earnings per share (EPS) for 2021**\n\n| 2021 Quarter | Non\u2011GAAP EPS |\n|--------------|--------------|\n| Q1\u202fFY2021 (ended\u202fMar\u202f31\u202f2021) | **$0.65**\u30109\u3011 |\n| Q2\u202fFY2021 (ended\u202fJun\u202f30\u202f2021) | **$0.69**\u30104\u3011 |\n| Q3\u202fFY2021 (ended\u202fSep\u202f30\u202f2021) | **$1.02**\u301030\u3011 |\n| Q4\u202fFY2021 (ended\u202fDec\u202f31\u202f2021) | **$2.16**\u301014\u3011 |\n\nThese figures are taken directly from the earnings\u2011call transcripts for each respective quarter."
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation\u2019s revenue, total revenue growth, and free cash flow in 2021-Q3?",
+      "gold": "$4.1 billion, up 5% sequentially and down 1% year over year, and negative $11 million.",
+      "num_hops": 3,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.7273
+      },
+      "query_secs": 7.0,
+      "answer": "**Western Digital\u202fCorporation \u2013 Fiscal\u202f2021\u202fQ3**\n\n- **Revenue:**\u202f$4.1\u202fbillion\u30104\u3011  \n- **Total revenue growth:**\u202fup\u202f5\u202f% sequentially (down\u202f1\u202f% year\u2011over\u2011year)\u30104\u3011  \n- **Free cash flow:**\u202f\u2011$11\u202fmillion (negative)\u301012\u3011"
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "multi-time query",
+      "question": "In which quarter did Western Digital Corporation achieve the highest non-GAAP gross margin during the period from 2022-Q1 to 2023-Q3?",
+      "gold": "Q1 2022",
+      "num_hops": 7,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 1.0
+      },
+      "query_secs": 14.1,
+      "answer": "**Quarter with the highest non\u2011GAAP gross margin (2022\u2011Q1\u202fto\u202f2023\u2011Q3):** **Fiscal\u202f2022\u202fQ1** \u2013 33.9% non\u2011GAAP gross margin\u30102\u2020L1-L3\u3011\u301015\u2020L13-L16\u3011."
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation\u2019s enterprise SSD product demand situation, third-quarter revenue, non-GAAP gross margin, and total revenue change in 2023-Q3?",
+      "gold": "Enterprise SSD product demand was sharply reduced, $2.8 billion, 11%, and down 10% sequentially and 36% year over year.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6667
+      },
+      "query_secs": 8.7,
+      "answer": "**Western Digital\u202fCorporation \u2013 FY\u202f2023\u202fQ3**\n\n| Metric | Figure / Situation | Source |\n|--------|--------------------|--------|\n| **Enterprise\u2011SSD product demand** | Demand was **stabilizing** and roughly **in line with expectations** for the quarter. | \u30102\u3011 |\n| **Third\u2011quarter revenue** | **$2.8\u202fbillion** | \u30102\u3011 |\n| **Non\u2011GAAP gross margin** | **11\u202f%** | \u30102\u3011 |\n| **Total\u2011revenue change** | **Down 10\u202f% sequentially** (and down 36\u202f% year\u2011over\u2011year) | \u301040\u3011 |\n\n*The demand comment reflects the broader flash\u2011SSD market, which includes the enterprise\u2011SSD portfolio.*"
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "multi-time query",
+      "question": "In which quarter in 2021 did Autodesk Inc. achieve the highest subscription plan revenue growth percentage?",
+      "gold": "Q1 2021",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 0.6667
+      },
+      "query_secs": 7.2,
+      "answer": "**Quarter with the highest subscription\u2011plan\u2011revenue growth in 2021**\n\n- **Fiscal Q1\u202f2021** \u2013 subscription\u2011plan revenue grew **35\u202f%**\u301053\u3011.  \n\n*The available transcripts provide subscription\u2011plan\u2011revenue growth for Q1 (35\u202f%) and Q2 (27\u202f%) of 2021\u301023\u3011. No figures for Q3 or Q4 2021 are given, so the highest reported growth is in Q1\u202f2021.*"
+    },
+    {
+      "space": "wdc",
+      "companies": "WDC",
+      "type": "multi-time query",
+      "question": "During which quarter (Q4 2021 \u2013 Q4 2022) did Western Digital report its highest non-GAAP gross margin?",
+      "gold": "Q1 2022",
+      "num_hops": 5,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.5
+      },
+      "query_secs": 10.8,
+      "answer": "**Quarter with the highest non\u2011GAAP gross margin (Q4\u202f2021\u202f\u2013\u202fQ4\u202f2022):** **Fiscal Q1\u202f2022** (the quarter ending\u202f31\u202fMar\u202f2022) \u2013 non\u2011GAAP gross margin was **33.9%**\u30101\u2020L4-L6\u3011\u301012\u2020L4-L7\u3011."
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "multi-time query",
+      "question": "During which period did Autodesk Inc. maintain the highest net revenue retention rate range from 2020-Q2 to 2021-Q1?",
+      "gold": "The net revenue retention rate was consistently in the range of 110% to 120% in each period from 2020-Q2 to 2021-Q1, so there was no change in the highest range across these quarters.",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.8889
+      },
+      "query_secs": 10.9,
+      "answer": "**Highest net\u2011revenue\u2011retention range (110\u202f%\u202f\u2013\u202f120\u202f%)**\n\n- **Q3\u202f2020** \u2013 Autodesk reported that the net\u2011revenue\u2011retention rate \u201ccontinued to be within the range of 110% to 120%\u201d\u30106\u3011.  \n- **Q1\u202f2021** \u2013 Autodesk again said the net\u2011revenue\u2011retention rate \u201cwas within the 110% to 120% range\u201d\u301021\u3011.  \n\nBoth quarters achieved the highest reported range (110\u202f%\u202f\u2013\u202f120\u202f%) among the periods from 2020\u2011Q2 through 2021\u2011Q1."
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "relative-time query",
+      "question": "What was Autodesk Inc.'s net revenue retention rate in each quarter before 2021 Q3?",
+      "gold": "Approximately 110% to 120% in 2020 Q1, approximately 110% to 120% in 2020 Q2, approximately 110% to 120% in 2020 Q3, approximately 110% to 120% in 2020 Q4, approximately 110% to 120% in 2021 Q1, and approximately 100% to 110% in 2021 Q2.",
+      "num_hops": 6,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.8
+      },
+      "query_secs": 7.7,
+      "answer": "**Autodesk\u202fInc. \u2013 Net Revenue Retention (NRR) rates for quarters prior to FY\u202f2021\u202fQ3**\n\n| Fiscal quarter | Reported NRR (range) | Source |\n|----------------|----------------------|--------|\n| FY\u202f2021\u202fQ2 | **100\u202f%\u202f\u2013\u202f110\u202f%** (within the guidance range) | \u301010\u3011 |\n| FY\u202f2021\u202fQ1 | **100\u202f%\u202f\u2013\u202f110\u202f%** (remained within the range) | \u301067\u3011 |\n| FY\u202f2020\u202fQ3 | **110\u202f%\u202f\u2013\u202f120\u202f%** (within the range) | \u30103\u3011 |\n\n**Quarters for which no NRR figure appears in the retrieved material**\n\n- FY\u202f2020\u202fQ4  \n- FY\u202f2020\u202fQ2  \n- FY\u202f2020\u202fQ1  \n\nThe available data above cover all quarters for which the earnings\u2011call transcripts mention a net\u2011revenue\u2011retention rate before FY\u202f2021\u202fQ3."
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "multi-time query",
+      "question": "In which quarter did Autodesk Inc achieve the highest subscription revenue growth during the period 2021-Q4 to 2022-Q3?",
+      "gold": "Autodesk Inc achieved the highest subscription revenue growth of 22% in 2021-Q4.",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5
+      },
+      "query_secs": 7.3,
+      "answer": "**Quarter with the highest subscription\u2011revenue growth (2021\u2011Q4\u202fto\u202f2022\u2011Q3):** **2021\u2011Q4** \u2013 subscription revenue grew **22\u202f%**\u301015\u3011.  \n\n*For reference, the subscription\u2011revenue growth figures for the other quarters are:*  \n\n- 2022\u2011Q1: 18\u202f%\u301031\u3011  \n- 2022\u2011Q2: 21\u202f%\u301022\u3011  \n- 2022\u2011Q3: 21\u202f%\u30109\u3011  \n\nThe 22\u202f% growth in 2021\u2011Q4 is the highest among these periods."
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "multi-time query",
+      "question": "What was Autodesk Inc.'s total deferred revenue in each quarter from 2022 Q3 to 2023 Q2?",
+      "gold": "$3.3 billion, $3.8 billion, $3.7 billion, and $3.7 billion.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6
+      },
+      "query_secs": 7.9,
+      "answer": "**Autodesk\u202fInc. \u2013 Total Deferred Revenue**\n\n- **2022\u202fQ3:**\u202f$3.3\u202fbillion\u202f\u30107\u3011  \n- **2022\u202fQ4:**\u202f$3.3\u202fbillion\u202f\u301076\u3011  \n- **2023\u202fQ1:**\u202f$3.7\u202fbillion\u202f\u301077\u3011  \n- **2023\u202fQ2:**\u202f$3.7\u202fbillion\u202f\u301012\u3011"
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-q1 did Autodesk Inc. have the highest billings growth percentage?",
+      "gold": "Q3 2020",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 1.0
+      },
+      "query_secs": 13.7,
+      "answer": "**Quarter with the highest billings growth before\u202f2021\u2011Q1:**  \n\n- **Fiscal\u202f2020\u202fQ3** \u2013 Billings grew **55\u202f%** year\u2011over\u2011year, the strongest growth among the quarters preceding 2021\u2011Q1\u301027\u3011."
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "multi-time query",
+      "question": "What was Autodesk Inc's total deferred revenue at the end of each quarter from 2022-Q4 to 2023-Q3?",
+      "gold": "$3.8 billion, $3.7 billion, $3.7 billion, and $3.8 billion.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5455
+      },
+      "query_secs": 8.7,
+      "answer": "**Autodesk\u202fInc \u2013 Total Deferred Revenue (end\u2011of\u2011quarter)**  \n\n| Fiscal Quarter | Total Deferred Revenue |\n|----------------|------------------------|\n| 2022\u202fQ4 | **$3.3\u202fbillion**\u301038\u3011 |\n| 2023\u202fQ1 | **$3.7\u202fbillion**\u30105\u3011 |\n| 2023\u202fQ2 | **$3.7\u202fbillion**\u30109\u3011 |\n| 2023\u202fQ3 | **$3.8\u202fbillion**\u30104\u3011 |"
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "single-time query",
+      "question": "What were Autodesk Inc.\u2019s net revenue retention rate, billings growth, total share repurchase amount, and focus areas for infrastructure investment in Q3 2020?",
+      "gold": "110% to 120%, 55% billings growth to more than $1 billion, 856,000 shares repurchased for $124 million at an average price of $144.49 per share, and continued investment in infrastructure that has performed well during prior downturns.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5714
+      },
+      "query_secs": 10.6,
+      "answer": "**Autodesk\u202fInc. \u2013 Q3\u202fFY\u202f2020**\n\n- **Net revenue\u2011retention rate:**\u202fThe company said the net\u2011revenue\u2011retention rate \u201ccontinued to be within the range of\u202f110\u202f%\u202fto\u202f120\u202f%\u201d in the third quarter\u30105\u3011.  \n- **Billings growth:**\u202fBillings grew **55\u202f%**, reaching \u201cmore than\u202f$1\u202fbillion\u201d in Q3\u202f2020\u30105\u3011.  \n\n**Metrics not disclosed for Q3\u202f2020**\n\n- **Total share\u2011repurchase amount:**\u202fNo figure for share\u2011repurchase activity (dollar amount or shares) appears in the Q3\u202f2020 earnings\u2011call material.  \n- **Focus areas for infrastructure investment:**\u202fThe Q3\u202f2020 transcript does not contain any statement about Autodesk\u2019s infrastructure\u2011investment focus or priorities.  \n\n*Only the net\u2011revenue\u2011retention rate and billings growth are available for Q3\u202f2020; the other requested items are not mentioned in the provided docu"
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "multi-time query",
+      "question": "What was Autodesk Inc.'s net revenue retention rate in each quarter from Q2 of 2020 to Q1 of 2022?",
+      "gold": "Approximately 110% to 120% in Q2 2020, 110% to 120% in Q3 2020, 110% to 120% in Q4 2020, 110% to 120% in Q1 2021, 100% to 110% in Q2 2021, 100% to 110% in Q3 2021, 100% to 110% in Q4 2021, and 100% to 110% in Q1 2022.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.8
+      },
+      "query_secs": 13.1,
+      "answer": "**Autodesk\u202fInc. \u2013 Net Revenue Retention Rate by Quarter (Q2\u202f2020\u202f\u2192\u202fQ1\u202f2022)**  \n\n- **Q2\u202f2020:**\u202f110\u202f%\u202f\u2013\u202f120\u202f%\u202frange\u301041\u3011  \n- **Q3\u202f2020:**\u202f110\u202f%\u202f\u2013\u202f120\u202f%\u202frange\u30106\u3011  \n- **Q4\u202f2020:**\u202f110\u202f%\u202f\u2013\u202f120\u202f%\u202frange\u301032\u3011  \n- **Q1\u202f2021:**\u202f110\u202f%\u202f\u2013\u202f120\u202f%\u202frange\u301056\u3011  \n- **Q2\u202f2021:**\u202f100\u202f%\u202f\u2013\u202f110\u202f%\u202frange\u30104\u3011  \n- **Q3\u202f2021:**\u202f100\u202f%\u202f\u2013\u202f110\u202f%\u202frange\u301047\u3011  \n- **Q4\u202f2021:**\u202f100\u202f%\u202f\u2013\u202f110\u202f%\u202frange\u301016\u3011  \n- **Q1\u202f2022:**\u202f100\u202f%\u202f\u2013\u202f110\u202f%\u202frange\u301052\u3011\n\nAll quarters from Q2\u202f2020 through Q1\u202f2022 have reported net\u2011revenue\u2011retention rates in the cited ranges."
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-Q1 did EPAM Systems Inc. record the highest Non-GAAP income from operations as a percentage of revenue?",
+      "gold": "Q3 2020",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 0.5
+      },
+      "query_secs": 10.4,
+      "answer": "**Answer**\n\nThe quarter before 2021\u2011Q1 in which EPAM Systems\u202fInc. recorded the highest Non\u2011GAAP income from operations as a percentage of revenue was **Q3\u202f2020**, with Non\u2011GAAP income from operations equal to **18.9\u202f% of revenue**\u30106\u2020L1-L3\u3011.  \n\nFor reference, the Non\u2011GAAP operating margins in the other quarters prior to 2021\u2011Q1 were:\n\n- Q4\u202f2020 \u2013 17.8\u202f% of revenue\u30101\u2020L13-L15\u3011  \n- Q2\u202f2020 \u2013 17.1\u202f% of revenue\u301030\u2020L1-L3\u3011  \n\nThus, Q3\u202f2020 had the highest reported Non\u2011GAAP operating margin among the pre\u20112021\u2011Q1 periods."
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "multi-time query",
+      "question": "What were EPAM Systems Inc.'s expected excess tax benefits for each quarter from Q2 to Q4 in 2022?",
+      "gold": "EPAM Systems Inc.'s expected excess tax benefits were approximately $4 million for Q2 2022, $5.9 million for Q3 2022, and $4.3 million for Q4 2022.",
+      "num_hops": 3,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4444
+      },
+      "query_secs": 9.7,
+      "answer": "**Expected excess tax benefits (2022)**  \n\n| Quarter | Expected excess tax benefits |\n|---------|------------------------------|\n| **Q2\u202f2022** | **\u2248\u202f$5.9\u202fmillion** \u2013 EPAM said \u201cwe expect excess tax benefits to be around $5.9\u202fmillion in the quarter\u201d\u301025\u3011 |\n| **Q3\u202f2022** | *No specific figure provided in the available transcripts* |\n| **Q4\u202f2022** | *No specific figure provided in the available transcripts* |\n\n*The Q2 figure comes from the Q2\u20112022 earnings\u2011call transcript. The Q3 and Q4 quarters do not contain an explicit guidance amount for excess tax benefits, so those periods cannot be answered with a numeric value.*"
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "multi-time query",
+      "question": "What was EPAM Systems Inc.'s GAAP effective tax rate in each quarter of 2022?",
+      "gold": "15.6%, negative 114.9%, 18.4%, and 22.9%.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.0
+      },
+      "query_secs": 9.5,
+      "answer": "**EPAM Systems\u202fInc. \u2013 GAAP effective tax rate (2022)**  \n\n| 2022 Quarter | GAAP effective tax rate |\n|--------------|------------------------|\n| Q1\u202f2022 | ~\u202f19\u202f% (guidance)\u301030\u3011 |\n| Q2\u202f2022 | ~\u202f19\u202f% (guidance)\u301034\u3011 |\n| Q3\u202f2022 | ~\u202f19\u202f% (guidance)\u30102\u3011 |\n| Q4\u202f2022 | *not disclosed* \u2013 the retrieved transcripts do not contain a specific Q4\u20112022 GAAP effective tax\u2011rate figure (only the full\u2011year rate of 17.3\u202f% is given)\u301036\u3011 |\n\n*The quarter\u2011specific GAAP effective tax rates for Q1\u2013Q3 are the guidance numbers that EPAM provided in its earnings calls. No quarter\u2011level GAAP tax\u2011rate figure is available for Q4\u202f2022 in the supplied material.*"
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "multi-time query",
+      "question": "In which quarter did EPAM Systems Inc. have the lowest cash flow from operations during the period from early 2020 to mid-2021?",
+      "gold": "Q1 2021",
+      "num_hops": 6,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.5
+      },
+      "query_secs": 9.5,
+      "answer": "**Quarter with the lowest cash\u2011flow\u2011from\u2011operations (early\u202f2020\u202f\u2013\u202fmid\u202f2021)**  \n\n- **Q1\u202f2020** \u2013 cash flow from operations was **$63.3\u202fmillion**\u30102\u3011.  \n\nThe transcript excerpts do not provide cash\u2011flow\u2011from\u2011operations figures for Q1\u202f2021 or Q2\u202f2021, so a comparison with those quarters cannot be made. Based on the available data, Q1\u202f2020 is the quarter with the lowest reported cash flow from operations in the period."
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "multi-time query",
+      "question": "What was EPAM Systems Inc.'s GAAP income from operations in each quarter from 2020 Q1 to 2021 Q3?",
+      "gold": "$107.3 million, $125.3 million, $96.4 million, $112 million, $129 million, $93 million, and $144.1 million.",
+      "num_hops": 7,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.2667
+      },
+      "query_secs": 12.9,
+      "answer": "**EPAM Systems\u202fInc. \u2013 GAAP income from operations (available figures)**  \n\n- **2020\u202fQ1:**\u202f$87.5\u202fmillion (13.4\u202f% of revenue) \u2013\u202f[33]  \n- **2020\u202fQ2:**\u202f$83.4\u202fmillion (13.2\u202f% of revenue) \u2013\u202f[42]  \n- **2020\u202fQ3:**\u202f$96.4\u202fmillion (14.8\u202f% of revenue) \u2013\u202f[45]  \n- **2020\u202fQ4:**\u202f*GAAP income from operations not provided in the retrieved material.*  \n- **2021\u202fQ1:**\u202f*GAAP income from operations not provided in the retrieved material.*  \n- **2021\u202fQ2:**\u202f*GAAP income from operations not provided in the retrieved material.*  \n- **2021\u202fQ3:**\u202f$144.1\u202fmillion (14.6\u202f% of revenue) \u2013\u202f[68]  \n\n*Only the quarters above contain explicit GAAP operating\u2011income figures in the supplied transcripts; the remaining quarters (2020\u202fQ4, 2021\u202fQ1, 2021\u202fQ2) have no reported numbers in the available context.*"
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "multi-time query",
+      "question": "In which quarter did EPAM Systems Inc. experience the highest growth rate in financial services during the period from 2021 Q4 to 2022 Q2?",
+      "gold": "Q4 2021",
+      "num_hops": 3,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 0.5
+      },
+      "query_secs": 7.7,
+      "answer": "**Quarter with the highest Financial Services growth (2021\u202fQ4\u202f\u2013\u202f2022\u202fQ2):** **2021\u202fQ4** \u2013 Financial services grew **60.3%** in that quarter, which exceeds the 54% growth in 2022\u202fQ1 and the 29.4% growth in 2022\u202fQ2\u301014\u3011."
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "multi-time query",
+      "question": "In which quarter did EPAM Systems Inc. have the lowest GAAP gross margin from 2021 to mid-2022?",
+      "gold": "Q2 2022",
+      "num_hops": 6,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 1.0
+      },
+      "query_secs": 8.3,
+      "answer": "**Quarter with the lowest GAAP gross margin (2021\u202f\u2013\u202fmid\u20112022):** **Q2\u202f2022**, when GAAP gross margin was **29.2\u202f%**\u30106\u3011."
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-Q2 did EPAM Systems, Inc. have the highest cash flow from operations?",
+      "gold": "Q3 2020",
+      "num_hops": 5,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 1.0
+      },
+      "query_secs": 8.6,
+      "answer": "**Quarter with the highest cash\u2011flow\u2011from\u2011operations before 2021\u2011Q2:** **Q3\u202f2020** \u2013 cash flow from operations was **$175.6\u202fmillion**\u30105\u3011."
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "single-time query",
+      "question": "What were EPAM Systems Inc.\u2019s stock-based compensation expense forecast, non-GAAP income from operations, and utilization rate in 2022-Q4?",
+      "gold": "Approximately $33 million, $220 million or 17.8% of revenue, and 73.6%.",
+      "num_hops": 3,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6667
+      },
+      "query_secs": 7.9,
+      "answer": "**2022\u202fQ4 \u2013 EPAM Systems Inc.**\n\n- **Stock\u2011based compensation expense (forecast):** about **$33\u202fmillion** for the quarter\u301020\u3011.  \n- **Non\u2011GAAP income from operations:** **$220\u202fmillion**, which represented **17.8\u202f% of revenue** in Q4\u202f2022\u30105\u3011.  \n- **Utilization rate:** **73.6\u202f%** (down from 76.8\u202f% a year earlier)\u30105\u3011."
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's book-to-bill ratio, GBS revenue, cash flow from operations, free cash flow impact, cash position, total debt, and operating lease payments in 2021-Q3?",
+      "gold": "1.13, $1.92 billion, an outflow of $187 million, more than $700 million higher without certain items, $3.9 billion, $6.2 billion, and $117 million.",
+      "num_hops": 7,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4762
+      },
+      "query_secs": 14.8,
+      "answer": "**DXC Technology Company \u2013 FY\u202f2021\u202fQ3**\n\n- **Book\u2011to\u2011bill ratio:** 1.13\u202f\u00d7\u202f (the quarter\u2019s bookings exceeded revenue by about 13\u202f%)\u30106\u3011.  \n- **GBS (Global Business Services) revenue:**\u202f$1.92\u202fbillion, representing roughly 45\u202f% of total Q3 revenue\u301060\u3011.  \n\n- **Cash flow from operations:**\u202fan outflow of **$187\u202fmillion** (negative cash flow)\u301061\u3011.  \n- **Free\u2011cash\u2011flow impact:**\u202fadjusted free cash flow was **\u2011$318\u202fmillion** for the quarter, reflecting large cash\u2011outflows tied to the HHS sale and supplier/payable normalizations\u301061\u3011.  \n\n- **Cash position (end\u2011of\u2011quarter cash):**\u202f$3.9\u202fbillion\u30101\u3011.  \n- **Total debt (including capitalized leases):**\u202f$6.2\u202fbillion\u30101\u3011.  \n\n- **Operating\u2011lease payments:** The retrieved transcripts do not contain a specific figure for operating\u2011lease payments in FY\u202f2021\u202fQ3, so"
+    },
+    {
+      "space": "adsk_us",
+      "companies": "ADSK US",
+      "type": "multi-time query",
+      "question": "What records did Autodesk Inc. achieve in each quarter from Q3 2022 to Q3 2023?",
+      "gold": "Healthy free cash flow of $257 million during Q3 2022, record fourth quarter and full year revenue, non-GAAP operating margins, and free cash flow in Q4 2022, record first-quarter revenue, non-GAAP operating margin, and free cash flow in Q1 2023, record second quarter revenue, non-GAAP operating margin, and free cash flow in Q2 2023, and record third quarter revenue, non-GAAP operating margin, and free cash flow in Q3 2023.",
+      "num_hops": 5,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.0
+      },
+      "query_secs": 66.1,
+      "answer": ""
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's non-GAAP EPS, book-to-bill ratio, share repurchase plan, organic revenue decline, adjusted EBIT margin, free cash flow, insurance software business annual revenue, and capital expenditures percentage in 2023-Q3?",
+      "gold": "$0.95, 1.34, approximately $400 million to complete a $1 billion program, 3.8% decline, 8.7%, $463 million, about $550 million, and 6.4%.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6154
+      },
+      "query_secs": 11.4,
+      "answer": "**DXC Technology Company \u2013 FY\u202f2023\u202fQ3 (quarter ending\u202fSeptember\u202f30\u202f2023)**  \n\n- **Non\u2011GAAP diluted EPS:**\u202f$0.95 per share\u30106\u3011  \n- **Book\u2011to\u2011bill ratio:**\u202f1.34\u202f\u00d7\u30106\u3011  \n\n- **Share\u2011repurchase plan:**\u202fDXC said it will repurchase approximately **$400\u202fmillion** of shares in the quarter to finish the previously announced $1\u202fbillion buy\u2011back program\u30105\u3011  \n\n- **Organic revenue decline:**\u202f\u20113.8\u202f% year\u2011over\u2011year\u30106\u3011  \n\n- **Adjusted EBIT margin:**\u202f8.7\u202f% (up from 7.5\u202f% in Q2)\u30106\u3011  \n\n- **Free cash flow:**\u202f$463\u202fmillion generated in the quarter\u30105\u3011  \n\n- **Insurance\u2011software business annual revenue:**\u202fabout **$550\u202fmillion**\u301010\u3011  \n\n- **Capital expenditures as a percent of revenue:**\u202f*No specific Q3\u202f2023 figure is provided in the retrieved transcripts.*  \n\n*All figures above are taken from the FY\u202f2023\u202fQ3 earnings\u2011c"
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's book-to-bill ratio, debt repayment, investment-grade credit profile commitment, non-GAAP diluted earnings per share, GBS revenue, GBS book-to-bill ratio, cash flow from operations, and organic growth progression in 2021-Q4?",
+      "gold": "1.08, $6.5 billion in the past nine months and an additional $500 million retired subsequent to year-end, commitment demonstrated through actions, $0.74 impacted negatively by $0.04 due to a 32% tax rate, $2 billion or 46% of total Q4 revenue, 1.2 with a full-year ratio of 1.32, an outflow of $280 million, and a decline of 3.7%.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4848
+      },
+      "query_secs": 11.3,
+      "answer": "**DXC Technology Company \u2013 FY\u202f2021\u202fQ4**\n\n| Metric | FY\u202f2021\u202fQ4 figure | Source |\n|--------|-------------------|--------|\n| **Overall book\u2011to\u2011bill ratio** | **1.08** (bookings $4.7\u202fbn) | \u30101\u3011 |\n| **Debt repayment** | **\u2248\u202f$6.5\u202fbn** paid down in the nine months leading up to Q4 (plus an additional $500\u202fm retired after year\u2011end) | \u30109\u3011 |\n| **Commitment to an investment\u2011grade credit profile** | Stated commitment to **maintain an investment\u2011grade credit rating** while reshaping the portfolio | \u30101\u3011, \u30109\u3011 |\n| **Non\u2011GAAP diluted earnings per share** | **$0.74** per share | \u30101\u3011 |\n| **GBS (Global Business Services) revenue** | **\u2248\u202f$2.0\u202fbn** (about 46\u202f% of total FY\u202f2021\u202fQ4 revenue) | \u301027\u3011 |\n| **GBS book\u2011to\u2011bill ratio** | **1.2** (GBS bookings $2.39\u202fbn) | \u301027\u3011 |\n| **Cash flow from operations** | **\u2011$280\u202fm"
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were DXC Technology Company\u2019s book-to-bill ratio, investment-grade credit commitment, adjusted EBIT margin performance, GBS bookings, revenue guidance, and organic growth progression in 2021-Q4?",
+      "gold": "1.08, commitment to an investment-grade credit profile, exceeded the top end of adjusted EBIT margin guidance, $2.39 billion for a book-to-bill of 1.2, revenue guidance of $4.25 billion to $4.3 billion with adjusted EBIT margins of 7% to 7.4%, and organic growth decline of 3.7%.",
+      "num_hops": 6,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.2017
+      },
+      "query_secs": 10.1,
+      "answer": "**DXC Technology Company \u2013 2021\u202fQ4 (Fiscal Q4\u202f2021)**  \n\n| Metric | Figure reported for 2021\u2011Q4 |\n|--------|-----------------------------|\n| **Book\u2011to\u2011bill ratio** | **1.08** \u2013 \u201cbookings were $4.7\u202fbillion for a book\u2011to\u2011bill of 1.08\u201d\u30101\u2020L31-L33\u3011 |\n| **Investment\u2011grade credit commitment** | The company reiterated its intent to **maintain an investment\u2011grade credit rating**\u30101\u2020L9-L11\u3011 |\n| **Adjusted EBIT margin performance** | **7.5\u202f%** (adjusted EBIT margin), an improvement of **50\u202fbps versus Q3**\u30101\u2020L15-L17\u3011 |\n| **GBS (Global Business Services) bookings** | **$2.39\u202fbillion** with a segment book\u2011to\u2011bill of **1.2**\u301018\u2020L9-L12\u3011 |\n| **Revenue guidance** | FY\u202f2022 revenue guidance of **$16.6\u202fbillion to $16.8\u202fbillion**\u30104\u2020L1-L4\u3011 |\n| **Organic growth progression** | Guidance for FY\u202f2022 **organic reven"
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "multi-time query",
+      "question": "What was DXC Technology Company's adjusted EBIT margin and EPS in each quarter from Q1 to Q3 of 2023?",
+      "gold": "7% and $0.75 in Q1, 7.5% and not explicitly mentioned in Q2, 8.7% and $0.95 in Q3.",
+      "num_hops": 3,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6667
+      },
+      "query_secs": 23.0,
+      "answer": "**Q1\u202fFY\u202f2023 (ended\u202fMar\u202f31\u202f2023)**  \n- Adjusted EBIT margin: **7\u202f%**  \n- Non\u2011GAAP diluted EPS: **$0.75**\u301013\u3011\n\n**Q2\u202fFY\u202f2023 (ended\u202fJun\u202f30\u202f2023)**  \n- Adjusted EBIT margin: **7.5\u202f%**  \n- Non\u2011GAAP diluted EPS: **$0.75**\u301044\u3011\n\n**Q3\u202fFY\u202f2023 (ended\u202fSep\u202f30\u202f2023)**  \n- Adjusted EBIT margin: **8.7\u202f%**  \n- Non\u2011GAAP diluted EPS: **$0.95**\u301022\u3011"
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were dxc technology company\u2019s non-GAAP EPS, book-to-bill ratio, revenues, organic revenue decline, adjusted EBIT margin, free cash flow, annual revenue from insurance software, and capital expenditures percentage in 2023-q3?",
+      "gold": "$0.95, 1.34, $3.57 billion, 3.8%, 8.7%, $463 million, $550 million, and 6.4%.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6597
+      },
+      "query_secs": 35.5,
+      "answer": "**DXC Technology Company \u2013 FY\u202f2023\u202fQ3 (2023\u2011Q3)**  \n\n- **Non\u2011GAAP diluted EPS:** **$0.95** per share\u30104\u3011  \n- **Book\u2011to\u2011bill ratio:** **1.34\u202f\u00d7** (the strongest since the CEO took over)\u30104\u3011  \n- **Revenue (GAAP):** **$3.57\u202fbillion**\u30104\u3011  \n- **Organic revenue decline:** **\u20113.8\u202f%** (i.e., revenue fell 3.8\u202f% on an organic basis)\u30104\u3011  \n- **Adjusted EBIT margin:** **8.7\u202f%** (up from 7.5\u202f% in Q2)\u30104\u3011  \n- **Free cash flow:** **$463\u202fmillion** for the quarter\u301015\u3011  \n- **Annual revenue from Insurance Software:** **$550\u202fmillion** (the insurance software business generated about $550\u202fM of annual revenue)\u30104\u3011  \n\n**Capital expenditures as a percentage of revenue:** The retrieved FY\u202f2023\u202fQ3 material does not contain a disclosed capex\u2011as\u2011%\u2011of\u2011revenue figure. Consequently, that metric is unavailable for this quarter"
+    },
+    {
+      "space": "epam_us",
+      "companies": "EPAM US",
+      "type": "single-time query",
+      "question": "What were EPAM Systems Inc.'s financial services growth, Americas revenue growth, non-GAAP income from operations, and expected excess tax benefits in 2022-Q4?",
+      "gold": "2.4%, 14.7%, $220 million or 17.8% of revenue, and approximately $4.3 million.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.2963
+      },
+      "query_secs": 69.1,
+      "answer": "**Financial Services Growth (Q4\u202f2022)**  \nEPAM reported that its Financial Services vertical grew **2.4\u202f% year\u2011over\u2011year** in the fourth quarter of 2022\u30103\u2020L1-L3\u3011\u30101\u2020L1-L3\u3011.  \n\n**Americas Revenue Growth (Q4\u202f2022)**  \nThe Americas region, which accounted for 59\u202f% of Q4 revenue, posted **14.7\u202f% YoY growth** (15.6\u202f% in constant currency)\u30101\u2020L4-L7\u3011.  \n\n**Non\u2011GAAP Income from Operations (Q4\u202f2022)**  \nNon\u2011GAAP income from operations was **$220\u202fmillion**, representing **17.8\u202f% of revenue** for the quarter\u30102\u2020L1-L4\u3011.  \n\n**Expected Excess Tax Benefits (Q4\u202f2022)**  \nEPAM\u2019s guidance indicated excess tax benefits of **about $9\u202fmillion** for each of the remaining quarters of 2022, including Q4\u301019\u2020L13-L16\u3011."
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "multi-time query",
+      "question": "In which quarter of 2023 did DXC Technology Company have the smallest decline in organic revenue?",
+      "gold": "Q2 2023",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.0
+      },
+      "query_secs": 58.4,
+      "answer": "**Quarter with the smallest organic\u2011revenue decline in 2023:** **Q2\u202fFY\u202f2023** \u2013 organic revenue fell only **\u2248\u202f1.5\u202f%** year\u2011over\u2011year\u301022\u2020L1-L4\u3011\u301018\u2020L1-L4\u3011.  \n\n*For comparison:* Q3\u202fFY\u202f2023 saw a\u202f\u20113.8\u202f% decline\u301011\u2020L1-L3\u3011 and Q4\u202fFY\u202f2023 a\u202f\u20112.9\u202f% decline\u301037\u2020L1-L3\u3011.  \n\n*Note:* The transcripts do not provide a specific organic\u2011revenue\u2011decline figure for Q1\u202fFY\u202f2023, so the answer is based on the quarters for which data are available."
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's 2021-Q3 revenue, book-to-bill ratio, GBS revenue, margin improvement, cash flow from operations, free cash flow impact, cash position, and total debt including capitalized leases?",
+      "gold": "$4.29 billion, 1.13, $1.92 billion, 10 basis points sequential improvement, an outflow of $187 million, more than $700 million higher, $3.9 billion, and $6.2 billion.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4286
+      },
+      "query_secs": 39.6,
+      "answer": "**DXC Technology Company \u2013 FY\u202f2021\u202fQ3 (Quarter ending\u202f30\u202fSept\u202f2021)**  \n\n| Metric | Figure (FY\u202f2021\u202fQ3) | Source |\n|--------|---------------------|--------|\n| Revenue (GAAP) | **$4.29\u202fbillion** \u2013 $88\u202fmillion above the top of guidance | \u30108\u3011 |\n| Book\u2011to\u2011bill ratio | **1.13\u202f\u00d7** | \u30108\u3011 |\n| Global Business Services (GBS) revenue | **$1.92\u202fbillion** (\u224845\u202f% of total revenue) | \u301061\u3011 |\n| Margin improvement (adjusted EBIT) | **+80\u202fbasis points** sequential improvement to a 7\u202f% margin | \u30108\u3011 |\n| Cash flow from operations | **\u2011$187\u202fmillion** (cash\u2011flow outflow) | \u301062\u3011 |\n| Adjusted free cash flow impact | **\u2011$318\u202fmillion** (negative free cash flow) | \u301062\u3011 |\n| Cash position (end\u2011of\u2011quarter) | **$3.9\u202fbillion** | \u30101\u3011 |\n| Total debt (including capitalized leases) | **$6.2\u202fbillion** | \u30101\u3011 |\n\nThese figures are"
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's free cash flow generation quality, adjusted EBIT margin, diluted earnings per share, and organic growth in 2023-Q1?",
+      "gold": "Improving, 7%, $0.75, and 15.7%.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.3636
+      },
+      "query_secs": 29.8,
+      "answer": "**DXC Technology \u2013 FY\u202f2023\u202fQ1**\n\n- **Free\u2011cash\u2011flow generation quality:** The company said its cash\u2011flow generation had improved, reporting **free cash flow of\u202f$88\u202fmillion** for the quarter\u30101\u3011.  \n- **Adjusted EBIT margin:** The adjusted EBIT margin was **7\u202f%**\u30101\u3011.  \n- **Diluted (non\u2011GAAP) earnings per share:** Diluted EPS came in at **$0.75**\u30101\u3011.  \n- **Organic growth:** Organic revenue **declined 2.6\u202f%** year\u2011over\u2011year\u30101\u3011."
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "single-time query",
+      "question": "What were Baidu Inc.'s total revenue, total revenue growth, non-GAAP operating margin, cash and short-term investments, and free cash flow in 2020-Q4?",
+      "gold": "RMB30.3 billion or $4.6 billion for total revenue, 5% for total revenue growth, 35% for non-GAAP operating margin for Baidu Core, RMB162.9 billion and RMB148.6 billion or $22.8 billion for cash and short-term investments, and RMB3.8 billion and RMB5.4 billion or $827 million for free cash flow excluding iQIYI.",
+      "num_hops": 6,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.3158
+      },
+      "query_secs": 10.1,
+      "answer": "**2020\u202fQ4 \u2013 Baidu\u202fInc. (figures taken from the earnings\u2011call transcript)**  \n\n- **Total revenue:**\u202fRMB\u202f28.2\u202fbillion (\u2248\u202fUS$4.2\u202fbillion) \u2013 up **1\u202f% year\u2011over\u2011year**\u30103\u3011.  \n- **Cash & short\u2011term investments:**\u202fRMB\u202f162.9\u202fbillion at quarter\u2011end\u30103\u3011.  \n- **Free cash flow:**\u202fRMB\u202f3.8\u202fbillion for the quarter\u30103\u3011.  \n\n**Non\u2011GAAP operating margin:** The transcript does not state Baidu\u202fInc.\u2019s non\u2011GAAP operating margin for Q4\u202f2020 (the only non\u2011GAAP margin mentioned is for Baidu\u202fCore at 35\u202f%). Therefore this specific metric is **unavailable** from the provided material."
+    },
+    {
+      "space": "dxc",
+      "companies": "DXC",
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's revenue, revenue decline, GBS revenue, and cash balance in 2020-Q1?",
+      "gold": "$4.89 billion, down 4.2%, $2.2 billion, and $1.9 billion.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5
+      },
+      "query_secs": 46.2,
+      "answer": "**DXC Technology Company \u2013 2020\u202fQ1**\n\n| Metric | Figure (2020\u202fQ1) | Source |\n|--------|------------------|--------|\n| Revenue (GAAP) | **$4.89\u202fbillion** | \u301035\u3011 |\n| Revenue decline (YoY) | **\u20114.2\u202f%** | \u301035\u3011 |\n| Global Business Services (GBS) revenue | **$2.16\u202fbillion** | \u301035\u3011 |\n| Cash balance at quarter\u2011end | **$2.9\u202fbillion** | \u301075\u3011 |\n\nThese are the only figures available for the requested items in the 2020\u2011Q1 earnings\u2011call material."
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "multi-time query",
+      "question": "What was Baidu Inc.'s net income attributable to Baidu in each quarter from Q2 2022 to Q1 2023?",
+      "gold": "RMB 3.6 billion, RMB 5.9 billion, RMB 5 billion, and RMB 5.8 billion.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5
+      },
+      "query_secs": 8.6,
+      "answer": "**Baidu Inc. \u2013 Net income attributable to Baidu**\n\n| Quarter | Net income attributable to Baidu |\n|---------|-----------------------------------|\n| Q2\u202f2022 | RMB\u202f3.6\u202fbillion\u301012\u3011 |\n| Q3\u202f2022 | **Net loss** of RMB\u202f\u2011146\u202fmillion\u301013\u3011 |\n| Q4\u202f2022 | RMB\u202f5\u202fbillion\u30102\u3011 |\n| Q1\u202f2023 | RMB\u202f5.8\u202fbillion\u30103\u3011 |"
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "single-time query",
+      "question": "What were Baidu Inc's total revenue, operating margin, net income, non-GAAP net income, and non-GAAP net margin in 2023-Q2?",
+      "gold": "RMB 34.1 billion, 17%, RMB 5.2 billion, RMB 8 billion, and 29%.",
+      "num_hops": 5,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5455
+      },
+      "query_secs": 10.2,
+      "answer": "**Baidu\u202fInc \u2013 2023\u202fQ2 (as reported)**  \n\n| Metric | Figure (Q2\u202f2023) | Source |\n|--------|------------------|--------|\n| Total revenue | **RMB\u202f34.1\u202fbillion** | \u30106\u3011 |\n| Net income (GAAP) | **RMB\u202f5.2\u202fbillion** | \u30102\u3011 |\n| Non\u2011GAAP net income | **RMB\u202f8\u202fbillion** | \u30102\u3011 |\n| Operating margin (GAAP) | *not disclosed in the retrieved excerpts* | \u2013 |\n| Non\u2011GAAP net margin | *not disclosed in the retrieved excerpts* | \u2013 |\n\n*The earnings call excerpts provide the total revenue, GAAP net income, and non\u2011GAAP net income for Q2\u202f2023, but they do not give a specific operating\u2011margin percentage for Baidu\u202fInc nor a non\u2011GAAP net\u2011margin percentage for the company as a whole.*"
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "multi-time query",
+      "question": "In which quarter did Baidu Inc. have the highest net income between 2022 and 2023?",
+      "gold": "Q3 2023",
+      "num_hops": 7,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.0
+      },
+      "query_secs": 9.8,
+      "answer": ""
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "multi-time query",
+      "question": "During which quarter did Baidu Inc experience the highest non-GAAP operating margin for Baidu Core from 2020 Q4 to 2021 Q3?",
+      "gold": "2020 Q4",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 0.6667
+      },
+      "query_secs": 9.3,
+      "answer": "The highest non\u2011GAAP operating margin for Baidu\u202fCore in the period from 2020\u202fQ4 through 2021\u202fQ3 was **35\u202f% in 2020\u202fQ4**\u301031\u3011."
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "multi-time query",
+      "question": "Which quarter did Baidu Inc achieve the highest adjusted EBITDA margin between Q3 2021 and Q1 2022?",
+      "gold": "Q3 2021",
+      "num_hops": 3,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.0
+      },
+      "query_secs": 11.9,
+      "answer": ""
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "single-time query",
+      "question": "What were Baidu Inc's total revenue, net income, non-GAAP net income, and free cash flow in 2023 Q2?",
+      "gold": "RMB 34.1 billion, RMB 5.2 billion, RMB 8 billion, and RMB 7.9 billion.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6667
+      },
+      "query_secs": 11.5,
+      "answer": "**Baidu\u202fInc \u2013 2023\u202fQ2**\n\n| Metric | Figure (RMB) |\n|--------|--------------|\n| Total revenue | **34.1\u202fbillion**\u30106\u3011 |\n| Net income (GAAP) | **5.2\u202fbillion**\u30102\u3011 |\n| Non\u2011GAAP net income | **8.0\u202fbillion**\u30102\u3011 |\n| Free cash flow | **7.9\u202fbillion**\u30102\u3011 |\n\nThese numbers are taken from Baidu\u2019s Q2\u202f2023 earnings call transcripts."
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "single-time query",
+      "question": "What were Baidu Inc.\u2019s total revenue, operating margin, net income, net margin, and free cash flow in 2023-Q2?",
+      "gold": "RMB 34.1 billion, 17%, RMB 5.2 billion, 19%, and RMB 7.9 billion.",
+      "num_hops": 5,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4
+      },
+      "query_secs": 13.2,
+      "answer": "**Baidu\u202fInc. \u2013 2023\u202fQ2 (quarter ending\u202f30\u202fJune\u202f2023)**  \n\n| Metric | Figure | Source |\n|--------|--------|--------|\n| **Total revenue** | **RMB\u202f34.1\u202fbillion** (up\u202f15% YoY) | \u30101\u3011, \u30109\u3011 |\n| **Net income (attributable to Baidu)** | **RMB\u202f5.2\u202fbillion** | \u30101\u3011 |\n| **Free cash flow** | **RMB\u202f7.9\u202fbillion** (RMB\u202f7.1\u202fbillion excluding iQIYI) | \u30101\u3011 |\n| **Operating margin** | *not disclosed in the Q2\u202f2023 transcript* | \u2013 |\n| **Net margin** | *not disclosed in the Q2\u202f2023 transcript* | \u2013 |\n\n*The earnings call for Q2\u202f2023 provides the total revenue, net income, and free\u2011cash\u2011flow numbers, but it does not give a specific operating\u2011margin or net\u2011margin percentage for Baidu\u202fInc. (only Baidu\u202fCore\u2019s operating margin is mentioned).*"
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "relative-time query",
+      "question": "Which quarter did Baidu Inc. have the highest free cash flow in its core business before 2021-q1?",
+      "gold": "Q2 2020",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 1.0
+      },
+      "query_secs": 13.2,
+      "answer": "**Answer:**  \nThe highest free\u2011cash\u2011flow for Baidu\u202fInc.\u2019s core business before\u202f2021\u2011Q1 was recorded in **Q2\u202f2020**, when Baidu Core generated **RMB\u202f8.8\u202fbillion** of free cash flow\u30104\u3011."
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "multi-time query",
+      "question": "What was Home Depot Inc.'s gross margin in each quarter from Q1 to Q3 of 2021?",
+      "gold": "34% in Q1, 33.2% in Q2, and 34.1% in Q3.",
+      "num_hops": 3,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6667
+      },
+      "query_secs": 7.6,
+      "answer": "**Home\u202fDepot\u202fInc. \u2013 Gross margin by quarter (2021)**  \n\n| Quarter | Gross margin |\n|---------|--------------|\n| Q1\u202f2021 | 34\u202f% \u202f\u30102\u3011 |\n| Q2\u202f2021 | 33.2\u202f% \u202f\u30104\u3011 |\n| Q3\u202f2021 | 34.1\u202f% \u202f\u301012\u3011 |"
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "multi-time query",
+      "question": "What was Home Depot Inc.'s operating margin in each quarter from Q2 2020 to Q1 2021?",
+      "gold": "15.9% in Q2 2020, 14.5% in Q3 2020, 12.7% in Q4 2020, and 15.4% in Q1 2021.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6
+      },
+      "query_secs": 8.0,
+      "answer": "**Home\u202fDepot\u202fInc. \u2013 Operating margin by quarter**\n\n| Quarter | Operating margin |\n|---------|------------------|\n| Q2\u202f2020 | **\u2248\u202f15.9\u202f%** \u2013 reported in the FY\u202f2020 Q2 earnings call\u301032\u3011 |\n| Q3\u202f2020 | *unanswerable* \u2013 the retrieved transcripts do not contain an operating\u2011margin figure for this quarter |\n| Q4\u202f2020 | **\u2248\u202f12.7\u202f%** \u2013 reported in the FY\u202f2020 Q4 earnings call\u301057\u3011 |\n| Q1\u202f2021 | **\u2248\u202f15.4\u202f%** \u2013 reported in the FY\u202f2021 Q1 earnings call\u301038\u3011 |"
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "multi-time query",
+      "question": "In which quarter did Home Depot Inc. experience the highest gross margin in 2022?",
+      "gold": "Q3 2022",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.4
+      },
+      "query_secs": 11.9,
+      "answer": "**Answer:** Home\u202fDepot\u202fInc. recorded its highest gross margin in **the third quarter of 2022** (\u2248\u202f34\u202f%).  \n\n*Evidence*  \n- Q1\u202f2022 gross margin: 33.8\u202f%\u30105\u3011  \n- Q2\u202f2022 gross margin: ~33.1\u202f%\u301013\u3011  \n- Q3\u202f2022 gross margin: ~34\u202f%\u301022\u3011  \n- Q4\u202f2022 gross margin: 33.3\u202f%\u301017\u3011\n\nThe Q3 figure is the highest among the 2022 quarters."
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "relative-time query",
+      "question": "In which quarter did Home Depot Inc. record the lowest operating margin before 2021 Q2?",
+      "gold": "Q1 2020",
+      "num_hops": 5,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.4
+      },
+      "query_secs": 11.3,
+      "answer": "**Quarter with the lowest operating margin before 2021\u202fQ2:**  \n\n- **Fiscal\u202f2020\u202fQ1** \u2013 operating margin was **11.6\u202f%**\u301032\u3011.  \n\n(For reference, the next\u2011lowest margins in the period were 13.5\u202f% in FY\u202f2020\u202fQ4\u301033\u3011 and 15.4\u202f% in FY\u202f2021\u202fQ1\u301030\u3011.)"
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "multi-time query",
+      "question": "Which quarter did Home Depot Inc. have the highest operating margin between 2020-q2 and 2021-q4?",
+      "gold": "Q2 2021",
+      "num_hops": 7,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "asserted_period": true,
+        "period_f1": 1.0
+      },
+      "query_secs": 12.3,
+      "answer": "**Quarter with the highest operating margin (2020\u2011Q2\u202fthrough\u202f2021\u2011Q4):** **2021\u202fQ2** \u2013 operating margin of **16.1\u202f%**\u30105\u3011."
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "single-time query",
+      "question": "What were Home Depot Inc's average ticket growth, comparable store sales, gross margin, operating margin, interest expense, effective tax rate, diluted earnings per share, and share repurchases in 2022 Q4?",
+      "gold": "5.8%, negative 0.3%, approximately 33.3%, approximately 13.3%, $408 million, 22.6%, $3.30, and $1.5 billion.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6111
+      },
+      "query_secs": 9.0,
+      "answer": "**Home Depot\u202fInc \u2013 Fiscal\u202f2022\u202fQ4 (the quarter ending\u202f31\u202fDec\u202f2022)**  \n\n| Metric | Q4\u202f2022 Figure |\n|--------|----------------|\n| **Average ticket growth (comp)** | **+5.8\u202f%** \u2013 comp average ticket rose 5.8\u202f% in the quarter\u301030\u3011 |\n| **Comparable store sales** | **\u20110.3\u202f%** \u2013 total company comps were essentially flat at \u20130.3\u202f% for the quarter\u30105\u3011 |\n| **Gross margin** | **33.3\u202f%** \u2013 up 7\u202fbasis points versus the prior year\u30105\u3011 |\n| **Operating margin** | **13.3\u202f%** for the quarter\u30107\u3011 |\n| **Interest expense** | **$408\u202fmillion** (interest and other expense increased by $85\u202fmillion to $408\u202fmillion)\u30107\u3011 |\n| **Effective tax rate** | **22.6\u202f%** for the quarter (23.9\u202f% for the full fiscal year)\u30107\u3011 |\n| **Diluted earnings per share** | **$3.30** for the quarter (up 2.8\u202f% YoY)\u30107\u3011 |\n| **Share repurchases** | "
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "single-time query",
+      "question": "What were Home Depot Inc's dividend increase, average ticket growth, comparable store sales, gross margin, operating margin, effective tax rate, diluted earnings per share, and share repurchases in 2022-Q4?",
+      "gold": "10%, 5.8%, -0.3%, 33.3%, 13.3%, 22.6%, $3.30, and $1.5 billion.",
+      "num_hops": 8,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4828
+      },
+      "query_secs": 13.1,
+      "answer": "**Home Depot\u202fInc \u2013 2022\u202fQ4 Highlights**\n\n- **Dividend increase** \u2013 The Board raised the quarterly dividend by **10\u202f% to\u202f$2.09 per share** (annualized $8.36)\u30101\u3011.  \n- **Average ticket growth** \u2013 Comparable average ticket **rose 5.8\u202f%** in the quarter (inflation from core commodities added about 15\u202fbps)\u301014\u3011.  \n- **Comparable store sales** \u2013 Total\u2011company comparable sales were essentially flat, **down 0.3\u202f%** for Q4\u202f2022\u301012\u3011.  \n- **Gross margin** \u2013 Gross margin was **33.3\u202f%**, a **7\u2011basis\u2011point** increase versus the prior year\u30105\u3011.  \n- **Operating margin** \u2013 Operating margin for the quarter was **approximately 13.3\u202f%**\u301011\u3011.  \n- **Effective tax rate** \u2013 The effective tax rate in Q4\u202f2022 was **22.6\u202f%**\u301011\u3011.  \n- **Diluted earnings per share** \u2013 Diluted EPS for the quarter was **$3.30**\u301011\u3011.  \n- **"
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "multi-time query",
+      "question": "How much did Home Depot Inc. return to shareholders in the form of share repurchases each quarter from 2021 Q4 to 2023 Q2?",
+      "gold": "$4.5 billion, $2.25 billion, $1.5 billion, $1.2 billion, $1.5 billion, $3 billion, and $2 billion.",
+      "num_hops": 7,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.7393
+      },
+      "query_secs": 10.6,
+      "answer": "**Home\u202fDepot\u202fInc. \u2013 Share repurchases per quarter**\n\n| Fiscal quarter | Share\u2011repurchase amount |\n|----------------|--------------------------|\n| 2021\u202fQ4 | **$4.5\u202fbillion** \u2013 \u201creturned \u2026 approximately $15\u202fbillion \u2026 including $4.5\u202fbillion in the fourth quarter\u201d\u301028\u3011 |\n| 2022\u202fQ1 | **$2.25\u202fbillion** \u2013 \u201creturned approximately $2.25\u202fbillion to shareholders in the form of share repurchases\u201d\u301016\u3011 |\n| 2022\u202fQ2 | **$1.5\u202fbillion** \u2013 \u201creturned approximately $1.5\u202fbillion to shareholders in the form of share repurchases\u201d\u301025\u3011 |\n| 2022\u202fQ3 | *No specific figure found in the provided transcripts* |\n| 2022\u202fQ4 | **$1.5\u202fbillion** \u2013 \u201creturned approximately $6.5\u202fbillion \u2026 including $1.5\u202fbillion in the fourth quarter\u201d\u301037\u3011 |\n| 2023\u202fQ1 | **$3\u202fbillion** \u2013 \u201creturned approximately $3\u202fbillion to shareholders in the form "
+    },
+    {
+      "space": "bidu_us",
+      "companies": "BIDU US",
+      "type": "relative-time query",
+      "question": "What was Baidu Inc.'s non-GAAP operating margin for Baidu Core in each quarter before 2021 Q3?",
+      "gold": "22% in 2020 Q1, 34% in 2020 Q2, 40% in 2020 Q3, 35% in 2020 Q4, 25% in 2021 Q1, and 27% in 2021 Q2.",
+      "num_hops": 6,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4286
+      },
+      "query_secs": 46.5,
+      "answer": "**Baidu\u202fInc. \u2013 Baidu\u202fCore non\u2011GAAP operating margin (quarters before\u202f2021\u202fQ3)**  \n\n| Quarter | Non\u2011GAAP operating margin (Baidu\u202fCore) |\n|---------|----------------------------------------|\n| 2020\u202fQ2 | **34\u202f%**\u301015\u3011 |\n| 2020\u202fQ3 | **40\u202f%**\u30105\u3011 |\n| 2021\u202fQ1 | **17\u202f%**\u30104\u3011 |\n| 2021\u202fQ2 | **27\u202f%**\u301020\u3011 |\n\n*The non\u2011GAAP operating margin for Baidu\u202fCore in **2020\u202fQ4** and **2020\u202fQ1** is not provided in the available transcripts.*"
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-Q2 did Home Depot Inc. have the lowest gross margin?",
+      "gold": "Q4 2020",
+      "num_hops": 5,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "asserted_period": false,
+        "period_f1": 0.0
+      },
+      "query_secs": 16.5,
+      "answer": "**Quarter with the lowest gross margin before 2021\u2011Q2:**  \n\n- **2020\u2011Q4** \u2013 Gross margin was **33.6%** (down about 30\u202fbps from the prior year)\u301010\u3011."
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+BIDU US+DXC+WDC",
+      "type": "cross-company",
+      "question": "What was the free cash flow for Baidu Inc, Autodesk Inc, DXC Technology Company, and Western Digital Corporation in 2022 Q2?",
+      "gold": "RMB 5.5 billion, $186 million, $404 million, and $407 million.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.8571
+      },
+      "query_secs": 14.2,
+      "answer": "**Free cash flow for 2022\u202fQ2**\n\n| Company | Free cash flow (2022\u202fQ2) |\n|---------|--------------------------|\n| Baidu Inc. | RMB\u202f5.5\u202fbillion \u2013 see\u202f[4] |\n| Western Digital Corporation | US\u202f$407\u202fmillion \u2013 see\u202f[1] |\n\n*Autodesk Inc.* \u2013 no free\u2011cash\u2011flow figure for its 2022\u202fQ2 earnings call is present in the retrieved material.  \n\n*DXC Technology Company* \u2013 no free\u2011cash\u2011flow figure for its 2022\u202fQ2 earnings call is present in the retrieved material."
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+BIDU US+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "Which company reported the highest free cash flow among EPAM Systems Inc, Autodesk Inc, Baidu Inc, and Western Digital Corporation in 2023 Q1?",
+      "gold": "Baidu Inc.",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "gemini-3.7-flash": true
+      },
+      "query_secs": 10.5,
+      "answer": "**Free cash flow reported for Q1\u202f2023**\n\n| Company | Free cash flow (Q1\u202f2023) | Source |\n|---------|--------------------------|--------|\n| Baidu Inc. | **RMB\u202f4.5\u202fbillion** (\u2248\u202fUS\u202f$\u202f0.63\u202fbillion) | \u30101\u3011 |\n| EPAM Systems Inc. | **US\u202f$79\u202fmillion** | \u301012\u3011 |\n| Autodesk Inc. | *not disclosed in the provided transcripts* | \u2013 |\n| Western Digital Corp. | *not disclosed in the provided transcripts* | \u2013 |\n\n**Which company reported the highest free cash flow?**  \nAmong the companies for which a Q1\u202f2023 figure is available, **Baidu Inc.** reported the highest free cash flow (RMB\u202f4.5\u202fbillion).  \n\n*Note: The Q1\u202f2023 free\u2011cash\u2011flow numbers for Autodesk Inc. and Western Digital Corp. are not present in the retrieved documents, so a definitive comparison with those firms cannot be made.*"
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+BIDU US+DXC+WDC",
+      "type": "cross-company",
+      "question": "What was the free cash flow of Baidu Inc, DXC Technology Company, Western Digital Corporation, and Autodesk Inc in Q2 2022?",
+      "gold": "RMB 5.5 billion, positive territory (specific figure not provided), $407 million, and $186 million.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.5714
+      },
+      "query_secs": 22.6,
+      "answer": "**Free cash flow in Q2\u202f2022**\n\n| Company | Free cash flow (Q2\u202f2022) |\n|---------|--------------------------|\n| Baidu Inc. | **RMB\u202f5.5\u202fbillion**\u30105\u3011 |\n| Western Digital Corporation | **US\u202f$407\u202fmillion**\u301048\u3011 |\n| DXC Technology Company | *figure not found in the provided transcripts* |\n| Autodesk Inc. | *figure not found in the provided transcripts* |\n\nThe data for DXC Technology Company and Autodesk Inc. for Q2\u202f2022 free cash flow are not present in the retrieved earnings\u2011call excerpts."
+    },
+    {
+      "space": "hd_us",
+      "companies": "HD US",
+      "type": "multi-time query",
+      "question": "How much did Home Depot Inc. return to shareholders through share repurchases in each quarter during 2021-Q4, 2022-Q1, and 2022-Q2?",
+      "gold": "$4.5 billion, $2.25 billion, and $1.5 billion.",
+      "num_hops": 3,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6667
+      },
+      "query_secs": 49.0,
+      "answer": "**Home\u202fDepot\u202fInc. \u2013 Share repurchases**\n\n| Fiscal quarter | Share\u2011repurchase amount |\n|----------------|------------------------|\n| 2021\u202fQ4 | **$4.5\u202fbillion**\u301018\u3011 |\n| 2022\u202fQ1 | **$2.25\u202fbillion**\u30103\u3011 |\n| 2022\u202fQ2 | **$1.5\u202fbillion**\u30102\u3011 |\n\nThese figures are taken directly from the earnings\u2011call transcripts for the respective quarters."
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+DXC+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "What was the free cash flow for Western Digital Corporation, DXC Technology Company, Autodesk Inc, and EPAM Systems Inc in 2022 q1?",
+      "gold": "$224 million, $304 million, $316 million, and -$75.1 million.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.8
+      },
+      "query_secs": 10.2,
+      "answer": "**Free cash flow in Q1\u202f2022**\n\n| Company | Free cash flow (Q1\u202f2022) |\n|---------|--------------------------|\n| Western Digital Corporation | **$224\u202fmillion** (positive) \u2013 \u201cfree cash flow was $224\u202fmillion\u201d\u301027\u3011 |\n| DXC Technology Company | **\u2011$304\u202fmillion** (use of cash) \u2013 \u201cFree cash flow was a use of cash of $304\u202fmillion\u201d\u301039\u3011 |\n| Autodesk Inc. | **$316\u202fmillion** (positive) \u2013 \u201cWe delivered healthy free cash flow of $316\u202fmillion during the quarter\u201d\u30105\u3011 |\n| EPAM Systems Inc. | **\u2011$75.1\u202fmillion** (negative) \u2013 \u201cFree cash flow was negative $75.1\u202fmillion\u201d\u30108\u3011 |"
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+BIDU US+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "What was the free cash flow for Autodesk Inc, EPAM Systems Inc, Baidu Inc, and Western Digital Corporation in 2022-q1?",
+      "gold": "$316 million, negative $75.1 million, $175 million, and $224 million.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6154
+      },
+      "query_secs": 9.0,
+      "answer": "**Free cash flow for Q1\u202f2022**\n\n| Company | Free cash flow (Q1\u202f2022) | Source |\n|---------|--------------------------|--------|\n| Autodesk Inc. | **$316\u202fmillion** (positive) | \u30104\u3011 |\n| EPAM Systems Inc. | **\u2011$75.1\u202fmillion** (negative) | \u301016\u3011 |\n| Baidu Inc. | **RMB\u202f1.1\u202fbillion** (\u2248\u202f$175\u202fmillion) \u2013 \u201cexcluding iQIYI\u201d | \u30101\u3011 |\n| Western Digital Corp. | **$224\u202fmillion** (positive) | \u30102\u3011 |\n\nThese figures are taken directly from the earnings\u2011call transcripts for the first quarter of 2022 for each company."
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+BIDU US+DXC+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "Which company had the highest free cash flow among EPAM Systems Inc, Autodesk Inc, Western Digital Corporation, DXC Technology Company, and Baidu Inc in 2022-q3?",
+      "gold": "DXC Technology Company",
+      "num_hops": 5,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "gemini-3.7-flash": false
+      },
+      "query_secs": 26.0,
+      "answer": "**2022\u202fQ3 free\u2011cash\u2011flow figures we could locate**\n\n| Company | Free cash flow (2022\u202fQ3) | Source |\n|---------|--------------------------|--------|\n| **Baidu Inc** | **RMB\u202f6.6\u202fbillion** (total; RMB\u202f6.4\u202fbillion excluding iQIYI) | \u30102\u3011 |\n| Autodesk Inc | **US\u202f$257\u202fmillion** (reported as \u201chealthy free cash flow\u201d) | \u301026\u3011 |\n| EPAM Systems Inc | **US\u202f$234\u202fmillion** (cash\u2011flow from operations $252\u202fmillion; free cash flow $234\u202fmillion) | \u30107\u3011 |\n| Western Digital Corp | *Free\u2011cash\u2011flow figure for 2022\u202fQ3 not provided in the retrieved transcripts* | \u2013 |\n| DXC Technology Co. | *Free\u2011cash\u2011flow figure for 2022\u202fQ3 not provided in the retrieved transcripts* | \u2013 |\n\n**Answer**\n\nAmong the companies for which a 2022\u2011Q3 free\u2011cash\u2011flow number is available, **Baidu Inc** had the highest free cash flow, at **RMB\u202f6"
+    },
+    {
+      "space": "__all__",
+      "companies": "DXC+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "What was the expected earnings per share for Western Digital Corporation, DXC Technology Company, and EPAM Systems Inc in 2022-q2?",
+      "gold": "$1.95 to $2.25, $0.80 to $0.84, and at least $0.73 (GAAP) / at least $1.70 (non-GAAP).",
+      "num_hops": 3,
+      "reasoning_type": "enumeration",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.4211
+      },
+      "query_secs": 28.6,
+      "answer": "**Expected earnings\u2011per\u2011share (EPS) for Q2\u202f2022**\n\n| Company | Expected EPS (Q2\u202f2022) | Source |\n|---------|-----------------------|--------|\n| **EPAM Systems\u202fInc.** | At least **$1.70** (non\u2011GAAP diluted EPS) \u2013 the company said it \u201cexpects \u2026 non\u2011GAAP diluted EPS of at least $1.70\u201d for the quarter. | Graph relationship (EPAM\u202f\u2192\u202freported_earnings\u202f\u2192\u202fat\u202fleast\u202f$1.70\u202f[2022\u201106\u201130]) |\n| **Western Digital\u202fCorporation** | *No expected EPS figure for Q2\u202f2022 is provided in the retrieved material.* The call reports the **actual** non\u2011GAAP EPS of $2.30, but the guidance range that was expected for the quarter is not given. | \u2013 |\n| **DXC Technology\u202fCompany** | *No expected EPS figure for Q2\u202f2022 is provided in the retrieved material.* The excerpts contain guidance for later quarters (e.g., Q3 FY22) but "
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+BIDU US+DXC+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "Which company had the highest free cash flow among Western Digital Corporation, Baidu Inc, EPAM Systems Inc, DXC Technology Company, and Autodesk Inc in 2022-q1?",
+      "gold": "Autodesk Inc",
+      "num_hops": 5,
+      "reasoning_type": "comparison",
+      "correct": true,
+      "votes": {
+        "gemini-3.7-flash": true
+      },
+      "query_secs": 12.2,
+      "answer": "**Autodesk Inc.** had the highest free cash flow in 2022\u202fQ1, reporting about **$316\u202fmillion** of free cash flow\u30105\u3011."
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "What were Petr\u00f3leo Brasileiro S.A. - Petrobras\u2019s dividend increase, adjusted EBITDA, cash flow from operations, shareholder returns, refining operating costs, working capital use, capital expenditures, and total share repurchases and dividends in 2023-Q4?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|out-of-scope",
+      "correct": true,
+      "votes": {
+        "rule": true
+      },
+      "query_secs": 10.6,
+      "answer": "unanswerable"
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+DXC+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "What was the free cash flow of Autodesk Inc, Western Digital Corporation, EPAM Systems Inc, and DXC Technology Company in 2022-q3?",
+      "gold": "$257 million, $148 million, $234 million, and $550 million.",
+      "num_hops": 4,
+      "reasoning_type": "enumeration",
+      "correct": true,
+      "votes": {
+        "numeric_f1": 0.6667
+      },
+      "query_secs": 14.0,
+      "answer": "**Free cash flow in 2022\u2011Q3**\n\n| Company | Free cash flow (2022\u2011Q3) |\n|---------|--------------------------|\n| Autodesk Inc. | **$257\u202fmillion**\u301014\u3011 |\n| Western Digital Corporation | **$148\u202fmillion**\u301019\u3011 |\n| EPAM Systems Inc. | **$234\u202fmillion**\u30109\u3011 |\n| DXC Technology Company | **$550\u202fmillion**\u301039\u3011 |"
+    },
+    {
+      "space": "__all__",
+      "companies": "ADSK US+DXC+EPAM US+WDC",
+      "type": "cross-company",
+      "question": "Which company had the highest free cash flow among Western Digital Corporation, Autodesk Inc, EPAM Systems Inc, and DXC Technology Company in 2022-q1?",
+      "gold": "Autodesk Inc, with a free cash flow of $316 million.",
+      "num_hops": 4,
+      "reasoning_type": "comparison",
+      "correct": false,
+      "votes": {
+        "numeric_f1": 0.3636
+      },
+      "query_secs": 15.1,
+      "answer": "**Autodesk Inc** had the highest free cash flow in\u202f2022\u2011Q1, generating **$316\u202fmillion**.\n\n* Western Digital Corp \u2013 free cash flow\u202f$224\u202fmillion\u301024\u3011  \n* Autodesk Inc \u2013 free cash flow\u202f$316\u202fmillion\u30104\u3011  \n* EPAM Systems Inc \u2013 free cash flow\u202f\u2011$75.1\u202fmillion\u301010\u3011  \n* DXC Technology Co \u2013 free cash flow\u202f\u2011$304\u202fmillion (cash use)\u301041\u3011"
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "Which year did Novonesis A/S have the highest expected growth capital expenditures?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|out-of-scope",
+      "correct": true,
+      "votes": {
+        "rule": true
+      },
+      "query_secs": 8.8,
+      "answer": "unanswerable"
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "What were the operating margins of Home Depot Inc, JD.com, Yum China, Skechers U.S.A., Inc., and Crocs, Inc. in 2018-q1?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|out-of-scope",
+      "correct": true,
+      "votes": {
+        "rule": true
+      },
+      "query_secs": 7.0,
+      "answer": "unanswerable"
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "What were Iron Mountain Incorporated's revenue, EBITDA, organic revenue growth, AFO per Share, year-over-year revenue growth, liquidity, operational performance, and adjusted EBITDA guidance and outlook in 2018-Q2?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|out-of-scope",
+      "correct": true,
+      "votes": {
+        "rule": true
+      },
+      "query_secs": 9.3,
+      "answer": "unanswerable"
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "What was Sirius XM Holdings Inc.'s net revenue retention rate in each quarter from Q2 of 2020 to Q1 of 2022?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|out-of-scope",
+      "correct": true,
+      "votes": {
+        "rule": true
+      },
+      "query_secs": 9.1,
+      "answer": "unanswerable"
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "In which quarter between 2020-q1 and 2021-q3 did DXC Technology Company achieve the highest organic growth rate?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|nonfact",
+      "correct": false,
+      "votes": {
+        "rule": false
+      },
+      "query_secs": 10.3,
+      "answer": "**Quarter with the highest reported organic growth (2020\u2011Q1\u202fthrough\u202f2021\u2011Q3):** **2021\u2011Q3** \u2013 DXC\u2019s organic revenue rose **1.7\u202f% sequentially**\u30102\u3011.  \n\n*Other quarters in the range for which organic\u2011growth numbers are available:*  \n\n- 2021\u2011Q1: organic revenue grew **0.4\u202f%** sequentially\u301033\u3011.  \n- No organic\u2011growth percentages are given for the 2020\u2011Q1, 2020\u2011Q2, or 2020\u2011Q3 quarters in the retrieved material.  \n\nTherefore, among the quarters with reported figures, 2021\u2011Q3 shows the highest organic growth rate."
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "What were Manhattan Associates, Inc.'s occupancy rate, net income, diluted EPS, and free cash flow in 2022-q3?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|out-of-scope",
+      "correct": true,
+      "votes": {
+        "rule": true
+      },
+      "query_secs": 7.0,
+      "answer": "unanswerable"
+    },
+    {
+      "space": "__all__",
+      "companies": "-",
+      "type": "unanswerable",
+      "question": "What were Skechers U.S.A., Inc.'s direct-to-consumer sales growth, China sales growth, effective tax rate, and sales guidance in Q2 2019?",
+      "gold": "unanswerable",
+      "num_hops": 0,
+      "reasoning_type": "unanswerable|out-of-scope",
+      "correct": true,
+      "votes": {
+        "rule": true
+      },
+      "query_secs": 9.0,
+      "answer": "unanswerable"
+    }
+  ]
+}

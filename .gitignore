@@ -247,6 +247,10 @@ evaluation/ectqa/filelist.txt
 !evaluation/ectqa/results_native_g36.json
 !evaluation/ectqa/results_hdfixed_g36.json
 !evaluation/ectqa/results_native_hdfixed.json
+!evaluation/ectqa/results_native_hdfixed_gpt4o.json
+!evaluation/ectqa/results_readers_gemini_3_7_flash.json
+!evaluation/ectqa/results_readers_gemma_4_26b_a4b_it_maas.json
+!evaluation/ectqa/results_readers_gpt_oss_120b.json
 !evaluation/ectqa/results_paired_nolimit.json
 !evaluation/ectqa/results_fig_g36_validity.json
 !evaluation/ectqa/probe_arms.json
