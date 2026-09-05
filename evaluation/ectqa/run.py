@@ -521,6 +521,33 @@ async def main():
             await asyncio.gather(*(index_one(c) for c, _ in ranked))
             print(f"indexing done in {time.time()-started:.0f}s\n", flush=True)
 
+        else:
+            # --skip-index reuses a realm built by an earlier run, and until now
+            # it trusted that realm blindly. It should not: a company whose
+            # indexing failed in that earlier session leaves an empty space, and
+            # every question about it is then asked against nothing. The model
+            # correctly declines, the scorer records a refusal, and the run
+            # reports a number that looks like a system weakness.
+            #
+            # That is exactly what happened. Ten Home Depot questions were scored
+            # against an empty space across several runs, costing roughly ten
+            # points of the headline before anyone noticed.
+            empty = []
+            for code, _qs in ranked:
+                n = await rag.store.client.count_vertices(
+                    "documents", realm=args.realm, space=spaces[code])
+                if not n:
+                    empty.append(f"{code} (space '{spaces[code]}')")
+                else:
+                    print(f"[{code}] {n} documents in '{spaces[code]}'", flush=True)
+            if empty:
+                raise SystemExit(
+                    "Refusing to run: --skip-index was given, but these companies "
+                    "have no documents in realm "
+                    f"{args.realm!r}: {', '.join(empty)}. Re-run without "
+                    "--skip-index, or choose a realm that has them.")
+            print(flush=True)
+
         qsem = asyncio.Semaphore(args.query_concurrency)
 
         async def ask(space, label, q):

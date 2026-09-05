@@ -245,6 +245,8 @@ evaluation/ectqa/filelist.txt
 # answers, votes and the configuration that produced it.
 !evaluation/ectqa/results_asserted_g36.json
 !evaluation/ectqa/results_native_g36.json
+!evaluation/ectqa/results_hdfixed_g36.json
+!evaluation/ectqa/results_native_hdfixed.json
 !evaluation/ectqa/results_paired_nolimit.json
 !evaluation/ectqa/results_fig_g36_validity.json
 !evaluation/ectqa/probe_arms.json
