@@ -1,0 +1,8017 @@
+{
+  "source": "reader_sweep_gpt4_full.json",
+  "judge": "gpt-4o",
+  "protocol": "LongMemEval evaluate_qa.py verbatim; Zep's published arrangement",
+  "summary": {
+    "gpt-4o": {
+      "overall": 0.7134268537074149,
+      "by_type": {
+        "single-session-user": 0.8857142857142857,
+        "multi-session": 0.5413533834586466,
+        "temporal-reasoning": 0.7969924812030075,
+        "single-session-assistant": 0.7454545454545455,
+        "knowledge-update": 0.7948717948717948,
+        "single-session-preference": 0.43333333333333335
+      },
+      "n": 499
+    },
+    "gemini-3.6-flash": {
+      "overall": 0.781563126252505,
+      "by_type": {
+        "single-session-user": 0.9285714285714286,
+        "multi-session": 0.5789473684210527,
+        "temporal-reasoning": 0.9097744360902256,
+        "single-session-assistant": 0.8181818181818182,
+        "knowledge-update": 0.8589743589743589,
+        "single-session-preference": 0.5
+      },
+      "n": 499
+    }
+  },
+  "rows": [
+    {
+      "arm": "gpt-4o",
+      "question_id": "95bcc1c8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "cc06de0d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8979f9ec",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "95bcc1c8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_468eb064",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "15745da0",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "15745da0",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8979f9ec",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_468eb064",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "cc06de0d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_e072b769",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c4f10528",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "21d02d0d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "18bc8abd",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "21d02d0d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_e072b769",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ce6d2d27",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c4f10528",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "18bc8abd",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4fd1909e",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ce6d2d27",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e4e14d04",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e4e14d04",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4fd1909e",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "06878be2",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "06878be2",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f8c5f88b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2d58bcd6",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2d58bcd6",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f8c5f88b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "561fabcd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2c50253f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2c50253f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "eeda8a6d_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "eeda8a6d_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "07741c45",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "07741c45",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "561fabcd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_1d4ab0c9",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7e974930",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_1d4ab0c9",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7e974930",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_68e94287",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_8e165409",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_68e94287",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_8e165409",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5c40ec5b",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4f54b7c9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4f54b7c9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8ebdbe50",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5c40ec5b",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6613b389",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8ebdbe50",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a9f6b44c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6613b389",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a9f6b44c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_fa19884d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0ddfec37_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_fa19884d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0ddfec37_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8cf51dda",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e3038f8c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7f6b06db",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8cf51dda",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7f6b06db",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1f2b8d4f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e3038f8c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "01493427",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1f2b8d4f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_c27434e8_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_59c863d7",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_c27434e8_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_59c863d7",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a1cc6108",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d7c942c3",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d7c942c3",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a1cc6108",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "778164c6",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "778164c6",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "982b5123_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_b0863698",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "982b5123_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_b0863698",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e831120c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "28bcfaac",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e831120c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "28bcfaac",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "06f04340",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1faac195",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1faac195",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "dcfa8644",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "06f04340",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_e414231f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d52b4f67",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "dcfa8644",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "184da446",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "184da446",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7401057b",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5809eb10",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5809eb10",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d52b4f67",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "87f22b4a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_e414231f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7024f17c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "87f22b4a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "01493427",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7024f17c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6e984301",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "51c32626",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "51c32626",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6e984301",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2b8f3739",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2b8f3739",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f4f1d8a4_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f4f1d8a4_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7401057b",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2487a7cb",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "eace081b",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "311778f1",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f9e8c073",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "eace081b",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2487a7cb",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f9e8c073",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c5e8278d",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c5e8278d",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "29f2956b_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e982271f",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "311778f1",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e982271f",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "89941a93",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0f05491a",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0f05491a",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_b4a80587",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_b4a80587",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_f2262a51",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "89941a93",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_f2262a51",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "19b5f2b3",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b01defab",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "aae3761f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "aae3761f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b01defab",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "19b5f2b3",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5025383b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5025383b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c8c3f81d",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_d6585ce9",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "cc5ded98",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c8c3f81d",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "cc5ded98",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "29f2956b_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_d6585ce9",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "88432d0a_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "88432d0a_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1b9b7252",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1b9b7252",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "71a3fd6b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "71a3fd6b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "bb7c3b45",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "bb7c3b45",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_468eb063",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "58bf7951",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b46e15ed",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_468eb063",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b46e15ed",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "58bf7951",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "60472f9c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "60472f9c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c8f1aeed",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "42ec0761",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b6019101",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b6019101",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "42ec0761",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c8f1aeed",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e5ba910e_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6aeb4375_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d3ab962e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d3ab962e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3c1045c8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6ade9755",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c8090214",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3c1045c8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "10e09553",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6ade9755",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "10e09553",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0edc2aef",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6aeb4375_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e5ba910e_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b320f3f8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1903aded",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1903aded",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "60d45044",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5831f84d",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5831f84d",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "60d45044",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c8090214",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b320f3f8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4d6b87c8",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_70e84552",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4d6b87c8",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "9ea5eabc",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1cea1afa",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_70e84552",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "51a45a95",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_1d80365e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "9ea5eabc",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_1d80365e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "195a1a1b",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0edc2aef",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "603deb26",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "603deb26",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "852ce960",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_1916e0ea",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "852ce960",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1cea1afa",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "352ab8bd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "195a1a1b",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e493bb7c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "32260d93",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "51a45a95",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a96c20ee_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e6041065",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_1916e0ea",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ef66a6e5",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "dd2973ad",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ef66a6e5",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6ae235be",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a96c20ee_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e493bb7c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6ae235be",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "dd2973ad",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4bc144e2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "75f70248",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "32260d93",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7527f7e2",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e6041065",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_cd90e484",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "09ba9854_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "09ba9854_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4bc144e2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_76048e76",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_4fc4f797",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2f56ae70",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_4fc4f797",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_cd90e484",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e8a79c70",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c18a7dc8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7527f7e2",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "09ba9854",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2f56ae70",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_76048e76",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "09ba9854",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e8a79c70",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "352ab8bd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "75832dbd",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0bb5a684",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0bb5a684",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6b7dfb22",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1da05512",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c18a7dc8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "69fee5aa",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "eeda8a6d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "69fee5aa",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "eeda8a6d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1da05512",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_fe651585",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "15745da0_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "15745da0_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "80ec1f4f_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "75832dbd",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_fe651585",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_88806d6e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_ab202e7f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_88806d6e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_ab202e7f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2ce6a0f2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3a704032",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_59149c77",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "75f70248",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "bc8a6e93_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "bc8a6e93_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "80ec1f4f_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3a704032",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_5dcc0aab",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "08f4fc43",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "81507db6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "81507db6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_59149c77",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2ce6a0f2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c4a1ceb8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c4a1ceb8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "caf03d32",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "099778bb",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f4f1d8a4",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_731e37d7",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a3332713",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "099778bb",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_731e37d7",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "08f4fc43",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a3332713",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a3838d2b",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1de5cff2",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8752c811",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_f420262d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8752c811",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_5dcc0aab",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "92a0aa75",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "92a0aa75",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "dad224aa",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8cf4d046",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a3838d2b",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "dad224aa",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f4f1d8a4",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6b7dfb22",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_f420262d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8cf4d046",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e56a43b9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e56a43b9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ba61f0b9",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ba61f0b9",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2698e78f_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c9f37c46",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c9f37c46",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "09d032c9",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "09d032c9",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2698e78f_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ceb54acb",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1de5cff2",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c7dc5443",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f685340e",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c7dc5443",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "cc6d1ec1",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "caf03d32",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2312f94c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ceb54acb",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b759caee",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "cc6d1ec1",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "80ec1f4f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_70e84552_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_70e84552_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3e321797",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "af082822",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2312f94c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3e321797",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f685340e",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_4edbafa2",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "19b5f2b3_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "73d42213",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "73d42213",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f0853d11",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6456829e_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "80ec1f4f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f0853d11",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6456829e_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "af082822",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b759caee",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "19b5f2b3_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "60bf93ed_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "60bf93ed_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "031748ae_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_4edbafa2",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7e00a6cb",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "031748ae_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_372c3eed_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_372c3eed_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7e00a6cb",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_e061b84g",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ef9cf60a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ef9cf60a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "bbf86515",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "77eafa52",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "bbf86515",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "77eafa52",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a89d7624",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a89d7624",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_6dc9b45b",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d682f1a2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "031748ae",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "945e3d21",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c7cf7dfd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_e061b84g",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "945e3d21",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_1e4a8aeb",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "031748ae",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "af8d2e46",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "89527b6b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_1e4a8aeb",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "89527b6b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "af8d2e46",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "577d4d32",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "720133ac",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "57f827a0",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "577d4d32",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d6233ab6",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_6dc9b45b",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d6233ab6",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e9327a54",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c7cf7dfd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "86f00804",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "57f827a0",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "65240037",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "720133ac",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "86f00804",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2e6d26dc",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6071bd76",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6071bd76",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "65240037",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "25e5aa4f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2e6d26dc",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d851d5ba",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_f49edff3",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "70b3e69b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d682f1a2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e9327a54",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d851d5ba",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "70b3e69b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c8090214_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "157a136e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c8090214_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2f91af09",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "25e5aa4f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2f91af09",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "118b2229",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "118b2229",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "157a136e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "58470ed2",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_f49edff3",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c14c00dd",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7ca326fa",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2133c1b5",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c14c00dd",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_68e94288",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_213fd887",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_213fd887",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "58470ed2",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_68e94288",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2133c1b5",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3fe836c9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3fe836c9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0977f2af",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4100d0a0",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "edced276",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_a2d1d1f6",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4100d0a0",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0977f2af",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "cf22b7bf",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "bc149d6b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1a1907b4",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "cf22b7bf",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7ca326fa",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "001be529",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1c0ddc50",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "edced276",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b3c15d39",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "001be529",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b3c15d39",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_a2d1d1f6",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0ddfec37",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_5501fe77",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_5501fe77",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0ddfec37",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "88432d0a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "bc149d6b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "37d43f65",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6a27ffc2",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6a27ffc2",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7de946e7",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e61a7584",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1c0ddc50",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "37d43f65",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7de946e7",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2ebe6c90",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e61a7584",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "681a1674",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ec81a493",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c19f7a0b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2ebe6c90",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "681a1674",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "45dc21b6",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c19f7a0b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "45dc21b6",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "86b68151",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1a1907b4",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4c36ccef",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4c36ccef",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d01c6aa8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_4cd9eba1",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "88432d0a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ec81a493",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "46a3abf7",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "46a3abf7",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "89941a94",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "86b68151",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "55241a1f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_4cd9eba1",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "89941a94",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "54026fce",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_e414231e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "54026fce",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2c63a862",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "55241a1f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d01c6aa8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "00ca467f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "00ca467f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3249768e",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3249768e",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2133c1b5_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "61f8c8f8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "41275add",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "41275add",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2133c1b5_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "61f8c8f8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_d12ceb0e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_15e38248",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "60036106",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0a995998",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "60036106",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_15e38248",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a08a253f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_d12ceb0e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a08a253f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a06e4cfe",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "bcbe585f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d23cf73b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f0e564bc",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d23cf73b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0a995998",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3b6f954b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2c63a862",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_9a159967",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_9a159967",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a06e4cfe",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_e414231e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "bcbe585f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3b6f954b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ad7109d1",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ad7109d1",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f0e564bc",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1568498a",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5a7937c8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a2f3aa27",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a2f3aa27",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2311e44b_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1568498a",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b6025781",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2311e44b_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5a7937c8",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b6025781",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "75499fd8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7fce9456",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8a137a7f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7fce9456",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "95228167",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f523d9fe",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8a137a7f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "21436231",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ccb36322",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "21436231",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ccb36322",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6f9b354f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "75499fd8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_af6db32f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "545bd2b5",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "faba32e5",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "faba32e5",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_6ed717ea",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "545bd2b5",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_6ed717ea",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "94f70d80",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "505af2f5",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "38146c39",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6f9b354f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_af6db32f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "94f70d80",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "38146c39",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7a8d0b71",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8a2466db",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7a8d0b71",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a82c026e",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a82c026e",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "36580ce8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "36580ce8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_8279ba03",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "bc8a6e93",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "bc8a6e93",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6456829e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "505af2f5",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_8279ba03",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8e9d538c",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "71017276",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8e9d538c",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "76d63226",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f523d9fe",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_8279ba02",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6456829e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5d3d2817",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "76d63226",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_b5700ca0",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_8279ba02",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "dccbc061",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5d3d2817",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_98f46fc6",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "07b6f563",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "07b6f563",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "58ef2f1c",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "58ef2f1c",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4adc0475",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "71017276",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ba358f49_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_b5700ca0",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1192316e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ba358f49_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1192316e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c4ea545c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4b24c848",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4adc0475",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4b24c848",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "71017277",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c4ea545c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6a1eabeb",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "dccbc061",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6cb6f249",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6cb6f249",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_98f46fc6",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6a1eabeb",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "726462e0",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8a2466db",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "726462e0",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "830ce83f",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "853b0a1d",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "29f2956b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1d4e3b97",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "830ce83f",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1d4e3b97",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "29f2956b",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_d9af6064",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2311e44b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2311e44b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "06db6396",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "853b0a1d",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "06db6396",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "71017277",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0862e8bf",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e47becba",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e47becba",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a96c20ee",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ed4ddc30",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0862e8bf",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6b168ec8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_d9af6064",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a96c20ee",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d6062bb9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6222b6eb",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "affe2881",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ed4ddc30",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6b168ec8",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "95228167",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6222b6eb",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "27016adc",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "9bbe84a2",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "9bbe84a2",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "affe2881",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "27016adc",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_a56e767c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_a56e767c",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d6062bb9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0862e8bf_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "fca70973",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0862e8bf_abs",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0bc8ad93",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a11281a2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a11281a2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "fca70973",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "07741c44",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "07741c44",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_4ef30696",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "370a8ff4",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7ddcf75f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "91b15a6e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "370a8ff4",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f685340e_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0bc8ad93",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7ddcf75f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1d4da289",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d24813b1",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "91b15a6e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "51b23612",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f685340e_abs",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d24813b1",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_4ef30696",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8077ef71",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "51b23612",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8b9d4367",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8077ef71",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1d4da289",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "66f24dbb",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "9ee3ecd6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "66f24dbb",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "efc3f7c2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8c18457d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "cc539528",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "85fa3a3f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "9ee3ecd6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8c18457d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "85fa3a3f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3d86fd0a",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_45189cb4",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3d86fd0a",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_45189cb4",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b0479f84",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "dfde3500",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8b9d4367",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8fb83627",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2ba83207",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_d6585ce8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "efc3f7c2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8fb83627",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2ba83207",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "dfde3500",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_31ff4165",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "9a707b81",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "488d3006",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0e5e2d1a",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_d6585ce8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_a1b77f9c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_31ff4165",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0e5e2d1a",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7405e8b1",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "cc539528",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_a1b77f9c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "488d3006",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "9a707b81",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_59149c78",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b0479f84",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7a0daae1",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "10d9b85a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "10d9b85a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_e061b84f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_e061b84f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_85da3956",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_85da3956",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a3045048",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a3045048",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7a0daae1",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_65aabe59",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_ec93e27f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7405e8b1",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "caf9ead2",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_61e13b3c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_b5700ca9",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "caf9ead2",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_59149c78",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_194be4b3",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_0b2f1d21",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4dfccbf7",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c6853660",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c6853660",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_ec93e27f",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4dfccbf7",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6d550036",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0100672e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5e1b23de",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5e1b23de",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_65aabe59",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2a1811e2",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_0b2f1d21",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_61e13b3c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2a1811e2",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_74aed68e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_b5700ca9",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4baee567",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6e984302",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0100672e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6d550036",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "f35224e0",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "f35224e0",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_483dd43c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_483dd43c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_74aed68e",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "36b9f61e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4baee567",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3fdac837",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2318644b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "bf659f65",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "08e075c7",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3fdac837",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "26bdc477",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_194be4b3",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2318644b",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "bf659f65",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "08e075c7",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7161e7e2",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8464fc84",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b29f3365",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b29f3365",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6e984302",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "26bdc477",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8464fc84",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e66b632c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7abb270c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7abb270c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7161e7e2",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_fe651585_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3ba21379",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e66b632c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3f1e9474",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "36b9f61e",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_fe651585_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "41698283",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_4929293b",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "3f1e9474",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "41698283",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_4929293b",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_f420262c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "edced276_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_78cf46a3",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1a8a66a6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "edced276_abs",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1a8a66a6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "9a707b82",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "9a707b82",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "3ba21379",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_21adecb5",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "982b5123",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "eac54adc",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a40e080f",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2698e78f",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_78cf46a3",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2698e78f",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "eac54adc",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_93159ced",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_21adecb5",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "60bf93ed",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_f420262c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "60bf93ed",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a40e080f",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2788b940",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "993da5e2",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2788b940",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_d84a3211",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ac031881",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "993da5e2",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_93159ced",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "9d25d4e0",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ac031881",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2f8be40d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2f8be40d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "72e3ee87",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_d84a3211",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "72e3ee87",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_7bc6cf22",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a346bb18",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "dc439ea3",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "9d25d4e0",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d905b33f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6aeb4375",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d905b33f",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0e4e4c46",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_7bc6cf22",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "60159905",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "dc439ea3",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0a34ad58",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "60159905",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b5ef892d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_93159ced_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b5ef892d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "db467c8c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "db467c8c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "982b5123",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0e4e4c46",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e25c3b8d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6aeb4375",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a346bb18",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e25c3b8d",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "16c90bf4",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "67e0d0f2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "618f13b2",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_93159ced_abs",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "67e0d0f2",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "618f13b2",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8aef76bc",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_93f6379c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "d596882b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8e91e7d9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "d596882b",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_93f6379c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "50635ada",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8aef76bc",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2bf43736",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "50635ada",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2bf43736",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0a34ad58",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "59524333",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "129d1232",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8e91e7d9",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "16c90bf4",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1e043500",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "59524333",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_0a05b494",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1e043500",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "129d1232",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_fa19884c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "35a27287",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_372c3eed",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_372c3eed",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "8550ddae",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0ea62687",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "37f165cf",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4dfccbf8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "eac54add",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a4996e51",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "37f165cf",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4dfccbf8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "eac54add",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a1eacc2a",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "35a27287",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "8550ddae",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_fa19884c",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_4929293a",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "a1eacc2a",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "fca762bc",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0ea62687",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "fca762bc",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "a4996e51",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2655b836",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b46e15ee",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_4929293a",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_1a1dc16d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0db4c65d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2655b836",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_1a1dc16d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_385a5000",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b46e15ee",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "078150f1",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_8c8961ae",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0db4c65d",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e01b8e2f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_0a05b494",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_e05b82a6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e01b8e2f",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e48988bc",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "078150f1",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_e05b82a6",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_c27434e8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_1e4a8aec",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_18c2b244",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "9aaed6a3",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "9aaed6a3",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_5438fa52",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_18c2b244",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_385a5000",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e48988bc",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "fea54f57",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_d31cdae3",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "fea54f57",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "22d2cb42",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "22d2cb42",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_d31cdae3",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_c27434e8",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "28dc39ac",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c2ac3c61",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "4388e9dd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "28dc39ac",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b86304ba",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c960da58",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b86304ba",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "c2ac3c61",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "4388e9dd",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_5438fa52",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "71315a70",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "2ebe6c92",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "2ebe6c92",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "71315a70",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "1c549ce4",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "1c549ce4",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "7a87bd0c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "c960da58",
+      "type": "single-session-user",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "18dcd5a5",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "7a87bd0c",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "0bc8ad92",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "18dcd5a5",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_1e4a8aec",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "6c49646a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "ba358f49",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_2f584639",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "6c49646a",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "gpt4_2f584639",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "b9cfe692",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "afdc33df",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "5a4f22c0",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "e3fc4d6e",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "5a4f22c0",
+      "type": "knowledge-update",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "ba358f49",
+      "type": "multi-session",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "gpt4_8c8961ae",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "afdc33df",
+      "type": "single-session-preference",
+      "repeat": 0,
+      "label": false,
+      "judge_reply": "No"
+    },
+    {
+      "arm": "gpt-4o",
+      "question_id": "0bc8ad92",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "b9cfe692",
+      "type": "temporal-reasoning",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes"
+    },
+    {
+      "arm": "gemini-3.6-flash",
+      "question_id": "e3fc4d6e",
+      "type": "single-session-assistant",
+      "repeat": 0,
+      "label": true,
+      "judge_reply": "Yes."
+    }
+  ]
+}

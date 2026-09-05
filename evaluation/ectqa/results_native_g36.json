@@ -1,0 +1,669 @@
+{
+  "benchmark": "ECT-QA (native element-wise protocol)",
+  "source_results": "/Users/crajah/Dropbox/_CREATIVE_/_GITHUB_ME/post-graph-rag/evaluation/ectqa/results_asserted_g36.json",
+  "judge": "gemini-3.7-flash",
+  "judge_in_paper": "gpt-4o-mini (unavailable on this router)",
+  "judge_family_excluded": false,
+  "protocol": "element-wise Correct/Refusal/Incorrect, rates sum to 1 per query",
+  "rubric_is_verbatim_from_paper": false,
+  "means": {
+    "correct": 0.6766793036023805,
+    "refusal": 0.17338217338217338,
+    "incorrect": 0.14993852301544608
+  },
+  "by_type": {
+    "single-time query": {
+      "correct": 0.6486497629354772,
+      "refusal": 0.14625850340136054,
+      "incorrect": 0.20509173366316225
+    },
+    "multi-time query": {
+      "correct": 0.6476131395486234,
+      "refusal": 0.24308755760368664,
+      "incorrect": 0.10929930284768995
+    },
+    "relative-time query": {
+      "correct": 0.6666666666666666,
+      "refusal": 0.3333333333333333,
+      "incorrect": 0.0
+    },
+    "cross-company": {
+      "correct": 0.675,
+      "refusal": 0.025,
+      "incorrect": 0.3
+    },
+    "unanswerable": {
+      "correct": 0.875,
+      "refusal": 0.0,
+      "incorrect": 0.125
+    }
+  },
+  "failed": [],
+  "reportable": true,
+  "results": [
+    {
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation\u2019s revenue guidance, operating expenses guidance, actual revenue, and actual operating expenses in the last quarter of 2020?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Western Digital Corporation's gross margin in each quarter of 2022?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Western Digital Corporation's non-GAAP gross margin in each quarter in 2022?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter did Western Digital Corporation achieve the highest non-GAAP gross margin during the period from 2022-Q1 to 2023-Q3?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation's operating expenses guidance, product launch, enterprise and client SSD revenue growth, year-over-year revenue growth, non-GAAP EPS, gaming revenue growth, debt repayment, and cash position in 2020-Q4?",
+      "correct": 0.3,
+      "refusal": 0.0,
+      "incorrect": 0.7,
+      "elements": 10
+    },
+    {
+      "type": "multi-time query",
+      "question": "What were Western Digital Corporation's non-GAAP earnings per share in each quarter of 2021?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "During which quarter (Q4 2021 \u2013 Q4 2022) did Western Digital report its highest non-GAAP gross margin?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation\u2019s enterprise SSD product demand situation, third-quarter revenue, non-GAAP gross margin, and total revenue change in 2023-Q3?",
+      "correct": 0.8,
+      "refusal": 0.0,
+      "incorrect": 0.2,
+      "elements": 5
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Western Digital Corporation\u2019s revenue, total revenue growth, and free cash flow in 2021-Q3?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Western Digital Corporation's non-GAAP gross margin in each quarter from Q4 of 2021 to Q4 of 2022?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 5
+    },
+    {
+      "type": "multi-time query",
+      "question": "During which period did Autodesk Inc. maintain the highest net revenue retention rate range from 2020-Q2 to 2021-Q1?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 2
+    },
+    {
+      "type": "relative-time query",
+      "question": "What was Autodesk Inc.'s net revenue retention rate in each quarter before 2021 Q3?",
+      "correct": 0.5,
+      "refusal": 0.5,
+      "incorrect": 0.0,
+      "elements": 6
+    },
+    {
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-q1 did Autodesk Inc. have the highest billings growth percentage?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter in 2021 did Autodesk Inc. achieve the highest subscription plan revenue growth percentage?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "What records did Autodesk Inc. achieve in each quarter from Q3 2022 to Q3 2023?",
+      "correct": 0.23076923076923078,
+      "refusal": 0.0,
+      "incorrect": 0.7692307692307693,
+      "elements": 13
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Autodesk Inc.'s total deferred revenue in each quarter from 2022 Q3 to 2023 Q2?",
+      "correct": 0.75,
+      "refusal": 0.25,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Autodesk Inc's total deferred revenue at the end of each quarter from 2022-Q4 to 2023-Q3?",
+      "correct": 0.75,
+      "refusal": 0.25,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter did Autodesk Inc achieve the highest subscription revenue growth during the period 2021-Q4 to 2022-Q3?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 2
+    },
+    {
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-Q1 did EPAM Systems Inc. record the highest Non-GAAP income from operations as a percentage of revenue?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Autodesk Inc.\u2019s net revenue retention rate, billings growth, total share repurchase amount, and focus areas for infrastructure investment in Q3 2020?",
+      "correct": 0.42857142857142855,
+      "refusal": 0.5714285714285714,
+      "incorrect": 0.0,
+      "elements": 7
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Autodesk Inc.'s net revenue retention rate in each quarter from Q2 of 2020 to Q1 of 2022?",
+      "correct": 0.75,
+      "refusal": 0.25,
+      "incorrect": 0.0,
+      "elements": 8
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter did EPAM Systems Inc. have the lowest cash flow from operations during the period from early 2020 to mid-2021?",
+      "correct": 0.0,
+      "refusal": 0.0,
+      "incorrect": 1.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "What were EPAM Systems Inc.'s expected excess tax benefits for each quarter from Q2 to Q4 in 2022?",
+      "correct": 0.3333333333333333,
+      "refusal": 0.0,
+      "incorrect": 0.6666666666666666,
+      "elements": 3
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter did EPAM Systems Inc. have the lowest GAAP gross margin from 2021 to mid-2022?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was EPAM Systems Inc.'s GAAP effective tax rate in each quarter of 2022?",
+      "correct": 0.25,
+      "refusal": 0.5,
+      "incorrect": 0.25,
+      "elements": 4
+    },
+    {
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-Q2 did EPAM Systems, Inc. have the highest cash flow from operations?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were EPAM Systems Inc.'s financial services growth, Americas revenue growth, non-GAAP income from operations, and expected excess tax benefits in 2022-Q4?",
+      "correct": 0.75,
+      "refusal": 0.0,
+      "incorrect": 0.25,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter did EPAM Systems Inc. experience the highest growth rate in financial services during the period from 2021 Q4 to 2022 Q2?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were EPAM Systems Inc.\u2019s stock-based compensation expense forecast, non-GAAP income from operations, and utilization rate in 2022-Q4?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 3
+    },
+    {
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's book-to-bill ratio, GBS revenue, cash flow from operations, free cash flow impact, cash position, total debt, and operating lease payments in 2021-Q3?",
+      "correct": 0.7142857142857143,
+      "refusal": 0.0,
+      "incorrect": 0.2857142857142857,
+      "elements": 7
+    },
+    {
+      "type": "single-time query",
+      "question": "What were dxc technology company\u2019s non-GAAP EPS, book-to-bill ratio, revenues, organic revenue decline, adjusted EBIT margin, free cash flow, annual revenue from insurance software, and capital expenditures percentage in 2023-q3?",
+      "correct": 0.875,
+      "refusal": 0.125,
+      "incorrect": 0.0,
+      "elements": 8
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was EPAM Systems Inc.'s GAAP income from operations in each quarter from 2020 Q1 to 2021 Q3?",
+      "correct": 0.42857142857142855,
+      "refusal": 0.2857142857142857,
+      "incorrect": 0.2857142857142857,
+      "elements": 7
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter of 2023 did DXC Technology Company have the smallest decline in organic revenue?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's non-GAAP EPS, book-to-bill ratio, share repurchase plan, organic revenue decline, adjusted EBIT margin, free cash flow, insurance software business annual revenue, and capital expenditures percentage in 2023-Q3?",
+      "correct": 0.875,
+      "refusal": 0.125,
+      "incorrect": 0.0,
+      "elements": 8
+    },
+    {
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's book-to-bill ratio, debt repayment, investment-grade credit profile commitment, non-GAAP diluted earnings per share, GBS revenue, GBS book-to-bill ratio, cash flow from operations, and organic growth progression in 2021-Q4?",
+      "correct": 0.5454545454545454,
+      "refusal": 0.0,
+      "incorrect": 0.45454545454545453,
+      "elements": 11
+    },
+    {
+      "type": "single-time query",
+      "question": "What were DXC Technology Company\u2019s book-to-bill ratio, investment-grade credit commitment, adjusted EBIT margin performance, GBS bookings, revenue guidance, and organic growth progression in 2021-Q4?",
+      "correct": 0.3333333333333333,
+      "refusal": 0.0,
+      "incorrect": 0.6666666666666666,
+      "elements": 6
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was DXC Technology Company's adjusted EBIT margin and EPS in each quarter from Q1 to Q3 of 2023?",
+      "correct": 0.8333333333333334,
+      "refusal": 0.0,
+      "incorrect": 0.16666666666666666,
+      "elements": 6
+    },
+    {
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's revenue, revenue decline, GBS revenue, and cash balance in 2020-Q1?",
+      "correct": 0.75,
+      "refusal": 0.25,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's 2021-Q3 revenue, book-to-bill ratio, GBS revenue, margin improvement, cash flow from operations, free cash flow impact, cash position, and total debt including capitalized leases?",
+      "correct": 0.5,
+      "refusal": 0.0,
+      "incorrect": 0.5,
+      "elements": 8
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Baidu Inc's total revenue, operating margin, net income, non-GAAP net income, and non-GAAP net margin in 2023-Q2?",
+      "correct": 0.4,
+      "refusal": 0.0,
+      "incorrect": 0.6,
+      "elements": 5
+    },
+    {
+      "type": "single-time query",
+      "question": "What were DXC Technology Company's free cash flow generation quality, adjusted EBIT margin, diluted earnings per share, and organic growth in 2023-Q1?",
+      "correct": 0.75,
+      "refusal": 0.0,
+      "incorrect": 0.25,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "During which quarter did Baidu Inc experience the highest non-GAAP operating margin for Baidu Core from 2020 Q4 to 2021 Q3?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter did Baidu Inc. have the highest net income between 2022 and 2023?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "Which quarter did Baidu Inc achieve the highest adjusted EBITDA margin between Q3 2021 and Q1 2022?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Baidu Inc.'s net income attributable to Baidu in each quarter from Q2 2022 to Q1 2023?",
+      "correct": 0.75,
+      "refusal": 0.0,
+      "incorrect": 0.25,
+      "elements": 4
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Baidu Inc's total revenue, net income, non-GAAP net income, and free cash flow in 2023 Q2?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Baidu Inc.'s total revenue, total revenue growth, non-GAAP operating margin, cash and short-term investments, and free cash flow in 2020-Q4?",
+      "correct": 0.6,
+      "refusal": 0.0,
+      "incorrect": 0.4,
+      "elements": 5
+    },
+    {
+      "type": "relative-time query",
+      "question": "Which quarter did Baidu Inc. have the highest free cash flow in its core business before 2021-q1?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Baidu Inc.\u2019s total revenue, operating margin, net income, net margin, and free cash flow in 2023-Q2?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 5
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Home Depot Inc.'s operating margin in each quarter from Q2 2020 to Q1 2021?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "relative-time query",
+      "question": "What was Baidu Inc.'s non-GAAP operating margin for Baidu Core in each quarter before 2021 Q3?",
+      "correct": 0.8333333333333334,
+      "refusal": 0.16666666666666666,
+      "incorrect": 0.0,
+      "elements": 6
+    },
+    {
+      "type": "multi-time query",
+      "question": "What was Home Depot Inc.'s gross margin in each quarter from Q1 to Q3 of 2021?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 3
+    },
+    {
+      "type": "multi-time query",
+      "question": "In which quarter did Home Depot Inc. experience the highest gross margin in 2022?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "relative-time query",
+      "question": "In which quarter did Home Depot Inc. record the lowest operating margin before 2021 Q2?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "multi-time query",
+      "question": "Which quarter did Home Depot Inc. have the highest operating margin between 2020-q2 and 2021-q4?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Home Depot Inc's dividend increase, average ticket growth, comparable store sales, gross margin, operating margin, effective tax rate, diluted earnings per share, and share repurchases in 2022-Q4?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 8
+    },
+    {
+      "type": "multi-time query",
+      "question": "How much did Home Depot Inc. return to shareholders through share repurchases in each quarter during 2021-Q4, 2022-Q1, and 2022-Q2?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 3
+    },
+    {
+      "type": "single-time query",
+      "question": "What were Home Depot Inc's average ticket growth, comparable store sales, gross margin, operating margin, interest expense, effective tax rate, diluted earnings per share, and share repurchases in 2022 Q4?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 8
+    },
+    {
+      "type": "cross-company",
+      "question": "What was the free cash flow for Baidu Inc, Autodesk Inc, DXC Technology Company, and Western Digital Corporation in 2022 Q2?",
+      "correct": 0.5,
+      "refusal": 0.0,
+      "incorrect": 0.5,
+      "elements": 4
+    },
+    {
+      "type": "cross-company",
+      "question": "What was the free cash flow of Baidu Inc, DXC Technology Company, Western Digital Corporation, and Autodesk Inc in Q2 2022?",
+      "correct": 0.5,
+      "refusal": 0.25,
+      "incorrect": 0.25,
+      "elements": 4
+    },
+    {
+      "type": "multi-time query",
+      "question": "How much did Home Depot Inc. return to shareholders in the form of share repurchases each quarter from 2021 Q4 to 2023 Q2?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 7
+    },
+    {
+      "type": "cross-company",
+      "question": "Which company reported the highest free cash flow among EPAM Systems Inc, Autodesk Inc, Baidu Inc, and Western Digital Corporation in 2023 Q1?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "cross-company",
+      "question": "What was the free cash flow for Autodesk Inc, EPAM Systems Inc, Baidu Inc, and Western Digital Corporation in 2022-q1?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "cross-company",
+      "question": "What was the free cash flow for Western Digital Corporation, DXC Technology Company, Autodesk Inc, and EPAM Systems Inc in 2022 q1?",
+      "correct": 0.75,
+      "refusal": 0.0,
+      "incorrect": 0.25,
+      "elements": 4
+    },
+    {
+      "type": "cross-company",
+      "question": "Which company had the highest free cash flow among Western Digital Corporation, Baidu Inc, EPAM Systems Inc, DXC Technology Company, and Autodesk Inc in 2022-q1?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "cross-company",
+      "question": "Which company had the highest free cash flow among EPAM Systems Inc, Autodesk Inc, Western Digital Corporation, DXC Technology Company, and Baidu Inc in 2022-q3?",
+      "correct": 0.0,
+      "refusal": 0.0,
+      "incorrect": 1.0,
+      "elements": 1
+    },
+    {
+      "type": "unanswerable",
+      "question": "What were Petr\u00f3leo Brasileiro S.A. - Petrobras\u2019s dividend increase, adjusted EBITDA, cash flow from operations, shareholder returns, refining operating costs, working capital use, capital expenditures, and total share repurchases and dividends in 2023-Q4?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "unanswerable",
+      "question": "Which year did Novonesis A/S have the highest expected growth capital expenditures?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "cross-company",
+      "question": "What was the expected earnings per share for Western Digital Corporation, DXC Technology Company, and EPAM Systems Inc in 2022-q2?",
+      "correct": 0.0,
+      "refusal": 0.0,
+      "incorrect": 1.0,
+      "elements": 4
+    },
+    {
+      "type": "unanswerable",
+      "question": "What were Iron Mountain Incorporated's revenue, EBITDA, organic revenue growth, AFO per Share, year-over-year revenue growth, liquidity, operational performance, and adjusted EBITDA guidance and outlook in 2018-Q2?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "unanswerable",
+      "question": "What was Sirius XM Holdings Inc.'s net revenue retention rate in each quarter from Q2 of 2020 to Q1 of 2022?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "unanswerable",
+      "question": "What were the operating margins of Home Depot Inc, JD.com, Yum China, Skechers U.S.A., Inc., and Crocs, Inc. in 2018-q1?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "unanswerable",
+      "question": "What were Skechers U.S.A., Inc.'s direct-to-consumer sales growth, China sales growth, effective tax rate, and sales guidance in Q2 2019?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "unanswerable",
+      "question": "What were Manhattan Associates, Inc.'s occupancy rate, net income, diluted EPS, and free cash flow in 2022-q3?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 1
+    },
+    {
+      "type": "unanswerable",
+      "question": "In which quarter between 2020-q1 and 2021-q3 did DXC Technology Company achieve the highest organic growth rate?",
+      "correct": 0.0,
+      "refusal": 0.0,
+      "incorrect": 1.0,
+      "elements": 1
+    },
+    {
+      "type": "cross-company",
+      "question": "Which company had the highest free cash flow among Western Digital Corporation, Autodesk Inc, EPAM Systems Inc, and DXC Technology Company in 2022-q1?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 2
+    },
+    {
+      "type": "cross-company",
+      "question": "What was the free cash flow of Autodesk Inc, Western Digital Corporation, EPAM Systems Inc, and DXC Technology Company in 2022-q3?",
+      "correct": 1.0,
+      "refusal": 0.0,
+      "incorrect": 0.0,
+      "elements": 4
+    },
+    {
+      "type": "relative-time query",
+      "question": "In which quarter before 2021-Q2 did Home Depot Inc. have the lowest gross margin?",
+      "correct": 0.0,
+      "refusal": 1.0,
+      "incorrect": 0.0,
+      "elements": 1
+    }
+  ]
+}

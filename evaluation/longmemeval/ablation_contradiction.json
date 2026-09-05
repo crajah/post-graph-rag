@@ -1,0 +1,326 @@
+{
+  "model": "gemini-3.6-flash",
+  "judge": [
+    "MiniMax-M2.7",
+    "gpt-oss-120b",
+    "DeepSeek-V3.2"
+  ],
+  "merge_strategy": "rrf",
+  "n": 20,
+  "features": {
+    "mmr": false,
+    "mmr_lambda": 0.7,
+    "node_distance": false,
+    "contradiction": true
+  },
+  "accuracy": 0.75,
+  "degraded": [],
+  "degraded_count": 0,
+  "reportable": true,
+  "by_type": {
+    "knowledge-update": 0.75,
+    "temporal-reasoning": 0.75
+  },
+  "results": [
+    {
+      "question_id": "4b24c848",
+      "type": "knowledge-update",
+      "correct": true,
+      "index_secs": 109.5,
+      "query_secs": 9.0,
+      "question": "How many tops have I bought from H&M so far?",
+      "gold": "five",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on the available information, you have bought and currently own a total of **five tops** from H&M so far. \n\nThis total includes three tops that you purchased from H&M's summer collection prior to August 11, 2023. Although you have expressed interest in potentially buying more tops from H&M during an upcoming weekend shopping trip, your current recorded count remains at five."
+    },
+    {
+      "question_id": "gpt4_0a05b494",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 117.6,
+      "query_secs": 42.4,
+      "question": "Who did I meet first, the woman selling jam at the farmer's market or the tourist from Australia?",
+      "gold": "the woman selling jam at the farmer's market",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "You met the **woman selling jam at the farmer's market** first.\n\nBased on your history, you visited the farmer's market on a Saturday morning two weeks prior to May 28, 2023 (around May 13, 2023), where you had a conversation with the jam maker. \n\nIn contrast, you met the Australian tourist on the subway a few days later on Thursday, May 25, 2023, when you helped them navigate the subway map."
+    },
+    {
+      "question_id": "gpt4_2f56ae70",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 187.8,
+      "query_secs": 9.7,
+      "question": "Which streaming service did I start using most recently?",
+      "gold": "Disney+",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on your usage history, the streaming service you started using most recently is **Disney+**. \n\nYou began a free trial for **Disney+** in **April 2023**, which is the most recent start date among your streaming services relative to today's date (May 22, 2023). \n\nFor comparison, you have been using **Apple TV+** for \"a few months,\" while your use of **Netflix**, **Hulu**, and **Amazon Prime** goes back further, having used each of them for the past six months."
+    },
+    {
+      "question_id": "gpt4_1e4a8aeb",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 154.0,
+      "query_secs": 8.8,
+      "question": "How many days passed between the day I attended the gardening workshop and the day I planted the tomato saplings?",
+      "gold": "6 days. 7 days (including the last day) is also acceptable.",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "6 days passed between the day you attended the gardening workshop and the day you planted the tomato saplings.\n\nAccording to the records, you attended the local neighborhood gardening workshop on **April 15, 2023**, where you learned about companion planting and crop rotation. Shortly after, on **April 21, 2023**, you planted 12 new tomato saplings in your garden. \n\nCalculating the difference between April 15, 2023, and April 21, 2023, results in exactly 6 days between the two events."
+    },
+    {
+      "question_id": "gpt4_7bc6cf22",
+      "type": "temporal-reasoning",
+      "correct": false,
+      "index_secs": 96.3,
+      "query_secs": 11.5,
+      "question": "How many days ago did I read the March 15th issue of The New Yorker?",
+      "gold": "12 days ago. 13 days (including the last day) is also acceptable.",
+      "votes": {
+        "MiniMax-M2.7": false,
+        "gpt-oss-120b": false,
+        "DeepSeek-V3.2": false
+      },
+      "answer": "Based on the retrieved context, you read the March 15th issue of *The New Yorker* [1]. \n\nAssuming the issue date of March 15th corresponds to March 15, 2023, the difference between March 15, 2023, and today's date of April 1, 2023, is **17 days**. \n\nPlease note that while the context specifies that you read the March 15th issue, it does not explicitly state the exact calendar date on which you read it [1]. However, relative to March 15, 2023, exactly 17 days have passed."
+    },
+    {
+      "question_id": "gpt4_85da3956",
+      "type": "temporal-reasoning",
+      "correct": false,
+      "index_secs": 152.0,
+      "query_secs": 11.4,
+      "question": "How many weeks ago did I attend the 'Summer Nights' festival at Universal Studios Hollywood?",
+      "gold": "3 weeks ago",
+      "votes": {
+        "MiniMax-M2.7": false,
+        "gpt-oss-120b": false,
+        "DeepSeek-V3.2": false
+      },
+      "answer": "Based on the provided context, there is not enough information to determine the exact date or the specific number of weeks ago that you attended the 'Summer Nights' festival at Universal Studios Hollywood. \n\nThe context confirms that you recently visited Universal Studios Hollywood with your friends Mike and Rachel, where you attended the Summer Nights festival and watched the Nighttime Lights at Hogwarts Castle show. It also mentions that you celebrated your birthday at the Toothsome Chocolate Emporium & Savory Feast Kitchen approximately a month ago, but it does not specify the exact date of your festival visit."
+    },
+    {
+      "question_id": "5e1b23de",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 35.7,
+      "query_secs": 7.5,
+      "question": "How many months ago did I attend the photography workshop?",
+      "gold": 3,
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "You attended the 3-day photography workshop on November 1, 2023 [1]. \n\nCounting back from today's date of February 1, 2024, you attended the workshop exactly 3 months ago."
+    },
+    {
+      "question_id": "07741c45",
+      "type": "knowledge-update",
+      "correct": false,
+      "index_secs": 114.6,
+      "query_secs": 14.8,
+      "question": "Where do I currently keep my old sneakers?",
+      "gold": "in a shoe rack in my closet",
+      "votes": {
+        "MiniMax-M2.7": false,
+        "gpt-oss-120b": false,
+        "DeepSeek-V3.2": false
+      },
+      "answer": "Based on the retrieved context, you keep your old sneakers stored **under your bed**. \n\nAdditionally, the context indicates that you keep old sneakers on a **shoe rack inside your closet**, where they are taking up space."
+    },
+    {
+      "question_id": "gpt4_f420262d",
+      "type": "temporal-reasoning",
+      "correct": false,
+      "index_secs": 583.5,
+      "query_secs": 10.5,
+      "question": "What was the airline that I flied with on Valentine's day?",
+      "gold": "American Airlines",
+      "votes": {
+        "MiniMax-M2.7": false,
+        "gpt-oss-120b": false,
+        "DeepSeek-V3.2": false
+      },
+      "answer": "Based on the provided context, there is no record of a flight taken on Valentine's Day (February 14th). \n\nThe context includes details about other trips\u2014such as a flight on American Airlines from New York to Los Angeles around mid-February (February 10th and 20th), a flight from Boston to Atlanta on January 15, 2023, and upcoming plans for March 2023\u2014but it does not specify an airline or flight for February 14th."
+    },
+    {
+      "question_id": "gpt4_c27434e8",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 145.2,
+      "query_secs": 14.9,
+      "question": "Which project did I start first, the Ferrari model or the Japanese Zero fighter plane model?",
+      "gold": "Japanese Zero fighter plane model",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on your project timeline, you started the **1/48 scale Japanese Zero fighter plane model** first.\n\nYou began building the Japanese Zero fighter plane model about a month before May 24, 2023 (in April 2023). In contrast, you started building the Ferrari 288 GTO model later, approximately three weeks prior to May 24, 2023 (on April 30, 2023)."
+    },
+    {
+      "question_id": "gpt4_2d58bcd6",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 129.5,
+      "query_secs": 8.9,
+      "question": "Which book did I finish reading first, 'The Hate U Give' or 'The Nightingale'?",
+      "gold": "'The Hate U Give'",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on your reading history, you finished reading **\"The Hate U Give\"** first. \n\nYou completed \"The Hate U Give\" a few days before your book club meeting, which took place approximately two weeks prior to May 22, 2023 (around early May 2023). \n\nIn contrast, you finished reading \"The Nightingale\" more recently, over the weekend immediately preceding May 22, 2023."
+    },
+    {
+      "question_id": "50635ada",
+      "type": "knowledge-update",
+      "correct": true,
+      "index_secs": 93.9,
+      "query_secs": 7.7,
+      "question": "What was my previous frequent flyer status on United Airlines before I got the current status?",
+      "gold": "Premier Silver",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on your account information, your previous frequent flyer status on United Airlines was **Premier Silver**. You became eligible for Premier Silver status after reaching 20,000 miles in the United Airlines MileagePlus program.\n\nRecently, you advanced to your current frequent flyer status, which is **Premier Gold**."
+    },
+    {
+      "question_id": "9a707b82",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 274.9,
+      "query_secs": 16.7,
+      "question": "I mentioned cooking something for my friend a couple of days ago. What was it?",
+      "gold": "a chocolate cake",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on your recent activity, you mentioned baking a **chocolate cake** for your friend. \n\nSpecifically, you made a homemade chocolate cake using espresso powder to bring as a treat for your friend's birthday party, which took place over the weekend of April 2\u20133, 2022."
+    },
+    {
+      "question_id": "gpt4_7f6b06db",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 237.9,
+      "query_secs": 11.7,
+      "question": "What is the order of the three trips I took in the past three months, from earliest to latest?",
+      "gold": "I went on a day hike to Muir Woods National Monument with my family, then I went on a road trip with friends to Big Sur and Monterey, and finally I started my solo camping trip to Yosemite National Park.",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on your past travel history, the order of the three trips you took in the past three months, from earliest to latest, is as follows:\n\n1. **Day Hike to Muir Woods National Monument**: The earliest of the three trips was a day hike you took with your family to Muir Woods National Monument on March 10, 2023, during which you hiked the Dipsea Trail [1].\n\n2. **Road Trip to Big Sur and Monterey**: Next was your coastal road trip with friends along Highway 1 to Big Sur and Monterey, staying at an Airbnb in Pacific Grove and visiting places like Cannery Row and the Monterey Bay Aquarium. You returned from this trip on April 20, 2023 [1, 2].\n\n3. **Solo Camping Trip to Yosemite National Park**: The most recent trip was your solo camping trip to Yosemite National Park, which you completed recently prior to June 1, 2023 [1, 3]."
+    },
+    {
+      "question_id": "gpt4_b5700ca0",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 38.3,
+      "query_secs": 7.4,
+      "question": "Where did I attend the religious activity last week?",
+      "gold": "the Episcopal Church",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "You attended the religious activity last week at the **Episcopal Church** [1]. \n\nSpecifically, you attended the Maundy Thursday service held at the church on April 6, 2023 [1]."
+    },
+    {
+      "question_id": "gpt4_c27434e8_abs",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 129.0,
+      "query_secs": 6.9,
+      "question": "Which project did I start first, the Ferrari model or the Porsche 991 Turbo S model?",
+      "gold": "The information provided is not enough. You did not mention starting the Porsche 991 Turbo S model.",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on the provided context, you started building the **Ferrari 288 GTO model** approximately three weeks prior to May 26, 2023 (around early May 2023). \n\nHowever, the retrieved context does not contain any information regarding a **Porsche 991 Turbo S model**. Therefore, it is not possible to determine which project you started first based on the available information."
+    },
+    {
+      "question_id": "6613b389",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 138.2,
+      "query_secs": 11.6,
+      "question": "How many months before my anniversary did Rachel get engaged?",
+      "gold": "2",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Rachel got engaged approximately **2 months** before your upcoming wedding anniversary. \n\nBased on the provided facts, Rachel got engaged on **May 15, 2023**, and your wedding anniversary is on **July 22, 2023**. \n\nThe exact span of time between May 15, 2023, and July 22, 2023, is 2 months and 7 days (68 days), placing her engagement just over two months prior to your anniversary."
+    },
+    {
+      "question_id": "2ebe6c90",
+      "type": "temporal-reasoning",
+      "correct": false,
+      "index_secs": 147.1,
+      "query_secs": 10.0,
+      "question": "How many days did it take me to finish 'The Nightingale' by Kristin Hannah?",
+      "gold": "21 days. 22 days (including the last day) is also acceptable.",
+      "votes": {
+        "MiniMax-M2.7": false,
+        "gpt-oss-120b": false,
+        "DeepSeek-V3.2": false
+      },
+      "answer": "Based on the provided context, you completed reading *The Nightingale* on January 31, 2023. \n\nHowever, the context only mentions that you started reading the book \"on the day of the conversation\" without providing the specific date of that conversation. Because the start date is not specified in the retrieved information, it is not possible to calculate the exact number of days it took you to finish the book."
+    },
+    {
+      "question_id": "f685340e_abs",
+      "type": "knowledge-update",
+      "correct": true,
+      "index_secs": 171.8,
+      "query_secs": 7.5,
+      "question": "How often do I play table tennis with my friends at the local park?",
+      "gold": "The information provided is not enough. You mentioned playing tennis but not table tennis.",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on the provided context, there is no mention of you playing **table tennis** (ping pong). \n\nThe context only contains details regarding **tennis**. Specifically, it indicates that you play regular tennis with your friends at the local park every other week."
+    },
+    {
+      "question_id": "gpt4_2c50253f",
+      "type": "temporal-reasoning",
+      "correct": true,
+      "index_secs": 285.5,
+      "query_secs": 7.9,
+      "question": "What time do I wake up on Tuesdays and Thursdays?",
+      "gold": "6:45 AM",
+      "votes": {
+        "MiniMax-M2.7": true,
+        "gpt-oss-120b": true,
+        "DeepSeek-V3.2": true
+      },
+      "answer": "Based on the retrieved context, your current standard wake-up time is 7:00 AM (a change from your previous wake-up time of 8:30 AM). \n\nOn Tuesdays and Thursdays, you wake up 15 minutes earlier than your normal time in order to meditate and practice yoga. Therefore, on Tuesdays and Thursdays, you wake up at **6:45 AM**."
+    }
+  ]
+}

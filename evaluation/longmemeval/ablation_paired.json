@@ -1,0 +1,1219 @@
+{
+  "model": "gemini-3.6-flash",
+  "judges": [
+    "MiniMax-M2.7",
+    "gpt-oss-120b",
+    "DeepSeek-V3.2"
+  ],
+  "repeats": 3,
+  "variants": {
+    "baseline": {
+      "mmr_enabled": false,
+      "node_distance_rerank": false
+    },
+    "mmr": {
+      "mmr_enabled": true,
+      "node_distance_rerank": false
+    },
+    "nodedistance": {
+      "mmr_enabled": false,
+      "node_distance_rerank": true
+    },
+    "both": {
+      "mmr_enabled": true,
+      "node_distance_rerank": true
+    }
+  },
+  "mmr_lambda": 0.7,
+  "means": {
+    "baseline": 0.6,
+    "mmr": 0.65,
+    "nodedistance": 0.7,
+    "both": 0.65
+  },
+  "degraded": [],
+  "degraded_count": 0,
+  "reportable": true,
+  "instances": [
+    {
+      "question_id": "gpt4_1e4a8aeb",
+      "type": "temporal-reasoning",
+      "gold": "6 days. 7 days (including the last day) is also acceptable.",
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, the exact date you attended the gardening workshop is not mentioned, although it is documented that you planted the 12 tomato saplings on April 21, 2023. \n\nBecause the specific date of the gardening workshop is missing from the retrieved information, it is not possible to calculate the exact number of days that passed between attending the workshop and planting the t",
+            "Based on the provided context, the exact date you attended the gardening workshop is not mentioned, although it is documented that you planted the 12 tomato saplings on April 21, 2023. \n\nBecause the specific date of the gardening workshop is missing from the retrieved information, it is not possible to calculate the exact number of days that passed between attending the workshop and planting the t",
+            "Based on the provided context, the exact date you attended the gardening workshop is not mentioned, although it is documented that you planted the 12 tomato saplings on April 21, 2023. \n\nBecause the specific date of the gardening workshop is missing from the retrieved information, it is not possible to calculate the exact number of days that passed between attending the workshop and planting the t"
+          ]
+        },
+        "mmr": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, the exact date you attended the gardening workshop is not provided. While the records indicate that you planted the 12 tomato saplings on April 21, 2023, there is no specific date associated with your attendance at the gardening workshop. \n\nBecause the workshop date is missing from the available information, it is not possible to calculate the number of days that pa",
+            "Based on the retrieved context, the exact date you attended the gardening workshop is not provided. While the records indicate that you planted the 12 tomato saplings on April 21, 2023, there is no specific date associated with your attendance at the gardening workshop. \n\nBecause the workshop date is missing from the available information, it is not possible to calculate the number of days that pa",
+            "Based on the provided context, you planted 12 tomato saplings on **April 21, 2023**. \n\nHowever, the retrieved context does not contain the specific date on which you attended the local gardening workshop on companion planting and crop rotation. \n\nBecause the exact date of the workshop is missing from the information provided, it is not possible to calculate the number of days that passed between a"
+          ]
+        },
+        "nodedistance": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, the exact date on which you attended the gardening workshop is not specified. \n\nWhile the context confirms that you planted twelve tomato saplings on April 21, 2023, it does not provide the date for the local gardening workshop on companion planting and crop rotation. Because the workshop date is missing, it is not possible to calculate the exact number of days that",
+            "Based on the retrieved context, the exact date on which you attended the gardening workshop is not specified. \n\nWhile the context confirms that you planted twelve tomato saplings on April 21, 2023, it does not provide the date for the local gardening workshop on companion planting and crop rotation. Because the workshop date is missing, it is not possible to calculate the exact number of days that",
+            "Based on the retrieved context, the exact date on which you attended the gardening workshop is not specified. \n\nWhile the context confirms that you planted twelve tomato saplings on April 21, 2023, it does not provide the date for the local gardening workshop on companion planting and crop rotation. Because the workshop date is missing, it is not possible to calculate the exact number of days that"
+          ]
+        },
+        "both": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, you planted 12 tomato saplings on **April 21, 2023**. \n\nHowever, the retrieved context does not contain the specific date on which you attended the local gardening workshop on companion planting and crop rotation. \n\nBecause the exact date of the workshop is missing from the information provided, it is not possible to calculate the number of days that passed between a",
+            "Based on the provided context, you planted 12 tomato saplings on **April 21, 2023**. \n\nHowever, the retrieved context does not contain the specific date on which you attended the local gardening workshop on companion planting and crop rotation. \n\nBecause the exact date of the workshop is missing from the information provided, it is not possible to calculate the number of days that passed between a",
+            "Based on the provided context, you planted 12 tomato saplings on **April 21, 2023**. \n\nHowever, the retrieved context does not contain the specific date on which you attended the local gardening workshop on companion planting and crop rotation. \n\nBecause the exact date of the workshop is missing from the information provided, it is not possible to calculate the number of days that passed between a"
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_0a05b494",
+      "type": "temporal-reasoning",
+      "gold": "the woman selling jam at the farmer's market",
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to definitively determine whether you met the woman selling jam at the farmer's market or the Australian tourist first. \n\nThe context specifies that you visited the farmer's market and spoke with the jam maker on Saturday morning, May 13, 2023. \n\nHowever, while the context notes that you helped a lost Australian tourist navigate a subway map on you",
+            "Based on the provided context, it is not possible to definitively determine whether you met the woman selling jam at the farmer's market or the Australian tourist first. \n\nThe context specifies that you visited the farmer's market and spoke with the jam maker on Saturday morning, May 13, 2023. \n\nHowever, while the context notes that you helped a lost Australian tourist navigate a subway map on you",
+            "Based on the provided context, it is not possible to definitively determine whether you met the woman selling jam at the farmer's market or the Australian tourist first. \n\nThe context specifies that you visited the farmer's market and spoke with the jam maker on Saturday morning, May 13, 2023. \n\nHowever, while the context notes that you helped a lost Australian tourist navigate a subway map on you"
+          ]
+        },
+        "mmr": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to determine whether you met the woman selling jam at the farmer's market or the Australian tourist first, because there is no date specified for your interaction with the tourist.\n\nAccording to the records, you spoke with the jam maker at the farmer's market on Saturday morning, **May 13, 2023**. \n\nWhile the records note that you helped a lost Aus",
+            "Based on the provided context, it is not possible to determine whether you met the woman selling jam at the farmer's market or the Australian tourist first, because there is no date specified for your interaction with the tourist.\n\nAccording to the records, you spoke with the jam maker at the farmer's market on Saturday morning, **May 13, 2023**. \n\nWhile the records note that you helped a lost Aus",
+            "Based on the provided context, it is not possible to determine whether you met the woman selling jam at the farmer's market or the Australian tourist first, because there is no date specified for your interaction with the tourist.\n\nAccording to the records, you spoke with the jam maker at the farmer's market on Saturday morning, **May 13, 2023**. \n\nWhile the records note that you helped a lost Aus"
+          ]
+        },
+        "nodedistance": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, you met the jam maker at the farmer's market on Saturday morning, **May 13, 2023**. \n\nHowever, while the context notes that you helped a lost Australian tourist navigate the subway map during your commute to work, it does not specify the date or timeframe for when this encounter occurred. \n\nBecause the exact date of your interaction with the Australian tourist is mi",
+            "Based on the retrieved context, you met the jam maker at the farmer's market on Saturday morning, **May 13, 2023**. \n\nHowever, while the context notes that you helped a lost Australian tourist navigate the subway map during your commute to work, it does not specify the date or timeframe for when this encounter occurred. \n\nBecause the exact date of your interaction with the Australian tourist is mi",
+            "Based on the retrieved context, you met the jam maker at the farmer's market on Saturday morning, **May 13, 2023**. \n\nHowever, while the context notes that you helped a lost Australian tourist navigate the subway map during your commute to work, it does not specify the date or timeframe for when this encounter occurred. \n\nBecause the exact date of your interaction with the Australian tourist is mi"
+          ]
+        },
+        "both": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to definitively determine whether you met the woman selling jam at the farmer's market or the Australian tourist first, as the exact date for your interaction with the Australian tourist is not specified. \n\nAccording to the retrieved information, you visited the farmer's market and spoke with the jam maker on Saturday morning, **May 13, 2023**. Dur",
+            "Based on the provided context, it is not possible to definitively determine whether you met the woman selling jam at the farmer's market or the Australian tourist first, as the exact date for your interaction with the Australian tourist is not specified. \n\nAccording to the retrieved information, you visited the farmer's market and spoke with the jam maker on Saturday morning, **May 13, 2023**. Dur",
+            "Based on the provided context, it is not possible to definitively determine whether you met the woman selling jam at the farmer's market or the Australian tourist first, as the exact date for your interaction with the Australian tourist is not specified. \n\nAccording to the retrieved information, you visited the farmer's market and spoke with the jam maker on Saturday morning, **May 13, 2023**. Dur"
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_7bc6cf22",
+      "type": "temporal-reasoning",
+      "gold": "12 days ago. 13 days (including the last day) is also acceptable.",
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to determine how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the context mentions that you read the March 15th issue covering climate change, it does not specify the exact date on which you actually read it. Without the date of when the reading took place, the exact number of days elapsed cannot be calculated.",
+            "Based on the provided context, it is not possible to determine how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the context mentions that you read the March 15th issue covering climate change, it does not specify the exact date on which you actually read it. Without the date of when the reading took place, the exact number of days elapsed cannot be calculated.",
+            "Based on the provided context, it is not possible to determine how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the context mentions that you read the March 15th issue covering climate change, it does not specify the exact date on which you actually read it. Without the date of when the reading took place, the exact number of days elapsed cannot be calculated."
+          ]
+        },
+        "mmr": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to calculate how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the records confirm that you read the March 15th issue focused on climate change, they do not specify the exact date on which you actually read it. Without knowing the specific reading date, the number of days between that event and today (2023-04-01) cannot b",
+            "Based on the provided context, it is not possible to calculate how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the records confirm that you read the March 15th issue focused on climate change, they do not specify the exact date on which you actually read it. Without knowing the specific reading date, the number of days between that event and today (2023-04-01) cannot b",
+            "Based on the provided context, it is not possible to calculate how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the records confirm that you read the March 15th issue focused on climate change, they do not specify the exact date on which you actually read it. Without knowing the specific reading date, the number of days between that event and today (2023-04-01) cannot b"
+          ]
+        },
+        "nodedistance": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to determine how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the context mentions that you read the March 15th issue covering climate change, it does not specify the exact date on which you actually read it. Without the date of when the reading took place, the exact number of days elapsed cannot be calculated.",
+            "Based on the provided context, it is not possible to determine how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the context mentions that you read the March 15th issue covering climate change, it does not specify the exact date on which you actually read it. Without the date of when the reading took place, the exact number of days elapsed cannot be calculated.",
+            "Based on the provided context, it is not possible to determine how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the context mentions that you read the March 15th issue covering climate change, it does not specify the exact date on which you actually read it. Without the date of when the reading took place, the exact number of days elapsed cannot be calculated."
+          ]
+        },
+        "both": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to calculate how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the records confirm that you read the March 15th issue focused on climate change, they do not specify the exact date on which you actually read it. Without knowing the specific reading date, the number of days between that event and today (2023-04-01) cannot b",
+            "Based on the provided context, it is not possible to calculate how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the records confirm that you read the March 15th issue focused on climate change, they do not specify the exact date on which you actually read it. Without knowing the specific reading date, the number of days between that event and today (2023-04-01) cannot b",
+            "Based on the provided context, it is not possible to calculate how many days ago you read the March 15th issue of *The New Yorker*. \n\nWhile the records confirm that you read the March 15th issue focused on climate change, they do not specify the exact date on which you actually read it. Without knowing the specific reading date, the number of days between that event and today (2023-04-01) cannot b"
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "5e1b23de",
+      "type": "temporal-reasoning",
+      "gold": 3,
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m"
+          ]
+        },
+        "mmr": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m"
+          ]
+        },
+        "nodedistance": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m"
+          ]
+        },
+        "both": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m",
+            "Based on the provided context, there is no information regarding the specific date or timestamp of when you attended the photography workshop. The retrieved records only confirm that you attended a 3-day photography workshop in a nearby city, but they do not mention when this event took place.\n\nBecause the date of the workshop is missing from the context, it is not possible to calculate how many m"
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "4b24c848",
+      "type": "knowledge-update",
+      "gold": "five",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided information, you currently own a total of **5 tops** from H&M that you have already acquired. The context specifically notes a purchase of 3 tops from H&M as part of your total collection of 5.\n\nAdditionally, you are really loving H&M's summer collection and are considering purchasing even more tops from H&M during your upcoming weekend trip to the mall.",
+            "Based on your records, you currently own a total of **5 tops** from H&M that you have acquired so far. \n\nYour recent activity specifically mentions purchasing 3 of these tops from H&M, and you have noted that you are considering buying additional tops from their collection over the coming weekend.",
+            "Based on your records, you currently own a total of **5 tops** from H&M that you have acquired so far. \n\nYour recent activity specifically mentions purchasing 3 of these tops from H&M, and you have noted that you are considering buying additional tops from their collection over the coming weekend."
+          ]
+        },
+        "mmr": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on your recorded history, you have purchased and acquired a total of **8 tops** from H&M so far. \n\nSpecifically, the records show that you already owned/acquired 5 tops from H&M, and you recently purchased an additional 3 tops from their collection. \n\nAdditionally, your notes mention that you are really loving H&M's summer collection and are planning to visit the mall over the weekend to loo",
+            "Based on your recorded history, you have purchased and acquired a total of **8 tops** from H&M so far. \n\nSpecifically, the records show that you already owned/acquired 5 tops from H&M, and you recently purchased an additional 3 tops from their collection. \n\nAdditionally, your notes mention that you are really loving H&M's summer collection and are planning to visit the mall over the weekend to loo",
+            "Based on your recorded history, you have purchased and acquired a total of **8 tops** from H&M so far. \n\nSpecifically, the records show that you already owned/acquired 5 tops from H&M, and you recently purchased an additional 3 tops from their collection. \n\nAdditionally, your notes mention that you are really loving H&M's summer collection and are planning to visit the mall over the weekend to loo"
+          ]
+        },
+        "nodedistance": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, you have purchased **3 tops** from H&M and mention having already acquired/owned **5 tops** from H&M. \n\nDepending on whether the 3 recent tops are counted separately from your existing collection, you have explicitly bought 3 tops from H&M and own a total of 5 tops from the store. Additionally, you are considering purchasing more tops from H&M over the weekend as yo",
+            "Based on the retrieved context, you have purchased **3 tops** from H&M and mention having already acquired/owned **5 tops** from H&M. \n\nDepending on whether the 3 recent tops are counted separately from your existing collection, you have explicitly bought 3 tops from H&M and own a total of 5 tops from the store. Additionally, you are considering purchasing more tops from H&M over the weekend as yo",
+            "Based on the retrieved context, you have purchased **3 tops** from H&M and mention having already acquired/owned **5 tops** from H&M. \n\nDepending on whether the 3 recent tops are counted separately from your existing collection, you have explicitly bought 3 tops from H&M and own a total of 5 tops from the store. Additionally, you are considering purchasing more tops from H&M over the weekend as yo"
+          ]
+        },
+        "both": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on your records, you have bought a total of **8 tops** from H&M so far. \n\nSpecifically, the context indicates that you previously acquired 5 H&M tops and subsequently purchased 3 more. You have also expressed interest in their summer collection and are planning to look for additional tops from H&M during an upcoming weekend trip to the mall.",
+            "Based on your records, you have bought a total of **8 tops** from H&M so far. \n\nSpecifically, the context indicates that you previously acquired 5 H&M tops and subsequently purchased 3 more. You have also expressed interest in their summer collection and are planning to look for additional tops from H&M during an upcoming weekend trip to the mall.",
+            "Based on your records, you have bought a total of **8 tops** from H&M so far. \n\nSpecifically, the context indicates that you previously acquired 5 H&M tops and subsequently purchased 3 more. You have also expressed interest in their summer collection and are planning to look for additional tops from H&M during an upcoming weekend trip to the mall."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_85da3956",
+      "type": "temporal-reasoning",
+      "gold": "3 weeks ago",
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, there is no explicit date provided for when you attended the \"Summer Nights\" festival at Universal Studios Hollywood. \n\nThe context does reference a date of July 15, 2023, in relation to your trip to Universal Studios Hollywood and a birthday dinner at Toothsome Chocolate Emporium & Savory Feast Kitchen (which took place about a month prior to July 15, 2023) [1]. \n\n",
+            "Based on the retrieved context, there is no specific date mentioned for when you attended the 'Summer Nights' festival at Universal Studios Hollywood. \n\nWhile the records confirm that you attended the event, watched the 'Nighttime Lights at Hogwarts Castle' show, and visited with your friends Rachel and Mike, the exact date of this visit is not provided in the context. Consequently, it is not poss",
+            "Based on the retrieved context, there is no specific date mentioned for when you attended the 'Summer Nights' festival at Universal Studios Hollywood. \n\nWhile the records confirm that you attended the event, watched the 'Nighttime Lights at Hogwarts Castle' show, and visited with your friends Rachel and Mike, the exact date of this visit is not provided in the context. Consequently, it is not poss"
+          ]
+        },
+        "mmr": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, there is no specific date provided for when you attended the 'Summer Nights' festival at Universal Studios Hollywood. \n\nWhile the context mentions that you attended the festival with your friends Rachel and Mike, watched the Nighttime Lights at Hogwarts Castle show, and celebrated a birthday dinner about a month prior to July 15, 2023, it does not contain the exact ",
+            "Based on the retrieved context, there is no specific date provided for when you attended the 'Summer Nights' festival at Universal Studios Hollywood. \n\nWhile the context mentions that you attended the festival with your friends Rachel and Mike, watched the Nighttime Lights at Hogwarts Castle show, and celebrated a birthday dinner about a month prior to July 15, 2023, it does not contain the exact ",
+            "Based on the retrieved context, there is no specific date provided for when you attended the 'Summer Nights' festival at Universal Studios Hollywood. \n\nWhile the context mentions that you attended the festival with your friends Rachel and Mike, watched the Nighttime Lights at Hogwarts Castle show, and celebrated a birthday dinner about a month prior to July 15, 2023, it does not contain the exact "
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context, you attended the 'Summer Nights' festival at Universal Studios Hollywood on **July 15, 2023** [1]. \n\nSince today is August 5, 2023, exactly 21 days have passed, which means you attended the festival **3 weeks ago**.",
+            "Based on the retrieved context, you attended the 'Summer Nights' festival at Universal Studios Hollywood on **July 15, 2023** [1]. \n\nSince today is August 5, 2023, exactly 21 days have passed, which means you attended the festival **3 weeks ago**.",
+            "Based on the retrieved context, you attended the 'Summer Nights' festival at Universal Studios Hollywood on **July 15, 2023** [1]. \n\nSince today is August 5, 2023, exactly 21 days have passed, which means you attended the festival **3 weeks ago**."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context, your visit to Universal Studios Hollywood and attendance at the 'Summer Nights' festival occurred on **July 15, 2023** [1]. \n\nGiven that today is **August 5, 2023**, exactly 21 days (or **3 weeks**) have passed since July 15, 2023. Therefore, you attended the 'Summer Nights' festival **3 weeks ago**.",
+            "Based on the retrieved context, your visit to Universal Studios Hollywood and attendance at the 'Summer Nights' festival occurred on **July 15, 2023** [1]. \n\nGiven that today is **August 5, 2023**, exactly 21 days (or **3 weeks**) have passed since July 15, 2023. Therefore, you attended the 'Summer Nights' festival **3 weeks ago**.",
+            "Based on the retrieved context, your visit to Universal Studios Hollywood and attendance at the 'Summer Nights' festival occurred on **July 15, 2023** [1]. \n\nGiven that today is **August 5, 2023**, exactly 21 days (or **3 weeks**) have passed since July 15, 2023. Therefore, you attended the 'Summer Nights' festival **3 weeks ago**."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_f420262d",
+      "type": "temporal-reasoning",
+      "gold": "American Airlines",
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no record of a flight taken on Valentine's Day (February 14th). \n\nThe context does mention a flight taken close to that date on February 10th, when you flew with **American Airlines** from New York to Los Angeles. Other recorded travel includes a round-trip flight to Atlanta on January 15, 2023, and upcoming travel plans for March 2023. \n\nIf you did fly on V",
+            "Based on the provided context, there is no record of a flight taken on Valentine's Day (February 14th). \n\nThe context does mention a flight taken close to that date on February 10th, when you flew with **American Airlines** from New York to Los Angeles. Other recorded travel includes a round-trip flight to Atlanta on January 15, 2023, and upcoming travel plans for March 2023. \n\nIf you did fly on V",
+            "Based on the provided context, there is no record of a flight taken on Valentine's Day (February 14th). \n\nThe context does mention a flight taken close to that date on February 10th, when you flew with **American Airlines** from New York to Los Angeles. Other recorded travel includes a round-trip flight to Atlanta on January 15, 2023, and upcoming travel plans for March 2023. \n\nIf you did fly on V"
+          ]
+        },
+        "mmr": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no information regarding a flight taken on Valentine's Day (February 14th). \n\nThe retrieved records only mention flights on other dates, such as a round-trip flight from Boston to Atlanta on January 15, 2023, an American Airlines flight from New York to Los Angeles on February 10th, a United Airlines flight from Boston to Chicago, and a JetBlue red-eye fligh",
+            "Based on the retrieved context, there is no record or mention of a flight taken on Valentine's Day (February 14th). \n\nThe context does provide details about other past flights, such as a round-trip flight from Boston to Atlanta on January 15, 2023, and a flight from New York to Los Angeles on American Airlines on February 10th. However, information regarding any flight on February 14th is not avai",
+            "Based on the retrieved context, there is no record or mention of a flight taken on Valentine's Day (February 14th). \n\nThe context does provide details about other past flights, such as a round-trip flight from Boston to Atlanta on January 15, 2023, and a flight from New York to Los Angeles on American Airlines on February 10th. However, information regarding any flight on February 14th is not avai"
+          ]
+        },
+        "nodedistance": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no information or record indicating that you took a flight on Valentine's Day (February 14th). \n\nThe context does mention a flight taken earlier in February\u2014specifically on February 10th\u2014when you flew with **American Airlines** from New York to Los Angeles. However, if you took a separate flight on Valentine's Day, those details are not present in the retrie",
+            "Based on the provided context, there is no information or record indicating that you took a flight on Valentine's Day (February 14th). \n\nThe context does mention a flight taken earlier in February\u2014specifically on February 10th\u2014when you flew with **American Airlines** from New York to Los Angeles. However, if you took a separate flight on Valentine's Day, those details are not present in the retrie",
+            "Based on the provided context, there is no information or record indicating that you took a flight on Valentine's Day (February 14th). \n\nThe context does mention a flight taken earlier in February\u2014specifically on February 10th\u2014when you flew with **American Airlines** from New York to Los Angeles. However, if you took a separate flight on Valentine's Day, those details are not present in the retrie"
+          ]
+        },
+        "both": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the provided context, there is no record of a flight taken on Valentine's Day (February 14th). \n\nThe context does mention a flight around that time of month on **February 10th**, when you flew with **American Airlines** from New York to Los Angeles. However, the available details do not specify any airline or flight taken on Valentine's Day itself.",
+            "Based on the provided context, there is no information or record indicating that you took a flight on Valentine's Day (February 14). \n\nThe travel records in the available context mention other specific dates and flights, such as a flight on February 10th from New York to Los Angeles on American Airlines and a round-trip flight on January 15, 2023, to Atlanta. However, none of the documented trips ",
+            "Based on the provided context, there is no information or record indicating that you took a flight on Valentine's Day (February 14). \n\nThe travel records in the available context mention other specific dates and flights, such as a flight on February 10th from New York to Los Angeles on American Airlines and a round-trip flight on January 15, 2023, to Atlanta. However, none of the documented trips "
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "9a707b82",
+      "type": "temporal-reasoning",
+      "gold": "a chocolate cake",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "You baked a **Chocolate Cake** for your friend. Specifically, you made this cake using espresso powder as a key ingredient to enhance the chocolate flavor [1, 2].\n\nThis dessert was prepared for your friend's birthday party, which took place over the weekend prior to April 10, 2022 [1].",
+            "You baked a **Chocolate Cake** for your friend. Specifically, you made this cake using espresso powder as a key ingredient to enhance the chocolate flavor [1, 2].\n\nThis dessert was prepared for your friend's birthday party, which took place over the weekend prior to April 10, 2022 [1].",
+            "You baked a **Chocolate Cake** for your friend. Specifically, you made this cake using espresso powder as a key ingredient to enhance the chocolate flavor [1, 2].\n\nThis dessert was prepared for your friend's birthday party, which took place over the weekend prior to April 10, 2022 [1]."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your baking history, you baked a **Chocolate Cake** for your friend's birthday party. \n\nTo give it extra flavor, you incorporated **espresso powder** into the chocolate cake recipe for the celebration.",
+            "Based on your baking history, you baked a **Chocolate Cake** for your friend's birthday party. \n\nTo give it extra flavor, you incorporated **espresso powder** into the chocolate cake recipe for the celebration.",
+            "Based on your baking history, you baked a **Chocolate Cake** for your friend's birthday party. \n\nTo give it extra flavor, you incorporated **espresso powder** into the chocolate cake recipe for the celebration."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "You baked a **Chocolate Cake** for your friend's birthday party. \n\nThe cake was made for a birthday celebration that took place over the recent weekend, and you specifically used **espresso powder** as a key ingredient in the recipe.",
+            "You baked a **Chocolate Cake** for your friend's birthday party. \n\nThe cake was made for a birthday celebration that took place over the recent weekend, and you specifically used **espresso powder** as a key ingredient in the recipe.",
+            "You baked a **Chocolate Cake** for your friend's birthday party. \n\nThe cake was made for a birthday celebration that took place over the recent weekend, and you specifically used **espresso powder** as a key ingredient in the recipe."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "A couple of days ago, you mentioned that you baked a **Chocolate Cake** for your friend's birthday party. \n\nTo give the cake an enhanced flavor, you specifically used espresso powder in the chocolate cake recipe. The birthday party took place during the weekend prior to April 10, 2022, matching your mention from a couple of days ago.",
+            "Based on the retrieved context, you baked a **Chocolate Cake** for your friend's birthday party. \n\nFor this recipe, you specifically used **espresso powder** as an ingredient to bake the cake for the celebration, which took place over the weekend shortly before April 10, 2022.",
+            "Based on the retrieved context, you baked a **Chocolate Cake** for your friend's birthday party. \n\nFor this recipe, you specifically used **espresso powder** as an ingredient to bake the cake for the celebration, which took place over the weekend shortly before April 10, 2022."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_2d58bcd6",
+      "type": "temporal-reasoning",
+      "gold": "'The Hate U Give'",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your reading history, you finished reading **'The Hate U Give'** first. \n\nYou completed 'The Hate U Give' in early May 2023, a few days ahead of your book club meeting. In contrast, you finished reading 'The Nightingale' later in the month during the weekend of May 20\u201321, 2023.",
+            "Based on your reading history, you finished reading **'The Hate U Give'** first. \n\nYou completed 'The Hate U Give' in early May 2023, a few days ahead of your book club meeting. In contrast, you finished reading 'The Nightingale' later in the month during the weekend of May 20\u201321, 2023.",
+            "Based on your reading history, you finished reading **'The Hate U Give'** first. \n\nYou completed 'The Hate U Give' in early May 2023, a few days ahead of your book club meeting. In contrast, you finished reading 'The Nightingale' later in the month during the weekend of May 20\u201321, 2023."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "You finished reading **'The Hate U Give'** first. \n\nAccording to your reading history, you completed *The Hate U Give* in early May 2023, a few days before your book club meeting. In contrast, you finished reading *The Nightingale* later in the month during the weekend of May 20\u201321, 2023, just prior to May 22.",
+            "You finished reading **'The Hate U Give'** first. \n\nAccording to your reading history, you completed *The Hate U Give* in early May 2023, a few days before your book club meeting. In contrast, you finished reading *The Nightingale* later in the month during the weekend of May 20\u201321, 2023, just prior to May 22.",
+            "You finished reading **'The Hate U Give'** first. \n\nAccording to your reading history, you completed *The Hate U Give* in early May 2023, a few days before your book club meeting. In contrast, you finished reading *The Nightingale* later in the month during the weekend of May 20\u201321, 2023, just prior to May 22."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your reading history, you finished reading **'The Hate U Give'** first. \n\nYou completed *The Hate U Give* in **early May 2023**, a few days before your book club meeting. In contrast, you finished reading *The Nightingale* later in the month during the weekend of **May 20\u201321, 2023**.",
+            "Based on your reading history, you finished reading **'The Hate U Give'** first. \n\nYou completed *The Hate U Give* in **early May 2023**, a few days before your book club meeting. In contrast, you finished reading *The Nightingale* later in the month during the weekend of **May 20\u201321, 2023**.",
+            "Based on your reading history, you finished reading **'The Hate U Give'** first. \n\nYou completed *The Hate U Give* in **early May 2023**, a few days before your book club meeting. In contrast, you finished reading *The Nightingale* later in the month during the weekend of **May 20\u201321, 2023**."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "You finished reading **'The Hate U Give'** first. \n\nAccording to your reading log history, you completed reading *'The Hate U Give'* in **early May 2023**, a few days before your book club meeting. \n\nIn contrast, you finished reading *'The Nightingale'* much more recently, over the weekend of **May 20\u201321, 2023**.",
+            "You finished reading **'The Hate U Give'** first. \n\nAccording to your reading log history, you completed reading *'The Hate U Give'* in **early May 2023**, a few days before your book club meeting. \n\nIn contrast, you finished reading *'The Nightingale'* much more recently, over the weekend of **May 20\u201321, 2023**.",
+            "You finished reading **'The Hate U Give'** first. \n\nAccording to your reading log history, you completed reading *'The Hate U Give'* in **early May 2023**, a few days before your book club meeting. \n\nIn contrast, you finished reading *'The Nightingale'* much more recently, over the weekend of **May 20\u201321, 2023**."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_2f56ae70",
+      "type": "temporal-reasoning",
+      "gold": "Disney+",
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on your streaming history as of May 22, 2023, the streaming service you started using most recently among your main subscriptions is **Apple TV+**, which you have been using for \"a few months.\" By comparison, you have been using Hulu, Netflix, and Amazon Prime for the past six months.\n\nAdditionally, if counting temporary trials or add-ons, you had a free trial of **Disney+** in April 2023 (d",
+            "Based on your streaming history as of May 22, 2023, the streaming service you started using most recently among your main subscriptions is **Apple TV+**, which you have been using for \"a few months.\" By comparison, you have been using Hulu, Netflix, and Amazon Prime for the past six months.\n\nAdditionally, if counting temporary trials or add-ons, you had a free trial of **Disney+** in April 2023 (d",
+            "Based on your streaming history as of May 22, 2023, the streaming service you started using most recently among your main subscriptions is **Apple TV+**, which you have been using for \"a few months.\" By comparison, you have been using Hulu, Netflix, and Amazon Prime for the past six months.\n\nAdditionally, if counting temporary trials or add-ons, you had a free trial of **Disney+** in April 2023 (d"
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, the streaming service you started using most recently is **Disney+**, which you used during a free trial in **April 2023** (just one month prior to May 22, 2023). You also recently decided to get the **HBO add-on** through Amazon Prime Video.\n\nPrior to starting your Disney+ trial, you began using **Apple TV+**, which you have been using for \"a few months.\" \n\nBy contr",
+            "Based on the provided context, the streaming service you started using most recently is **Disney+**, which you used during a free trial in **April 2023** (just one month prior to May 22, 2023). You also recently decided to get the **HBO add-on** through Amazon Prime Video.\n\nPrior to starting your Disney+ trial, you began using **Apple TV+**, which you have been using for \"a few months.\" \n\nBy contr",
+            "Based on the provided context, the streaming service you started using most recently is **Disney+**, which you used during a free trial in **April 2023** (just one month prior to May 22, 2023). You also recently decided to get the **HBO add-on** through Amazon Prime Video.\n\nPrior to starting your Disney+ trial, you began using **Apple TV+**, which you have been using for \"a few months.\" \n\nBy contr"
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your history, the streaming service you started using most recently is **Disney+**, which you used during a free trial in **April 2023**. \n\nFor comparison, your usage of other streaming services spans further back:\n* **Apple TV+**: You have been using this platform for a few months.\n* **Hulu, Netflix, and Amazon Prime**: You have been using these services for the past 6 months (since arou",
+            "Based on your history, the streaming service you started using most recently is **Disney+**, which you used during a free trial in **April 2023**. \n\nFor comparison, your usage of other streaming services spans further back:\n* **Apple TV+**: You have been using this platform for a few months.\n* **Hulu, Netflix, and Amazon Prime**: You have been using these services for the past 6 months (since arou",
+            "Based on your history, the streaming service you started using most recently is **Disney+**, which you used during a free trial in **April 2023**. \n\nFor comparison, your usage of other streaming services spans further back:\n* **Apple TV+**: You have been using this platform for a few months.\n* **Hulu, Netflix, and Amazon Prime**: You have been using these services for the past 6 months (since arou"
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context as of May 22, 2023, **Disney+** is the streaming service you started using most recently, having used a free trial in **April 2023**.\n\nTo put this into perspective with your other streaming service usage:\n* **Apple TV+**: You have been using it for \"a few months.\"\n* **Hulu, Netflix, and Amazon Prime**: You have been using each of these services for the past 6 months ",
+            "Based on your usage history, the streaming service you started using most recently is **Disney+**, which you began using during a free trial in **April 2023**. \n\nFor comparison, your usage timeline for other streaming services is as follows:\n* **Apple TV+**: You have been using this service for a few months (placing your start date around early 2023).\n* **Hulu**, **Netflix**, and **Amazon Prime**:",
+            "Based on your usage history, the streaming service you started using most recently is **Disney+**, which you began using during a free trial in **April 2023**. \n\nFor comparison, your usage timeline for other streaming services is as follows:\n* **Apple TV+**: You have been using this service for a few months (placing your start date around early 2023).\n* **Hulu**, **Netflix**, and **Amazon Prime**:"
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "07741c45",
+      "type": "knowledge-update",
+      "gold": "in a shoe rack in my closet",
+      "variants": {
+        "baseline": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, your old sneakers are currently stored in a **shoe rack inside your closet**. \n\nAdditionally, the context indicates that you keep old sneakers **under your bed** for storage.",
+            "Based on the retrieved context, your old sneakers are currently stored in a **shoe rack inside your closet**. \n\nAdditionally, the context indicates that you keep old sneakers **under your bed** for storage.",
+            "Based on the retrieved context, your old sneakers are currently stored in a **shoe rack inside your closet**. \n\nAdditionally, the context indicates that you keep old sneakers **under your bed** for storage."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context, you currently keep your old sneakers in a **shoe rack inside your closet**. \n\nAdditionally, the context indicates that you also store old sneakers **under your bed**.",
+            "Based on the retrieved context, you currently keep your old sneakers in a **shoe rack inside your closet**. \n\nAdditionally, the context indicates that you also store old sneakers **under your bed**.",
+            "Based on the provided context, you currently keep your old sneakers on a shoe rack located inside your closet.\n\nAdditionally, the context notes that you store old sneakers under your bed as well."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your retrieved context, you currently keep your old sneakers on a shoe rack inside your closet. \n\nAdditionally, the context notes that you also keep old sneakers under your bed for extra storage.",
+            "Based on your retrieved context, you currently keep your old sneakers on a shoe rack inside your closet. \n\nAdditionally, the context notes that you also keep old sneakers under your bed for extra storage.",
+            "Based on your retrieved context, you currently keep your old sneakers on a shoe rack inside your closet. \n\nAdditionally, the context notes that you also keep old sneakers under your bed for extra storage."
+          ]
+        },
+        "both": {
+          "score": 0.0,
+          "marks": [
+            false,
+            false,
+            false
+          ],
+          "answers": [
+            "Based on the retrieved context, there are two locations associated with where you keep your old sneakers:\n\nFirst, your old sneakers are currently kept in a shoe rack inside your closet. \n\nAdditionally, another record in your information indicates that you store your old sneakers under your bed.",
+            "Based on the retrieved context, there are two locations associated with where you keep your old sneakers:\n\nFirst, your old sneakers are currently kept in a shoe rack inside your closet. \n\nAdditionally, another record in your information indicates that you store your old sneakers under your bed.",
+            "Based on the retrieved context, there are two locations associated with where you keep your old sneakers:\n\nFirst, your old sneakers are currently kept in a shoe rack inside your closet. \n\nAdditionally, another record in your information indicates that you store your old sneakers under your bed."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_c27434e8",
+      "type": "temporal-reasoning",
+      "gold": "Japanese Zero fighter plane model",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your project timeline, you started the **1/48 scale Japanese Zero fighter plane model** first. \n\nYou began building the Japanese Zero fighter plane model approximately **one month prior** to May 24, 2023. In contrast, you started building the 1980s-era Ferrari 288 GTO model about **three weeks prior** to May 24, 2023.",
+            "Based on your project timeline, you started the **1/48 scale Japanese Zero fighter plane model** first. \n\nYou began building the Japanese Zero fighter plane model approximately **one month prior** to May 24, 2023. In contrast, you started building the 1980s-era Ferrari 288 GTO model about **three weeks prior** to May 24, 2023.",
+            "Based on your project timeline, you started the **1/48 scale Japanese Zero fighter plane model** first. \n\nYou began building the Japanese Zero fighter plane model approximately **one month prior** to May 24, 2023. In contrast, you started building the 1980s-era Ferrari 288 GTO model about **three weeks prior** to May 24, 2023."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "You started the **1/48 scale Japanese Zero fighter plane model** first. \n\nBased on your project timeline, you began working on the Japanese Zero fighter plane model about a month prior to May 24, 2023. In contrast, you started building the Ferrari 288 GTO scale model approximately three weeks prior to May 24, 2023. Since a month ago is earlier than three weeks ago, the Japanese Zero fighter plane ",
+            "You started the **1/48 scale Japanese Zero fighter plane model** first. \n\nBased on your project timeline, you began working on the Japanese Zero fighter plane model about a month prior to May 24, 2023. In contrast, you started building the Ferrari 288 GTO scale model approximately three weeks prior to May 24, 2023. Since a month ago is earlier than three weeks ago, the Japanese Zero fighter plane ",
+            "Based on the provided information, you started the **1/48 scale Japanese Zero fighter plane model** first. \n\nYou began building the Japanese Zero fighter plane model approximately **one month** prior to May 24, 2023. In comparison, you started building the Ferrari 288 GTO model about **three weeks** prior to May 24, 2023 (on a Sunday afternoon)."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided information, you started the **Japanese Zero fighter plane model** first. \n\nYou began building the 1/48 scale Japanese Zero fighter plane model approximately **one month** prior to May 24, 2023. In contrast, you started building the Ferrari 288 GTO model about **three weeks** prior to May 24, 2023. Therefore, the Japanese Zero fighter plane project predates the Ferrari model ",
+            "Based on the provided information, you started the **Japanese Zero fighter plane model** first. \n\nYou began building the 1/48 scale Japanese Zero fighter plane model approximately **one month** prior to May 24, 2023. In contrast, you started building the Ferrari 288 GTO model about **three weeks** prior to May 24, 2023. Therefore, the Japanese Zero fighter plane project predates the Ferrari model ",
+            "Based on the provided information, you started the **Japanese Zero fighter plane model** first. \n\nYou began building the 1/48 scale Japanese Zero fighter plane model approximately **one month** prior to May 24, 2023. In contrast, you started building the Ferrari 288 GTO model about **three weeks** prior to May 24, 2023. Therefore, the Japanese Zero fighter plane project predates the Ferrari model "
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided information, you started the **1/48 scale Japanese Zero fighter plane model** first. \n\nYou began building the Japanese Zero fighter plane model approximately **one month** prior to May 24, 2023. In comparison, you started building the Ferrari 288 GTO model about **three weeks** prior to May 24, 2023 (on a Sunday afternoon).",
+            "Based on the provided information, you started the **1/48 scale Japanese Zero fighter plane model** first. \n\nYou began building the Japanese Zero fighter plane model approximately **one month** prior to May 24, 2023. In comparison, you started building the Ferrari 288 GTO model about **three weeks** prior to May 24, 2023 (on a Sunday afternoon).",
+            "Based on the provided information, you started the **1/48 scale Japanese Zero fighter plane model** first. \n\nYou began building the Japanese Zero fighter plane model approximately **one month** prior to May 24, 2023. In comparison, you started building the Ferrari 288 GTO model about **three weeks** prior to May 24, 2023 (on a Sunday afternoon)."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_2c50253f",
+      "type": "temporal-reasoning",
+      "gold": "6:45 AM",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your established routine, you wake up at **6:45 AM** on Tuesdays and Thursdays. \n\nYour standard daily routine involves waking up at 7:00 AM (an update from your previous wake-up time of 8:30 AM). However, on Tuesdays and Thursdays, you wake up 15 minutes earlier than your baseline routine in order to make extra time to practice yoga and meditate before starting the rest of your day.",
+            "Based on your established routine, you wake up at **6:45 AM** on Tuesdays and Thursdays. \n\nYour standard daily routine involves waking up at 7:00 AM (an update from your previous wake-up time of 8:30 AM). However, on Tuesdays and Thursdays, you wake up 15 minutes earlier than your baseline routine in order to make extra time to practice yoga and meditate before starting the rest of your day.",
+            "Based on your established routine, you wake up at **6:45 AM** on Tuesdays and Thursdays. \n\nYour standard daily routine involves waking up at 7:00 AM (an update from your previous wake-up time of 8:30 AM). However, on Tuesdays and Thursdays, you wake up 15 minutes earlier than your baseline routine in order to make extra time to practice yoga and meditate before starting the rest of your day."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your current routine, you wake up at **6:45 AM** on Tuesdays and Thursdays.\n\nYour established baseline wake-up time is 7:00 AM for your daily morning routine. However, on Tuesdays and Thursdays, you set your alarm 15 minutes earlier than usual to give yourself extra time for your yoga practice and meditation session before starting the rest of your day.",
+            "Based on your current routine, you wake up at **6:45 AM** on Tuesdays and Thursdays.\n\nYour established baseline wake-up time is 7:00 AM for your daily morning routine. However, on Tuesdays and Thursdays, you set your alarm 15 minutes earlier than usual to give yourself extra time for your yoga practice and meditation session before starting the rest of your day.",
+            "Based on your current routine, you wake up at **6:45 AM** on Tuesdays and Thursdays.\n\nYour established baseline wake-up time is 7:00 AM for your daily morning routine. However, on Tuesdays and Thursdays, you set your alarm 15 minutes earlier than usual to give yourself extra time for your yoga practice and meditation session before starting the rest of your day."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your established routine, you wake up at **6:45 AM** on Tuesdays and Thursdays. \n\nYour standard daily routine involves waking up at 7:00 AM (an update from your previous wake-up time of 8:30 AM). However, on Tuesdays and Thursdays, you wake up 15 minutes earlier than your baseline routine in order to make extra time to practice yoga and meditate before starting the rest of your day.",
+            "Based on your established routine, you wake up at **6:45 AM** on Tuesdays and Thursdays. \n\nYour standard daily routine involves waking up at 7:00 AM (an update from your previous wake-up time of 8:30 AM). However, on Tuesdays and Thursdays, you wake up 15 minutes earlier than your baseline routine in order to make extra time to practice yoga and meditate before starting the rest of your day.",
+            "Based on your established routine, you wake up at **6:45 AM** on Tuesdays and Thursdays. \n\nYour standard daily routine involves waking up at 7:00 AM (an update from your previous wake-up time of 8:30 AM). However, on Tuesdays and Thursdays, you wake up 15 minutes earlier than your baseline routine in order to make extra time to practice yoga and meditate before starting the rest of your day."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your current routine, you wake up at **6:45 AM** on Tuesdays and Thursdays.\n\nYour established baseline wake-up time is 7:00 AM for your daily morning routine. However, on Tuesdays and Thursdays, you set your alarm 15 minutes earlier than usual to give yourself extra time for your yoga practice and meditation session before starting the rest of your day.",
+            "Based on your current routine, you wake up at **6:45 AM** on Tuesdays and Thursdays.\n\nYour established baseline wake-up time is 7:00 AM for your daily morning routine. However, on Tuesdays and Thursdays, you set your alarm 15 minutes earlier than usual to give yourself extra time for your yoga practice and meditation session before starting the rest of your day.",
+            "Based on your current routine, you wake up at **6:45 AM** on Tuesdays and Thursdays.\n\nYour established baseline wake-up time is 7:00 AM for your daily morning routine. However, on Tuesdays and Thursdays, you set your alarm 15 minutes earlier than usual to give yourself extra time for your yoga practice and meditation session before starting the rest of your day."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "6613b389",
+      "type": "temporal-reasoning",
+      "gold": "2",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Rachel got engaged on **May 15, 2023**, and your anniversary is on **July 22**. \n\nTherefore, Rachel got engaged approximately **2 months** (specifically, 2 months and 7 days) before your anniversary.",
+            "Rachel got engaged on **May 15, 2023**, and your anniversary is on **July 22**. \n\nTherefore, Rachel got engaged approximately **2 months** (specifically, 2 months and 7 days) before your anniversary.",
+            "Rachel got engaged on **May 15, 2023**, and your anniversary is on **July 22**. \n\nTherefore, Rachel got engaged approximately **2 months** (specifically, 2 months and 7 days) before your anniversary."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context, your friend Rachel got engaged on May 15, 2023, and your wedding anniversary is on July 22 [1, 2]. \n\nCounting the time between May 15, 2023, and July 22, 2023, Rachel got engaged approximately **2 months** (or just over two months) before your anniversary.",
+            "Based on the retrieved context, your friend Rachel got engaged on May 15, 2023, and your wedding anniversary is on July 22 [1, 2]. \n\nCounting the time between May 15, 2023, and July 22, 2023, Rachel got engaged approximately **2 months** (or just over two months) before your anniversary.",
+            "Based on the retrieved context, your friend Rachel got engaged on May 15, 2023, and your wedding anniversary is on July 22 [1, 2]. \n\nCounting the time between May 15, 2023, and July 22, 2023, Rachel got engaged approximately **2 months** (or just over two months) before your anniversary."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Rachel got engaged on **May 15, 2023**, and your anniversary is on **July 22**. \n\nTherefore, Rachel got engaged approximately **2 months** (specifically, 2 months and 7 days) before your anniversary.",
+            "Rachel got engaged on **May 15, 2023**, and your anniversary is on **July 22**. \n\nTherefore, Rachel got engaged approximately **2 months** (specifically, 2 months and 7 days) before your anniversary.",
+            "Rachel got engaged on **May 15, 2023**, and your anniversary is on **July 22**. \n\nTherefore, Rachel got engaged approximately **2 months** (specifically, 2 months and 7 days) before your anniversary."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context, your friend Rachel got engaged on May 15, 2023, and your wedding anniversary is on July 22 [1, 2]. \n\nCounting the time between May 15, 2023, and July 22, 2023, Rachel got engaged approximately **2 months** (or just over two months) before your anniversary.",
+            "Based on the retrieved context, your friend Rachel got engaged on May 15, 2023, and your wedding anniversary is on July 22 [1, 2]. \n\nCounting the time between May 15, 2023, and July 22, 2023, Rachel got engaged approximately **2 months** (or just over two months) before your anniversary.",
+            "Based on the retrieved context, your friend Rachel got engaged on May 15, 2023, and your wedding anniversary is on July 22 [1, 2]. \n\nCounting the time between May 15, 2023, and July 22, 2023, Rachel got engaged approximately **2 months** (or just over two months) before your anniversary."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_c27434e8_abs",
+      "type": "temporal-reasoning",
+      "gold": "The information provided is not enough. You did not mention starting the Porsche 991 Turbo S model.",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, you started working on your **Ferrari 288 GTO model** on a rainy Sunday afternoon approximately three weeks prior to May 26, 2023.\n\nHowever, the retrieved context does not contain any information about a **Porsche 991 Turbo S model**. Because details about the Porsche project are missing from the available records, it is not possible to determine which of those two m",
+            "Based on the provided context, you started working on your **Ferrari 288 GTO model** on a rainy Sunday afternoon approximately three weeks prior to May 26, 2023.\n\nHowever, the retrieved context does not contain any information about a **Porsche 991 Turbo S model**. Because details about the Porsche project are missing from the available records, it is not possible to determine which of those two m",
+            "Based on the provided context, you started working on your **Ferrari 288 GTO model** on a rainy Sunday afternoon approximately three weeks prior to May 26, 2023.\n\nHowever, the retrieved context does not contain any information about a **Porsche 991 Turbo S model**. Because details about the Porsche project are missing from the available records, it is not possible to determine which of those two m"
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, you started building the **Ferrari 288 GTO model** about three weeks prior to May 26, 2023 (around early May 2023) on a rainy Sunday afternoon. \n\nHowever, the retrieved information does not contain any mention of a **Porsche 991 Turbo S model**. Because there are no details or dates recorded regarding a Porsche model in the context, it is not possible to definitively",
+            "Based on the provided context, you started building the **Ferrari 288 GTO model** about three weeks prior to May 26, 2023 (around early May 2023) on a rainy Sunday afternoon. \n\nHowever, the retrieved information does not contain any mention of a **Porsche 991 Turbo S model**. Because there are no details or dates recorded regarding a Porsche model in the context, it is not possible to definitively",
+            "Based on the provided context, you started building the **Ferrari 288 GTO model** about three weeks prior to May 26, 2023 (around early May 2023) on a rainy Sunday afternoon. \n\nHowever, the retrieved information does not contain any mention of a **Porsche 991 Turbo S model**. Because there are no details or dates recorded regarding a Porsche model in the context, it is not possible to definitively"
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, it is not possible to determine whether you started the Ferrari model or the Porsche 991 Turbo S model first because there is no mention of a Porsche 991 Turbo S model in the available records.\n\nThe retrieved context shows that you started building the **Ferrari 288 GTO model** on a rainy Sunday afternoon about three weeks prior to May 26, 2023 (around early May 2023",
+            "Based on the provided context, it is not possible to determine whether you started the Ferrari model or the Porsche 991 Turbo S model first because there is no mention of a Porsche 991 Turbo S model in the available records.\n\nThe retrieved context shows that you started building the **Ferrari 288 GTO model** on a rainy Sunday afternoon about three weeks prior to May 26, 2023 (around early May 2023",
+            "Based on the provided context, it is not possible to determine whether you started the Ferrari model or the Porsche 991 Turbo S model first because there is no mention of a Porsche 991 Turbo S model in the available records.\n\nThe retrieved context shows that you started building the **Ferrari 288 GTO model** on a rainy Sunday afternoon about three weeks prior to May 26, 2023 (around early May 2023"
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, you started building the **Ferrari 288 GTO model** on a rainy Sunday afternoon approximately three weeks prior to May 26, 2023 (around early May 2023). \n\nHowever, there is no mention of a **Porsche 991 Turbo S model** anywhere in the retrieved context. Because information regarding the Porsche model is missing, it is not possible to determine which of those two proje",
+            "Based on the provided context, you started building the **Ferrari 288 GTO model** on a rainy Sunday afternoon approximately three weeks prior to May 26, 2023 (around early May 2023). \n\nHowever, there is no mention of a **Porsche 991 Turbo S model** anywhere in the retrieved context. Because information regarding the Porsche model is missing, it is not possible to determine which of those two proje",
+            "Based on the provided context, you started building the **Ferrari 288 GTO model** on a rainy Sunday afternoon approximately three weeks prior to May 26, 2023 (around early May 2023). \n\nHowever, there is no mention of a **Porsche 991 Turbo S model** anywhere in the retrieved context. Because information regarding the Porsche model is missing, it is not possible to determine which of those two proje"
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "2ebe6c90",
+      "type": "temporal-reasoning",
+      "gold": "21 days. 22 days (including the last day) is also acceptable.",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah.\n\nAccording to your reading record, you started reading the book on January 10, 2023, and finished it on January 31, 2023.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah.\n\nAccording to your reading record, you started reading the book on January 10, 2023, and finished it on January 31, 2023.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah.\n\nAccording to your reading record, you started reading the book on January 10, 2023, and finished it on January 31, 2023."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading history, you started reading *The Nightingale* on **January 10, 2023**, and finished it on **January 31, 2023**.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading history, you started reading *The Nightingale* on **January 10, 2023**, and finished it on **January 31, 2023**.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading history, you started reading *The Nightingale* on **January 10, 2023**, and finished it on **January 31, 2023**."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading records, you started reading the book on **January 10, 2023**, and completed it on **January 31, 2023**.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading records, you started reading the book on **January 10, 2023**, and completed it on **January 31, 2023**.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading records, you started reading the book on **January 10, 2023**, and completed it on **January 31, 2023**."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading history, you started reading the novel on **January 10, 2023**, and finished it on **January 31, 2023**. \n\nDuring this time, you noted that you loved the book's historical setting and its strong female leads.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading history, you started reading the novel on **January 10, 2023**, and finished it on **January 31, 2023**. \n\nDuring this time, you noted that you loved the book's historical setting and its strong female leads.",
+            "It took you **21 days** to finish reading *The Nightingale* by Kristin Hannah. \n\nAccording to your reading history, you started reading the novel on **January 10, 2023**, and finished it on **January 31, 2023**. \n\nDuring this time, you noted that you loved the book's historical setting and its strong female leads."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_7f6b06db",
+      "type": "temporal-reasoning",
+      "gold": "I went on a day hike to Muir Woods National Monument with my family, then I went on a road trip with friends to Big Sur and Monterey, and finally I started my solo camping trip to Yosemite National Park.",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your retrieved history, here is the chronological order of the three trips you took over the past three months, from earliest to latest:\n\n**1. Muir Woods National Monument Day Hike (March 10, 2023)**  \nYour earliest trip was a family day hike to Muir Woods National Monument on March 10, 2023, where you hiked the Dipsea Trail.\n\n**2. Big Sur and Monterey Road Trip (Ended April 20, 2023)**  ",
+            "Based on your retrieved history, here is the chronological order of the three trips you took over the past three months, from earliest to latest:\n\n**1. Muir Woods National Monument Day Hike (March 10, 2023)**  \nYour earliest trip was a family day hike to Muir Woods National Monument on March 10, 2023, where you hiked the Dipsea Trail.\n\n**2. Big Sur and Monterey Road Trip (Ended April 20, 2023)**  ",
+            "Based on your retrieved history, here is the chronological order of the three trips you took over the past three months, from earliest to latest:\n\n**1. Muir Woods National Monument Day Hike (March 10, 2023)**  \nYour earliest trip was a family day hike to Muir Woods National Monument on March 10, 2023, where you hiked the Dipsea Trail.\n\n**2. Big Sur and Monterey Road Trip (Ended April 20, 2023)**  "
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context, the three trips you took in the past three months, ordered from earliest to latest, are as follows:\n\n1. **Day Hike to Muir Woods National Monument** (*March 10, 2023*): This was a day hike taken with your family, during which you hiked the Dipsea Trail.\n2. **Road Trip to Big Sur and Monterey** (*Returned April 20, 2023*): A road trip with friends along Highway 1 whe",
+            "Based on your recorded activities over the past three months leading up to June 1, 2023, the chronological order of the three trips you took, from earliest to latest, is as follows:\n\n1. **Muir Woods National Monument Day Hike (March 10, 2023)**  \n   Your earliest trip was a family day hike to Muir Woods National Monument on March 10, 2023, where you hiked the Dipsea Trail. \n\n2. **Big Sur and Monte",
+            "Based on your recorded activities over the past three months leading up to June 1, 2023, the chronological order of the three trips you took, from earliest to latest, is as follows:\n\n1. **Muir Woods National Monument Day Hike (March 10, 2023)**  \n   Your earliest trip was a family day hike to Muir Woods National Monument on March 10, 2023, where you hiked the Dipsea Trail. \n\n2. **Big Sur and Monte"
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your travel history over the past three months leading up to June 1, 2023, the three trips you took, ordered from earliest to latest, are as follows:\n\n1. **Muir Woods National Monument Day Hike (March 10, 2023)**  \n   Your earliest trip was a day hike to Muir Woods National Monument with your family on March 10, 2023, where you hiked the Dipsea Trail.\n\n2. **Big Sur and Monterey Road Trip ",
+            "Based on your activity over the past three months leading up to June 1, 2023, the chronological order of the three trips you took, from earliest to latest, is as follows:\n\n1. **Muir Woods Day Hike** (March 10, 2023)\n2. **Big Sur and Monterey Road Trip** (Returned April 20, 2023)\n3. **Yosemite National Park Solo Camping Trip** (Most Recent)\n\nYour first excursion was a day hike with your family to M",
+            "Based on your activity over the past three months leading up to June 1, 2023, the chronological order of the three trips you took, from earliest to latest, is as follows:\n\n1. **Muir Woods Day Hike** (March 10, 2023)\n2. **Big Sur and Monterey Road Trip** (Returned April 20, 2023)\n3. **Yosemite National Park Solo Camping Trip** (Most Recent)\n\nYour first excursion was a day hike with your family to M"
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on your past travel history provided in the context, here is the chronological order of the three trips you took in the past three months, from earliest to latest:\n\n**1. Day Hike to Muir Woods National Monument**\nYour first trip was a day hike with your family at Muir Woods National Monument on **March 10, 2023**, where you hiked the Dipsea Trail.\n\n**2. Road Trip to Big Sur and Monterey**\nYo",
+            "Based on your past travel history provided in the context, here is the chronological order of the three trips you took in the past three months, from earliest to latest:\n\n**1. Day Hike to Muir Woods National Monument**\nYour first trip was a day hike with your family at Muir Woods National Monument on **March 10, 2023**, where you hiked the Dipsea Trail.\n\n**2. Road Trip to Big Sur and Monterey**\nYo",
+            "Based on your past travel history provided in the context, here is the chronological order of the three trips you took in the past three months, from earliest to latest:\n\n**1. Day Hike to Muir Woods National Monument**\nYour first trip was a day hike with your family at Muir Woods National Monument on **March 10, 2023**, where you hiked the Dipsea Trail.\n\n**2. Road Trip to Big Sur and Monterey**\nYo"
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "50635ada",
+      "type": "knowledge-update",
+      "gold": "Premier Silver",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the retrieved context, your current frequent flyer status on United Airlines MileagePlus is **Premier Gold**, which you recently achieved. \n\nPrior to reaching Premier Gold, your previous status tier on United Airlines was **Premier Silver**.",
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nBefore recently achieving your current status of Premier Gold, you held Premier Silver status in the United Airlines MileagePlus loyalty program, which you reached after hitting 20,000 miles.",
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nBefore recently achieving your current status of Premier Gold, you held Premier Silver status in the United Airlines MileagePlus loyalty program, which you reached after hitting 20,000 miles."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Before achieving your current status, your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nYou previously reached Premier Silver status after accumulating 20,000 miles with the United Airlines MileagePlus program. Since then, you have recently upgraded your status to **Premier Gold**.",
+            "Before achieving your current status, your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nYou previously reached Premier Silver status after accumulating 20,000 miles with the United Airlines MileagePlus program. Since then, you have recently upgraded your status to **Premier Gold**.",
+            "Before achieving your current status, your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nYou previously reached Premier Silver status after accumulating 20,000 miles with the United Airlines MileagePlus program. Since then, you have recently upgraded your status to **Premier Gold**."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nBefore recently upgrading to your current Premier Gold status tier in the United Airlines MileagePlus program, you held Premier Silver status, which you reached upon hitting 20,000 miles.",
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nBefore recently upgrading to your current Premier Gold status tier in the United Airlines MileagePlus program, you held Premier Silver status, which you reached upon hitting 20,000 miles.",
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nBefore recently upgrading to your current Premier Gold status tier in the United Airlines MileagePlus program, you held Premier Silver status, which you reached upon hitting 20,000 miles."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nAccording to the provided information, you previously reached Premier Silver status after hitting 20,000 miles on United Airlines, and you recently achieved your current status of Premier Gold.",
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nAccording to the provided information, you previously reached Premier Silver status after hitting 20,000 miles on United Airlines, and you recently achieved your current status of Premier Gold.",
+            "Your previous frequent flyer status on United Airlines was **Premier Silver**.\n\nAccording to the provided information, you previously reached Premier Silver status after hitting 20,000 miles on United Airlines, and you recently achieved your current status of Premier Gold."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "gpt4_b5700ca0",
+      "type": "temporal-reasoning",
+      "gold": "the Episcopal Church",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "You attended the religious activity, specifically the Maundy Thursday service, at the **Episcopal Church**. \n\nAccording to your records, you are a member of the Episcopal Church and participate in community and volunteer activities with a group from there.",
+            "You attended the religious activity, specifically the Maundy Thursday service, at the **Episcopal Church**. \n\nAccording to your records, you are a member of the Episcopal Church and participate in community and volunteer activities with a group from there.",
+            "You attended the religious activity, specifically the Maundy Thursday service, at the **Episcopal Church**. \n\nAccording to your records, you are a member of the Episcopal Church and participate in community and volunteer activities with a group from there."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Last week, you attended a religious activity\u2014specifically the Maundy Thursday service\u2014at the **Episcopal Church** [1]. \n\nYou are a member of the Episcopal Church and actively participate in its community, including involvement with a church volunteer group [1].",
+            "Last week, you attended a religious activity\u2014specifically the Maundy Thursday service\u2014at the **Episcopal Church** [1]. \n\nYou are a member of the Episcopal Church and actively participate in its community, including involvement with a church volunteer group [1].",
+            "Last week, you attended a religious activity\u2014specifically the Maundy Thursday service\u2014at the **Episcopal Church** [1]. \n\nYou are a member of the Episcopal Church and actively participate in its community, including involvement with a church volunteer group [1]."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Last week, you attended a Maundy Thursday service at the **Episcopal Church** [1]. \n\nAs an active member of the Episcopal Church, you participate in their religious services and collaborate with a volunteer group within the church [1].",
+            "Last week, you attended a Maundy Thursday service at the **Episcopal Church** [1]. \n\nAs an active member of the Episcopal Church, you participate in their religious services and collaborate with a volunteer group within the church [1].",
+            "Last week, you attended a Maundy Thursday service at the **Episcopal Church** [1]. \n\nAs an active member of the Episcopal Church, you participate in their religious services and collaborate with a volunteer group within the church [1]."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Last week, you attended a religious activity\u2014specifically the Maundy Thursday service\u2014at the **Episcopal Church** [1]. \n\nYou are a member of the Episcopal Church and actively participate in its community, including involvement with a church volunteer group [1].",
+            "Last week, you attended a religious activity\u2014specifically the Maundy Thursday service\u2014at the **Episcopal Church** [1]. \n\nYou are a member of the Episcopal Church and actively participate in its community, including involvement with a church volunteer group [1].",
+            "Last week, you attended a religious activity\u2014specifically the Maundy Thursday service\u2014at the **Episcopal Church** [1]. \n\nYou are a member of the Episcopal Church and actively participate in its community, including involvement with a church volunteer group [1]."
+          ]
+        }
+      }
+    },
+    {
+      "question_id": "f685340e_abs",
+      "type": "knowledge-update",
+      "gold": "The information provided is not enough. You mentioned playing tennis but not table tennis.",
+      "variants": {
+        "baseline": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, there is no information available regarding how often you play table tennis with your friends at the local park. \n\nThe retrieved details only mention that you play regular tennis with your friends at the local park (on a weekly or every-other-week basis), but table tennis is not documented in the context.",
+            "Based on the provided context, there is no information available regarding how often you play table tennis with your friends at the local park. \n\nThe retrieved details only mention that you play regular tennis with your friends at the local park (on a weekly or every-other-week basis), but table tennis is not documented in the context.",
+            "Based on the provided context, there is no information available regarding how often you play table tennis with your friends at the local park. \n\nThe retrieved details only mention that you play regular tennis with your friends at the local park (on a weekly or every-other-week basis), but table tennis is not documented in the context."
+          ]
+        },
+        "mmr": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, there is no information mentioned about you playing **table tennis** with your friends at the local park. \n\nThe retrieved records only contain details regarding your **tennis** activities. According to the context, you play regular tennis with your friends at the local park (noted at different frequencies such as weekly or every other week), but table tennis is not l",
+            "Based on the provided context, there is no information mentioned about you playing **table tennis** with your friends at the local park. \n\nThe retrieved records only contain details regarding your **tennis** activities. According to the context, you play regular tennis with your friends at the local park (noted at different frequencies such as weekly or every other week), but table tennis is not l",
+            "Based on the provided context, there is no mention of you playing **table tennis** with your friends. \n\nThe context does contain information about your regular **tennis** sessions at the local park\u2014noting that you play standard tennis with your friends either weekly or every other week\u2014but it does not contain any details or records regarding table tennis."
+          ]
+        },
+        "nodedistance": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, there is no information mentioned about how often you play **table tennis** with your friends at the local park. \n\nThe retrieved records only contain details regarding standard **tennis** sessions with your friends at the local park (noting frequencies such as weekly or every other week), but they do not make any reference to table tennis.",
+            "Based on the provided context, there is no information mentioned about how often you play **table tennis** with your friends at the local park. \n\nThe retrieved records only contain details regarding standard **tennis** sessions with your friends at the local park (noting frequencies such as weekly or every other week), but they do not make any reference to table tennis.",
+            "Based on the provided context, there is no information mentioned about how often you play **table tennis** with your friends at the local park. \n\nThe retrieved records only contain details regarding standard **tennis** sessions with your friends at the local park (noting frequencies such as weekly or every other week), but they do not make any reference to table tennis."
+          ]
+        },
+        "both": {
+          "score": 1.0,
+          "marks": [
+            true,
+            true,
+            true
+          ],
+          "answers": [
+            "Based on the provided context, there is no information available regarding how often you play table tennis with your friends at the local park. \n\nThe context only contains information about you playing standard **tennis** at the local park (noted as playing weekly or every other week). Since table tennis is not mentioned in the retrieved data, I cannot provide an answer regarding table tennis acti",
+            "Based on the provided context, there is no information available regarding how often you play table tennis with your friends at the local park. \n\nThe context only contains information about you playing standard **tennis** at the local park (noted as playing weekly or every other week). Since table tennis is not mentioned in the retrieved data, I cannot provide an answer regarding table tennis acti",
+            "Based on the provided context, there is no information available regarding how often you play table tennis with your friends at the local park. \n\nThe context only contains information about you playing standard **tennis** at the local park (noted as playing weekly or every other week). Since table tennis is not mentioned in the retrieved data, I cannot provide an answer regarding table tennis acti"
+          ]
+        }
+      }
+    }
+  ]
+}

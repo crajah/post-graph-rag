@@ -237,3 +237,22 @@ evaluation/longmemeval/*.json
 evaluation/ectqa/data/
 evaluation/ectqa/*.json
 evaluation/ectqa/filelist.txt
+
+# ...but the results behind published claims DO belong in the repo. The globs
+# above exist to keep fetched datasets out; they were catching results as
+# collateral, which made "every failing case ships in the repo" untrue. Each
+# file below is cited by the README or the paper, and carries its per-question
+# answers, votes and the configuration that produced it.
+!evaluation/ectqa/results_asserted_g36.json
+!evaluation/ectqa/results_native_g36.json
+!evaluation/ectqa/results_paired_nolimit.json
+!evaluation/ectqa/results_fig_g36_validity.json
+!evaluation/ectqa/probe_arms.json
+!evaluation/longmemeval/reader_sweep_nolimit.json
+!evaluation/longmemeval/reader_sweep_validity.json
+!evaluation/longmemeval/official_gpt4o_g36.json
+!evaluation/longmemeval/ablation_baseline.json
+!evaluation/longmemeval/ablation_paired.json
+!evaluation/longmemeval/ablation_mmr.json
+!evaluation/longmemeval/ablation_nodedistance.json
+!evaluation/longmemeval/ablation_contradiction.json
