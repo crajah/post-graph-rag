@@ -10,19 +10,7 @@
 
 No separate vector store. No graph engine to operate. One database, one consistency model, one backup — and transactions that span your graph *and* your application tables.
 
-### Built on [post-graph](https://github.com/crajah/post-graph)
-
-The property-graph layer underneath, and a standalone library if you want the graph without the RAG. It makes PostgreSQL behave like a graph database rather than emulating one:
-
-- **Table-per-vertex, table-per-edge** — real foreign keys, real indexes, real constraints, so your graph is queryable by anything that speaks SQL
-- **Recursive CTE traversals** — neighbours, paths and shortest-path with cycle detection, executed in the database rather than in your application
-- **Two levels of tenancy** — `realm` for hard isolation (optionally schema-per-tenant), `space` for sub-grouping inside it
-- **pgvector on vertices and edges**, searchable across live and historical rows
-- **Append-only history and trigger-based audit logging** on every table, capturing old and new state with the acting user
-- **Promoted payload columns and server-side range queries** — filter, order and bulk-delete on JSONB fields at the database, not in Python
-
-[`pip install post-graph`](https://github.com/crajah/post-graph) · Apache 2.0 · 635 tests
-
+The graph layer underneath is [post-graph](https://github.com/crajah/post-graph), also usable on its own — [more below](#post-graph).
 
 ## ⚡ Try it
 
@@ -86,6 +74,23 @@ A second judge from a different model family scores the same answers at 0.668 �
 The breakdown is more useful than the total: **incorrect elements sit at 0.15**, and relative-time questions produce none at all — when this system commits to a figure, it is usually right. The gap to a higher score is *refusal*, evidence not retrieved rather than reasoning gone wrong.
 
 *Same qualifications apply, plus two specific to this comparison: their judge model is not available on our router, and their verbatim rubric is truncated in the public HTML, so ours reproduces their described categories rather than their text. Their figures are on their corpus slice; ours is 78 questions over 6 companies. Read a few points of margin as approximate rather than decisive.*
+
+---
+
+<a id="post-graph"></a>
+
+## 🧱 The layer underneath: [post-graph](https://github.com/crajah/post-graph)
+
+A standalone library, if you want the graph without the RAG. It makes PostgreSQL behave like a graph database rather than emulating one:
+
+- **Table-per-vertex, table-per-edge** — real foreign keys, real indexes, real constraints, so your graph is queryable by anything that speaks SQL
+- **Recursive CTE traversals** — neighbours, paths and shortest-path with cycle detection, executed in the database rather than in your application
+- **Two levels of tenancy** — `realm` for hard isolation (optionally schema-per-tenant), `space` for sub-grouping inside it
+- **pgvector on vertices and edges**, searchable across live and historical rows
+- **Append-only history and trigger-based audit logging** on every table, capturing old and new state with the acting user
+- **Promoted payload columns and server-side range queries** — filter, order and bulk-delete on JSONB fields at the database, not in Python
+
+[`pip install post-graph`](https://github.com/crajah/post-graph) · Apache 2.0 · 635 tests
 
 ---
 
