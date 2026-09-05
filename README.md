@@ -583,6 +583,23 @@ They skip automatically when PostgreSQL with pgvector is not reachable.
 
 ---
 
+## 🤝 Contributing
+
+Bug reports, failing test cases and pull requests are all welcome.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the parts that are specific to this
+project rather than generic advice: what the test suite needs, what it
+deliberately does not need, and the invariants worth understanding before
+changing them.
+
+Issues tagged [`good first issue`](https://github.com/crajah/post-graph-rag/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) are real gaps rather than
+make-work — each one names the file to look at, what "done" means, and what
+you will learn from it.
+
+Tests need PostgreSQL with `pgvector` and **no LLM credentials** — every test
+uses an in-process fake, so the suite is free, offline and deterministic.
+
+---
+
 ## 📄 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
