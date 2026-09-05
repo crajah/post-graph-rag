@@ -65,14 +65,14 @@ Scored under the protocol ECT-QA's own authors use — an LLM judge comparing el
 
 | | Correct ↑ |
 | :--- | ---: |
-| **post-graph-rag** · `gemini-3.6-flash` | **0.677** |
+| **post-graph-rag** · `gemini-3.6-flash` | **0.807** |
 | TG-RAG *(published)* | 0.599 |
 | GraphRAG *(published)* | 0.405 |
 | LightRAG *(published)* | 0.406 |
 
-A second judge from a different model family scores the same answers at 0.668 — agreement within a point, which matters more than either figure, since the usual objection to a judged rate is that it moves with the judge.
+A second judge from a different model family scores the same answers at 0.805 — two-tenths of a point apart, which matters more than either figure, since the usual objection to a judged rate is that it moves with the judge.
 
-The breakdown is more useful than the total: **incorrect elements sit at 0.15**, and relative-time questions produce none at all — when this system commits to a figure, it is usually right. The gap to a higher score is *refusal*, evidence not retrieved rather than reasoning gone wrong.
+The breakdown is more useful than the total: **incorrect elements sit at 0.14**, refusals at 0.05, and relative-time questions produce no incorrect elements at all. When this system commits to a figure on this corpus, it is usually right.
 
 *Same qualifications apply, plus two specific to this comparison: their judge model is not available on our router, and their verbatim rubric is truncated in the public HTML, so ours reproduces their described categories rather than their text. Their figures are on their corpus slice; ours is 78 questions over 6 companies. Read a few points of margin as approximate rather than decisive.*
 
