@@ -10,6 +10,34 @@
 
 No separate vector store. No graph engine to operate. One database, one consistency model, one backup — and transactions that span your graph *and* your application tables.
 
+Built on **[post-graph](https://github.com/crajah/post-graph)** — the property-graph layer underneath, usable on its own if you want the graph without the RAG.
+
+## ⚡ Try it
+
+```bash
+pip install post-graph-rag
+```
+
+Point it at PostgreSQL with `pgvector` and any OpenAI-compatible endpoint:
+
+```python
+from post_graph_rag import GraphRAG, RAGConfig
+
+rag = GraphRAG(RAGConfig(
+    api_base="https://your-router/v1", api_key=..., model="gemini-3.6-flash",
+    embedding_model="gemini-embedding-001", embedding_dim=1536,
+    db_uri="postgresql://localhost:5432/postgres", realm="my_kb"))
+await rag.initialize()
+
+await rag.index_document("Helena Voss is CFO of Calder Industries.", metadata={"source": "2019.txt"})
+await rag.index_document("Priya Nair has been appointed CFO, succeeding Helena Voss.", metadata={"source": "2023.txt"})
+
+answer = await rag.query("Who is the CFO of Calder Industries?")
+# Priya Nair — the earlier fact is closed, not competing
+```
+
+**[→ Seven runnable examples](examples/)** · [Full installation](#install) · [Configuration reference](#config)
+
 ## 📈 Benchmarks
 
 Paper: [arXiv:2608.24921](https://arxiv.org/abs/2608.24921).
@@ -235,6 +263,8 @@ cd examples && python 01_quickstart.py
 | [`06_communities_and_exploration.py`](examples/06_communities_and_exploration.py) | Topic tree, corpus themes, coverage gaps |
 | [`07_retrieval_modes.py`](examples/07_retrieval_modes.py) | `local`, `global` and `mix` retrieval, same question |
 
+<a id="install"></a>
+
 ## 📦 Installation
 
 Install `post-graph-rag` via `pip` or `uv`:
@@ -377,6 +407,8 @@ realms indexed on the old scheme.
 
 ---
 
+<a id="config"></a>
+
 ## ⚙️ Configuration Reference (`RAGConfig`)
 
 `RAGConfig` can be configured explicitly or automatically loaded from environment variables:
@@ -476,7 +508,7 @@ Data container for structured document metadata.
 - `from_dict(data: Dict[str, Any]) -> DocumentMetadata`: Deserializes dictionary data.
 
 ### `RAGGraphStore`
-Database layer wrapping `post-graph`.
+Database layer wrapping [`post-graph`](https://github.com/crajah/post-graph).
 
 - `add_document(text, embedding, metadata, space=None)`: Inserts a document vertex into the `documents` table.
 - `upsert_entity(name, entity_type, description, embedding, space=None)`: Upserts by canonical name within `(realm, space)`, so an entity mentioned in many documents is a single vertex. A bare `Concept` stub never overwrites a richer type or description.
