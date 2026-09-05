@@ -411,6 +411,10 @@ async def main():
     # 429s carry "try again in 3600 seconds", so retrying the same model is
     # waiting an hour by instalments when a working model is one call away.
     ap.add_argument("--max-retries", type=int, default=3)
+    ap.add_argument("--max-total-tokens", type=int, default=None,
+                    help="Context budget in tokens. Unset means unlimited, which "
+                         "is the engine default; set 4000 to reproduce the "
+                         "pre-1.11 assembler for the ablation of that change.")
     ap.add_argument("--top-k", type=int, default=48,
                     help="gold answers need a mean of 5.5 figures and up to 32, "
                          "often one per quarter across 16 quarters; 12 chunks "
@@ -556,7 +560,8 @@ async def main():
                 try:
                     out = await rag.query(
                         f"{ANSWER_INSTRUCTION}\n\nQuestion: {q['question']}",
-                        param=QueryParam(mode="mix", top_k=args.top_k, space=space))
+                        param=QueryParam(mode="mix", top_k=args.top_k, space=space,
+                                         max_total_tokens=args.max_total_tokens))
                     answer = (out["answer"] if isinstance(out, dict) else str(out)).strip()
                 except Exception as e:
                     degraded.append({"question": q["question"][:80],
@@ -653,6 +658,7 @@ async def main():
          "accuracy": total / max(1, len(results)),
          "by_type": {k: sum(v) / len(v) for k, v in by_type.items()},
          "degraded": degraded, "degraded_count": len(degraded),
+         "max_total_tokens": args.max_total_tokens,
          "scoring": {"figures": "numeric_f1", "periods": "period_f1",
                      "refusals": "rule", "narrative_golds": args.judges},
          "judge_family_excluded": False,
