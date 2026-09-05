@@ -5,11 +5,10 @@ must gain no table and pay no write. Everything else is the poll-work loop a
 breadth-first consumer runs.
 """
 import pytest
+from conftest import FakeLLM
 
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
-
-from conftest import FakeLLM
 
 pytestmark = pytest.mark.asyncio
 

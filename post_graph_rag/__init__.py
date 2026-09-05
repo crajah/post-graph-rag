@@ -1,26 +1,34 @@
 """post-graph-rag: Graph RAG library using post-graph and pgvector on PostgreSQL."""
 
-from post_graph_rag.config import RAGConfig
-from post_graph_rag.errors import (
-    RAGError,
-    SchemaError,
-    EmbeddingError,
-    LLMError,
-    ExtractionError,
-)
 from post_graph_rag.chunking import Chunker, make_paragraph_chunker, paragraph_chunker
 from post_graph_rag.communities import (
-    CommunityDetector, default_detector, group_by_community, label_propagation,
+    CommunityDetector,
+    default_detector,
+    group_by_community,
+    label_propagation,
+)
+from post_graph_rag.config import RAGConfig
+from post_graph_rag.deltas import CorpusDelta
+from post_graph_rag.engine import GraphRAG
+from post_graph_rag.errors import (
+    EmbeddingError,
+    ExtractionError,
+    LLMError,
+    RAGError,
+    SchemaError,
+)
+from post_graph_rag.extractor import Entity, ExtractionResult, GraphExtractor, Triple
+from post_graph_rag.graph_store import RAGGraphStore
+from post_graph_rag.llm import LLMService
+from post_graph_rag.models import (
+    CommunityCoverage,
+    DocumentContext,
+    DocumentMetadata,
+    KeywordResult,
+    QueryParam,
 )
 from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
-from post_graph_rag.deltas import CorpusDelta
 from post_graph_rag.retention import RetentionReport
-from post_graph_rag.models import CommunityCoverage
-from post_graph_rag.models import DocumentContext, DocumentMetadata, QueryParam, KeywordResult
-from post_graph_rag.llm import LLMService
-from post_graph_rag.extractor import GraphExtractor, Entity, Triple, ExtractionResult
-from post_graph_rag.graph_store import RAGGraphStore
-from post_graph_rag.engine import GraphRAG
 
 __version__ = "1.11.1"
 __all__ = [

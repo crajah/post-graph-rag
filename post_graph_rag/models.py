@@ -1,7 +1,8 @@
 """Data models for post-graph-rag including DocumentMetadata, QueryParam, and KeywordResult."""
 import hashlib
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
 class DocumentMetadata:

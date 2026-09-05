@@ -1,11 +1,10 @@
 """Tests for GraphExtractor: no fabricated relations, specific predicates only."""
 import pytest
+from conftest import FakeLLM
 
 from post_graph_rag import RAGConfig
 from post_graph_rag.errors import ExtractionError, RAGError
 from post_graph_rag.extractor import Entity, ExtractionResult, GraphExtractor, Triple
-
-from conftest import FakeLLM
 
 
 def _extractor(extraction=None, fail=False):

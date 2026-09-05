@@ -5,7 +5,6 @@ dormancy's: an archived entity leaves retrieval and community builds but
 stays in the table, and restore brings it back.
 """
 import pytest
-
 from conftest import VOCAB_DIM
 
 pytestmark = pytest.mark.asyncio
@@ -45,7 +44,7 @@ class TestScoringAndArchive:
 
     async def test_archive_marks_and_withholds(self, rag_factory):
         rag = await rag_factory(record_retrieval_events=True)
-        vs = await _seed(rag)
+        await _seed(rag)
         await rag.query_data("about E0?")              # touch E0 via telemetry
         # threshold 1.0 archives everything scoring below 1.0 -- i.e. the cold
         # entities, but E0 (hit + degree) should score highest
@@ -71,14 +70,15 @@ class TestScoringAndArchive:
         assert arch == []
 
     async def test_archived_excluded_from_community_build(self, rag_factory):
+        from conftest import FakeLLM
+
         from post_graph_rag.config import RAGConfig
         from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
-        from conftest import FakeLLM
         rag = await rag_factory(record_retrieval_events=True)
         cfg = RAGConfig(api_base="http://localhost:9/v1", api_key="k", embedding_dim=16)
         rag.reporter = CommunityReporter(FakeLLM(cfg, extraction=CommunityReport(
             title="t", summary="s", findings=[Finding(summary="f", explanation="e")], rating=5.0)))
-        vs = await _seed(rag)
+        await _seed(rag)
         # archive everything, then snapshot must be empty of them
         rep = await rag.apply_retention(threshold=1.0, dry_run=False)
         ents, _rels = await rag.store.graph_snapshot()

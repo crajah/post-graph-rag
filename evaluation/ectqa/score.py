@@ -34,8 +34,8 @@ except SystemExit:
 numeric_f1 = _run.numeric_f1
 period_f1 = _run.period_f1
 
-from post_graph_rag import RAGConfig                      # noqa: E402
-from post_graph_rag.llm import LLMService                 # noqa: E402
+from post_graph_rag import RAGConfig  # noqa: E402
+from post_graph_rag.llm import LLMService  # noqa: E402
 
 
 def is_refusal(answer: str) -> bool:

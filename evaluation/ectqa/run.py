@@ -45,6 +45,7 @@ _spec.loader.exec_module(_lme)
 judge_panel = _lme.judge_panel  # the LongMemEval panel, reused unchanged
 
 from post_graph import RESERVED_SPACE_ALL  # noqa: E402
+
 from post_graph_rag import DocumentMetadata, GraphRAG, QueryParam, RAGConfig  # noqa: E402
 from post_graph_rag.llm import LLMService  # noqa: E402
 

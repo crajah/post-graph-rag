@@ -2,14 +2,13 @@
 
 import json
 
-
 from post_graph_rag.models import (
-    DocumentMetadata,
     DocumentContext,
+    DocumentMetadata,
     KeywordResult,
     QueryParam,
-    document_key,
     content_hash,
+    document_key,
 )
 
 

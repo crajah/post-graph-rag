@@ -15,7 +15,6 @@ reusing the sweep's machinery for indexing and judging.
 """
 import argparse
 import asyncio
-import importlib.util
 import json
 import pathlib
 import random
@@ -26,13 +25,17 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1]))
 
-from run import (  # noqa: E402
-    CONVERSATIONAL_PROMPT, DegradedRun, index_instance, judge_panel, parse_date,
-)
 from reader_sweep import panel_for  # noqa: E402
+from run import (  # noqa: E402
+    CONVERSATIONAL_PROMPT,
+    DegradedRun,
+    index_instance,
+    judge_panel,
+    parse_date,
+)
 
 from post_graph_rag import GraphRAG, QueryParam, RAGConfig  # noqa: E402
-from post_graph_rag.llm import LLMService                   # noqa: E402
+from post_graph_rag.llm import LLMService  # noqa: E402
 
 MODES = ("naive", "mix")   # their Baseline RAG, our Graph RAG
 
@@ -126,7 +129,7 @@ async def main():
         print(line)
     print(f"  {'OVERALL':<28}" + "".join(
         f"{(sum(tot[m])/len(tot[m]) if tot[m] else 0):>10.3f}" for m in MODES))
-    print(f"\n  their result: flat 0.536 judge vs graph 0.454 -- structure lost.")
+    print("\n  their result: flat 0.536 judge vs graph 0.454 -- structure lost.")
     print(f"  {len(per_instance)} scored, {len(degraded)} degraded")
 
     pathlib.Path(args.out).write_text(json.dumps({

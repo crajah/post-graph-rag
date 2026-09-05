@@ -1,10 +1,9 @@
 """DB-backed tests for alias merging, relation dedup/weight, and mention expansion."""
 import pytest
+from conftest import fake_embed
 
 from post_graph_rag import DocumentMetadata, QueryParam
 from post_graph_rag.extractor import Entity, ExtractionResult, Triple
-
-from conftest import fake_embed
 
 BABBAGE = ExtractionResult(
     entities=[

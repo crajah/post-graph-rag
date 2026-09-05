@@ -2,20 +2,20 @@
 
 
 from post_graph_rag.extractor import (
-    normalise_predicate,
-    is_pronominal,
-    is_phrase_not_entity,
-    _clean_date,
-    date_sort_key,
-    VAGUE_PREDICATES,
-    TENSE_PREFIXES,
+    BARE_QUANTITY,
     DEFAULT_ENTITY_TYPES,
     MAX_ENTITY_NAME_CHARS,
-    BARE_QUANTITY,
-    GraphExtractor,
+    TENSE_PREFIXES,
+    VAGUE_PREDICATES,
     Entity,
-    Triple,
     ExtractionResult,
+    GraphExtractor,
+    Triple,
+    _clean_date,
+    date_sort_key,
+    is_phrase_not_entity,
+    is_pronominal,
+    normalise_predicate,
 )
 
 

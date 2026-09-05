@@ -1,22 +1,28 @@
 import asyncio
 import inspect
-import math
 import logging
-from datetime import datetime, timezone
+import math
 import re
-from typing import Callable, List, Dict, Any, Optional, Sequence, Set, Tuple, Union
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
+
 from post_graph import Vertex
+
 from post_graph_rag.chunking import make_paragraph_chunker
 from post_graph_rag.communities import default_detector, group_by_community
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import RAGError
-from post_graph_rag.reporting import CommunityReporter, report_to_text
-from post_graph_rag.models import (
-    DocumentContext, DocumentMetadata, QueryParam, content_hash, document_key,
-)
-from post_graph_rag.llm import LLMService
-from post_graph_rag.extractor import GraphExtractor, ExtractionResult, date_sort_key
+from post_graph_rag.extractor import ExtractionResult, GraphExtractor, date_sort_key
 from post_graph_rag.graph_store import RAGGraphStore
+from post_graph_rag.llm import LLMService
+from post_graph_rag.models import (
+    DocumentContext,
+    DocumentMetadata,
+    QueryParam,
+    content_hash,
+    document_key,
+)
+from post_graph_rag.reporting import CommunityReporter, report_to_text
 
 logger = logging.getLogger(__name__)
 

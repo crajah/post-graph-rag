@@ -2,14 +2,13 @@
 
 import json
 
-
 from post_graph_rag.reporting import (
+    REPORT_SYSTEM_PROMPT,
     CommunityReport,
     CommunityReporter,
     Finding,
     render_community,
     report_to_text,
-    REPORT_SYSTEM_PROMPT,
 )
 
 

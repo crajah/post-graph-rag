@@ -1,16 +1,20 @@
 """Tests for the extraction-quality fixes: aliases, context, negation, gleaning, vocabulary."""
 import pytest
+from conftest import FakeLLM
 
 from post_graph_rag import RAGConfig
 from post_graph_rag.chunking import paragraph_chunker
 from post_graph_rag.extractor import (
     MAX_ENTITY_NAME_CHARS,
-    Entity, ExtractionResult, GraphExtractor, Triple,
-    is_phrase_not_entity, is_pronominal, normalise_predicate,
+    Entity,
+    ExtractionResult,
+    GraphExtractor,
+    Triple,
+    is_phrase_not_entity,
+    is_pronominal,
+    normalise_predicate,
 )
 from post_graph_rag.models import DocumentContext
-
-from conftest import FakeLLM
 
 
 def _extractor(extraction=None, **kw):

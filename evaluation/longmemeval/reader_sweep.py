@@ -42,7 +42,11 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1]))
 
 from run import (  # noqa: E402
-    CONVERSATIONAL_PROMPT, DegradedRun, index_instance, judge_panel, parse_date,
+    CONVERSATIONAL_PROMPT,
+    DegradedRun,
+    index_instance,
+    judge_panel,
+    parse_date,
 )
 
 _spec = importlib.util.spec_from_file_location(
@@ -56,7 +60,7 @@ numeric_f1, period_f1 = _ect.numeric_f1, _ect.period_f1
 answer_similarity = _ect.answer_similarity
 
 from post_graph_rag import GraphRAG, QueryParam, RAGConfig  # noqa: E402
-from post_graph_rag.llm import LLMService                   # noqa: E402
+from post_graph_rag.llm import LLMService  # noqa: E402
 
 
 def family(model: str) -> str:

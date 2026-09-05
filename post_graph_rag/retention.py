@@ -20,7 +20,7 @@ scoring on structure alone.
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 
 def _parse(ts: Optional[str]) -> Optional[datetime]:

@@ -4,7 +4,7 @@ import pytest
 
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import LLMError
-from post_graph_rag.llm import LLMService, _is_retryable, RETRYABLE_STATUS, RETRYABLE_MARKERS
+from post_graph_rag.llm import RETRYABLE_MARKERS, RETRYABLE_STATUS, LLMService, _is_retryable
 
 
 def _rate_limit_error():

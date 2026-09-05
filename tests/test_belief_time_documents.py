@@ -11,10 +11,9 @@ import asyncio
 from datetime import datetime, timezone
 
 import pytest
+from conftest import VOCAB_DIM
 
 from post_graph_rag import QueryParam
-
-from conftest import VOCAB_DIM
 
 pytestmark = pytest.mark.asyncio
 

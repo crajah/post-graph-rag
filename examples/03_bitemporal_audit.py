@@ -15,6 +15,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from _shared import banner, fresh_realm, make_config
+
 from post_graph_rag import GraphRAG, QueryParam
 
 

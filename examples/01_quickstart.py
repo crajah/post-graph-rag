@@ -7,6 +7,7 @@ question; the graph walks the relations between them.
 import asyncio
 
 from _shared import banner, fresh_realm, make_config
+
 from post_graph_rag import GraphRAG
 
 DOCS = [

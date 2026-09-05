@@ -29,7 +29,11 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1]))
 
 from run import (  # noqa: E402
-    CONVERSATIONAL_PROMPT, DegradedRun, index_instance, judge_panel, parse_date,
+    CONVERSATIONAL_PROMPT,
+    DegradedRun,
+    index_instance,
+    judge_panel,
+    parse_date,
 )
 
 from post_graph_rag import GraphRAG, QueryParam, RAGConfig  # noqa: E402

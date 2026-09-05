@@ -8,8 +8,9 @@ and the reason spaces are a query parameter rather than a separate database.
 import asyncio
 
 from _shared import banner, fresh_realm, make_config
-from post_graph_rag import GraphRAG, QueryParam
 from post_graph import RESERVED_SPACE_ALL
+
+from post_graph_rag import GraphRAG, QueryParam
 
 TENANTS = {
     "acme": "Acme Corp reported quarterly revenue of 24 million dollars and "

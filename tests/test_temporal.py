@@ -1,14 +1,18 @@
 """Tests for temporal evolution: re-indexing, dormancy, supersession, validity."""
 import pytest
+from conftest import FakeLLM
 
 from post_graph_rag import DocumentMetadata, QueryParam, RAGConfig
 from post_graph_rag.engine import GraphRAG, _valid_at
 from post_graph_rag.extractor import (
-    Entity, ExtractionResult, GraphExtractor, Triple, _clean_date, date_sort_key,
+    Entity,
+    ExtractionResult,
+    GraphExtractor,
+    Triple,
+    _clean_date,
+    date_sort_key,
 )
 from post_graph_rag.models import content_hash, document_key
-
-from conftest import FakeLLM
 
 FRIENDS = ExtractionResult(
     entities=[Entity(name="Alice", type="Person", description="colleague"),

@@ -3,11 +3,11 @@
 import pytest
 
 from post_graph_rag.errors import (
+    EmbeddingError,
+    ExtractionError,
+    LLMError,
     RAGError,
     SchemaError,
-    EmbeddingError,
-    LLMError,
-    ExtractionError,
 )
 
 

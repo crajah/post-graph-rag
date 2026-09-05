@@ -2,18 +2,23 @@
 import json
 
 import pytest
+from conftest import FakeLLM
 
 from post_graph_rag import QueryParam, RAGConfig
 from post_graph_rag.communities import (
-    default_detector, group_by_community, label_propagation,
+    default_detector,
+    group_by_community,
+    label_propagation,
 )
 from post_graph_rag.errors import ExtractionError
 from post_graph_rag.extractor import Entity, ExtractionResult, Triple
 from post_graph_rag.reporting import (
-    CommunityReport, CommunityReporter, Finding, render_community, report_to_text,
+    CommunityReport,
+    CommunityReporter,
+    Finding,
+    render_community,
+    report_to_text,
 )
-
-from conftest import FakeLLM
 
 # Two dense clusters joined by nothing. Any reasonable detector must separate them.
 TWO_CLUSTERS_NODES = ["a1", "a2", "a3", "b1", "b2", "b3"]

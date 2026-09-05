@@ -18,12 +18,10 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1]))
 
-from run import (ANSWER_INSTRUCTION, judge_panel, numeric_f1,  # noqa: E402
-                 period_f1)
+from run import ANSWER_INSTRUCTION, judge_panel, numeric_f1, period_f1  # noqa: E402
 
-from post_graph import RESERVED_SPACE_ALL                            # noqa: E402
-from post_graph_rag import GraphRAG, QueryParam, RAGConfig           # noqa: E402
-from post_graph_rag.llm import LLMService                            # noqa: E402
+from post_graph_rag import GraphRAG, QueryParam, RAGConfig  # noqa: E402
+from post_graph_rag.llm import LLMService  # noqa: E402
 
 
 async def main():

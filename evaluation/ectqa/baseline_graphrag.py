@@ -16,7 +16,6 @@ environment (pip install graphrag, Python <3.14) and run this with that
 interpreter.
 """
 import argparse
-import asyncio
 import json
 import os
 import pathlib

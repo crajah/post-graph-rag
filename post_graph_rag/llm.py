@@ -5,8 +5,10 @@ import hashlib
 import logging
 import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Type
+
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import EmbeddingError, LLMError
 

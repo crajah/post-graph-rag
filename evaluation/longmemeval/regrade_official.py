@@ -32,9 +32,9 @@ from collections import defaultdict
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
 
-import os                                          # noqa: E402
+import os  # noqa: E402
 
-from openai import AsyncOpenAI                     # noqa: E402
+from openai import AsyncOpenAI  # noqa: E402
 
 # --- verbatim from LongMemEval src/evaluation/evaluate_qa.py -----------------
 PROMPTS = {

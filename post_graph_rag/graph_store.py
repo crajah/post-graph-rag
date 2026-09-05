@@ -1,11 +1,13 @@
 """Graph Store implementation wrapping post-graph and pgvector."""
 import asyncio
 import json
+import logging
 import re
 from datetime import datetime, timezone
-import logging
-from typing import List, Dict, Any, Set, Tuple, Optional, Union
-from post_graph import AsyncPostGraph, Vertex, Edge, RESERVED_SPACE_ALL
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+from post_graph import RESERVED_SPACE_ALL, AsyncPostGraph, Edge, Vertex
+
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import SchemaError
 from post_graph_rag.models import DocumentMetadata

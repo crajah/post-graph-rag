@@ -1,10 +1,10 @@
 """Tests for post_graph_rag.chunking — paragraph chunker edge cases."""
 
 from post_graph_rag.chunking import (
-    paragraph_chunker,
-    make_paragraph_chunker,
     DEFAULT_CHUNK_CHARS,
     DEFAULT_OVERLAP_CHARS,
+    make_paragraph_chunker,
+    paragraph_chunker,
 )
 
 

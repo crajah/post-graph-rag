@@ -5,11 +5,10 @@ current behaviour (no children, no parents), and when the hierarchy is on it
 genuinely nests -- every child has exactly one parent edge.
 """
 import pytest
+from conftest import VOCAB_DIM, FakeLLM
 
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
-
-from conftest import FakeLLM, VOCAB_DIM
 
 pytestmark = pytest.mark.asyncio
 

@@ -29,8 +29,9 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
 
-from post_graph_rag import RAGConfig                      # noqa: E402
-from post_graph_rag.llm import LLMService                 # noqa: E402
+from post_graph_rag import RAGConfig  # noqa: E402
+from post_graph_rag.llm import LLMService  # noqa: E402
+
 
 def is_refusal(answer: str) -> bool:
     """Only a leading refusal counts.

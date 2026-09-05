@@ -4,7 +4,6 @@ Seeded through the store API (no LLM), so every stamp under test is the one
 production writes. The watermark discipline is the core assertion: polling
 with each delta's `as_of` must see every change exactly once.
 """
-import asyncio
 
 import pytest
 

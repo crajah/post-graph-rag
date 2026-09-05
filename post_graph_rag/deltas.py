@@ -18,10 +18,8 @@ communities are rebuilt wholesale rather than edited, so they report a
 staleness flag, not a fake diff.
 """
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import timezone
 from typing import Any, Dict, List, Optional, Tuple
-
-from post_graph import RESERVED_SPACE_ALL
 
 _INCLUDE = ("relations", "entities", "documents", "communities")
 

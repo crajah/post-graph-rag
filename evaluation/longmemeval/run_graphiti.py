@@ -67,12 +67,12 @@ async def main():
     ap.add_argument("--out", default=str(HERE / "results_graphiti.json"))
     args = ap.parse_args()
 
-    from graphiti_core import Graphiti
     # The package must be imported before the module: postgraph/__init__.py
     # imports from postgraph_driver, which imports back into the package, and
     # importing the module directly hits the half-built cycle. The driver's own
     # tests happen to take the working order, so the bug is invisible to them.
     import graphiti_core.driver.postgraph  # noqa: F401
+    from graphiti_core import Graphiti
     from graphiti_core.driver.postgraph_driver import PostGraphDriver
     from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
     from graphiti_core.llm_client.config import LLMConfig

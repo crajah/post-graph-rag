@@ -12,6 +12,7 @@ hash of each query.
 import asyncio
 
 from _shared import banner, fresh_realm, make_config
+
 from post_graph_rag import GraphRAG, QueryParam
 
 DOCS = [

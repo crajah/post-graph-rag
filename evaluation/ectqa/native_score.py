@@ -46,8 +46,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1]))
 
-from post_graph_rag import RAGConfig                     # noqa: E402
-from post_graph_rag.llm import LLMService                # noqa: E402
+from post_graph_rag import RAGConfig  # noqa: E402
+from post_graph_rag.llm import LLMService  # noqa: E402
 
 
 class ElementVerdict(BaseModel):

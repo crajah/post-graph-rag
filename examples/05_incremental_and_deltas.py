@@ -15,6 +15,7 @@ exactly-once even when your application server's clock drifts.
 import asyncio
 
 from _shared import banner, fresh_realm, make_config
+
 from post_graph_rag import GraphRAG
 
 

@@ -2,11 +2,10 @@
 import asyncio
 
 import pytest
+from conftest import VOCAB_DIM, fake_embed, make_config
 
 from post_graph_rag import RAGGraphStore
 from post_graph_rag.errors import SchemaError
-
-from conftest import VOCAB_DIM, fake_embed, make_config
 
 
 @pytest.mark.asyncio
