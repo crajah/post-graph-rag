@@ -166,3 +166,42 @@ class CommunityCoverage:
     retrieval_hits: int
     last_hit_at: Optional[str]
     hit_share: float          # hits normalised by member count
+
+
+@dataclass
+class DocumentStats:
+    """What one document contributed to the graph.
+
+    A registry rendering a table of documents needs these counts per row, so
+    the batch form is the one that matters and this is deliberately a flat
+    rollup rather than a nested structure.
+
+    ``found`` distinguishes the two zero cases. A document that was indexed and
+    yielded nothing extractable and a document that was never indexed at all
+    both roll up to zeros, and a caller showing "0 entities" against a document
+    that is simply absent is showing a different fact than it thinks.
+    """
+    doc_key: str
+    found: bool = False
+    chunks: int = 0
+    chunk_bytes: int = 0
+    entities_mentioned: int = 0
+    entities_current: int = 0
+    entities_dormant: int = 0
+    relations: int = 0
+    first_indexed_at: Optional[str] = None
+    last_indexed_at: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "doc_key": self.doc_key,
+            "found": self.found,
+            "chunks": self.chunks,
+            "chunk_bytes": self.chunk_bytes,
+            "entities_mentioned": self.entities_mentioned,
+            "entities_current": self.entities_current,
+            "entities_dormant": self.entities_dormant,
+            "relations": self.relations,
+            "first_indexed_at": self.first_indexed_at,
+            "last_indexed_at": self.last_indexed_at,
+        }

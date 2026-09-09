@@ -18,6 +18,7 @@ from post_graph_rag.llm import LLMService
 from post_graph_rag.models import (
     DocumentContext,
     DocumentMetadata,
+    DocumentStats,
     QueryParam,
     content_hash,
     document_key,
@@ -303,6 +304,46 @@ class GraphRAG:
             "retrieval_events", realm=self.config.realm,
             space=space or self.store.space,
             where=[("ts", "<", before)])
+
+    async def document_stats(self, doc_key: str, space=None) -> DocumentStats:
+        """What one document contributed: chunks, entities, relations, timings.
+
+        A document that was never indexed returns zeros with ``found`` false
+        rather than raising, because "indexed but empty" and "not present" are
+        different answers and a caller rendering a table needs to tell them
+        apart without catching an exception per row.
+        """
+        return await self.store.document_stats(doc_key, space=space)
+
+    async def documents_stats(self, doc_keys, space=None):
+        """The batch form of document_stats: two round trips for any key count.
+
+        Use this to render a table of documents. Looping over document_stats
+        would issue two queries per row; this issues two in total.
+        """
+        return await self.store.documents_stats(list(doc_keys), space=space)
+
+    async def document_graph(self, doc_key: str, space=None,
+                             max_entities: int = 500, max_relations: int = 1000):
+        """The subgraph a document contributed, for a drill-down view.
+
+        Output is capped and the caps are reported in ``truncated``, so a view
+        never presents a partial subgraph as the whole of what a document said.
+        """
+        return await self.store.document_graph(
+            doc_key, space=space,
+            max_entities=max_entities, max_relations=max_relations)
+
+    async def sweep_orphaned_relations(self, space=None) -> int:
+        """Retire relations whose endpoint entities have all gone dormant.
+
+        One-shot repair for graphs written before relation provenance existed.
+        Those relations record no sources, so no document deletion can ever
+        withdraw them and they stay live indefinitely -- still answering
+        questions from documents that were removed. Nothing is deleted: the
+        rows are marked dormant, exactly as document deletion would have.
+        """
+        return await self.store.sweep_orphaned_relations(space=space)
 
     async def close(self):
         """Close database connection."""

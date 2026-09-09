@@ -10,11 +10,36 @@ from post_graph import RESERVED_SPACE_ALL, AsyncPostGraph, Edge, Vertex
 
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import SchemaError
-from post_graph_rag.models import DocumentMetadata
+from post_graph_rag.models import DocumentMetadata, DocumentStats
 
 logger = logging.getLogger(__name__)
 
 VERTEX_TABLES = ("documents", "entities", "communities")
+
+# A relation is withheld from retrieval when its provenance is gone. Kept as one
+# SQL fragment rather than repeated per query: the defect this fixes was that
+# each read path decided for itself, and most of them decided nothing. Anything
+# returning relations composes this in unless the caller asks for dormant rows.
+def _as_iso(value: Any) -> Optional[str]:
+    """Normalise a timestamp column to ISO text, whatever the driver returned."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
+
+
+def _not_dormant(alias: str = "") -> str:
+    """SQL for "this relation is still current", optionally table-qualified."""
+    prefix = f"{alias}." if alias else ""
+    return f"({prefix}payload->>'dormant_since') IS NULL"
+
+# Why a relation went dormant. The distinction is load-bearing on revival: a
+# relation stranded because both its endpoint entities went dormant comes back
+# when either endpoint is mentioned again, whereas one whose sources were
+# withdrawn stays dormant until a document asserts it afresh.
+DORMANT_SOURCES_WITHDRAWN = "sources_withdrawn"
+DORMANT_ORPHANED_ENDPOINTS = "orphaned_endpoints"
 
 
 def _utc_now() -> str:
@@ -115,6 +140,11 @@ class RAGGraphStore:
         for key in ("t_created", "t_expired"):
             await self.client.create_payload_index("relations", realm=self.realm, key=key)
         await self.client.create_payload_index("entities", realm=self.realm, key="dormant_since")
+        # Relations carry the same flag and every relation read path now filters
+        # on it, so it needs the same index. Expression indexes apply to
+        # existing tables, so realms created before this gain it on next start.
+        await self.client.create_payload_index("relations", realm=self.realm, key="dormant_since")
+        await self._ensure_relation_sources_index()
         # Hierarchy level: numeric expression index matching the numeric cast
         # the level predicate compiles to. Expression indexes apply to
         # existing tables, so realms created before the hierarchy gain it too.
@@ -123,6 +153,25 @@ class RAGGraphStore:
 
         await self._verify_vector_columns()
         await self._ensure_entity_name_index()
+
+    async def _ensure_relation_sources_index(self):
+        """GIN index over relation provenance, for the withdrawal predicate.
+
+        Withdrawal tests ``payload->'sources' ?| $1`` on every document
+        deletion. Without this the test is a sequential scan of the space,
+        which is the cost the set-based rewrite was meant to remove.
+
+        Best-effort: an index is an optimisation, and a deployment whose role
+        cannot create one should still be able to delete a document.
+        """
+        table_ref = self.client._get_table_ref("relations", self.realm)
+        try:
+            await self.client._execute(
+                f"CREATE INDEX IF NOT EXISTS idx_relations_payload_sources_gin "
+                f"ON {table_ref} USING gin ((payload->'sources'))"
+            )
+        except Exception as e:
+            logger.warning("Could not create relation sources index: %s", e)
 
     async def _verify_vector_columns(self):
         """Assert every vertex table has an embedding column of the configured width.
@@ -223,7 +272,8 @@ class RAGGraphStore:
         target_space = space or self.space
         chunks = await self.find_document_chunks(doc_key, space=target_space)
         if not chunks:
-            return {"chunks": 0, "mentions": 0, "dormant": 0}
+            return {"chunks": 0, "mentions": 0, "dormant": 0,
+                    "relations_withdrawn": 0, "relations_orphaned": 0}
 
         chunk_ids = [int(c["id"]) for c in chunks]
         mentions_ref = self.client._get_table_ref("doc_mentions", self.realm)
@@ -243,11 +293,15 @@ class RAGGraphStore:
         )
 
         withdrawn = await self._withdraw_relation_sources(chunk_ids, space=target_space)
-        dormant = await self.refresh_dormancy(
+        # Entity dormancy first: the orphaned-endpoint rule reads it, and running
+        # it before the entities are marked would find every endpoint still live.
+        counts = await self._refresh_dormancy(
             [str(t["to_id"]) for t in touched], space=target_space
         )
         return {"chunks": len(chunk_ids), "mentions": len(removed),
-                "dormant": dormant, "relations_withdrawn": withdrawn}
+                "dormant": counts["entities_dormant"],
+                "relations_withdrawn": withdrawn,
+                "relations_orphaned": counts["relations_orphaned"]}
 
     async def _withdraw_relation_sources(self, chunk_ids: List[int], space: Optional[str] = None) -> int:
         """Remove deleted chunks from relation provenance and recompute weight.
@@ -255,46 +309,185 @@ class RAGGraphStore:
         A relation left with no contributing chunk is marked dormant rather than
         deleted, matching how orphaned entities are handled: the assertion was
         genuinely made once, and the audit trail is meant to keep it.
+
+        Set-based on purpose. This previously loaded every relation in the space
+        and filtered in Python, so the cost of deleting one document grew with
+        the size of the whole graph. The ``?|`` test touches only rows whose
+        provenance actually names a deleted chunk.
+
+        Source entries are compared as text on both sides. They are written from
+        ``Vertex.id``, which is a string today; coercing explicitly means a
+        future numeric identifier cannot silently stop matching and strand
+        provenance the way the pre-provenance rows were stranded.
+        """
+        if not chunk_ids:
+            return 0
+        target_space = space or self.space
+        rels_ref = self.client._get_table_ref("relations", self.realm)
+        wanted = [str(c) for c in chunk_ids]
+        now = _utc_now()
+
+        rows = await self.client._fetch(
+            f"WITH kept AS ( "
+            f"  SELECT r.id, "
+            f"         COALESCE(jsonb_agg(s.val) FILTER (WHERE s.val IS NOT NULL), '[]'::jsonb) AS remaining "
+            f"  FROM {rels_ref} r "
+            f"  LEFT JOIN LATERAL jsonb_array_elements_text(r.payload->'sources') AS s(val) "
+            f"    ON s.val <> ALL($3::text[]) "
+            f"  WHERE r.realm = $1 AND r.space = $2 AND r.payload->'sources' ?| $3::text[] "
+            f"  GROUP BY r.id "
+            f") "
+            f"UPDATE {rels_ref} r SET payload = CASE "
+            f"  WHEN jsonb_array_length(k.remaining) > 0 THEN "
+            f"    (r.payload - 'dormant_since' - 'dormant_reason') "
+            f"      || jsonb_build_object('sources', k.remaining, "
+            f"                            'weight', jsonb_array_length(k.remaining)) "
+            f"      || CASE WHEN r.payload ? 'dormant_since' "
+            f"              THEN jsonb_build_object('revived_at', $4::text) "
+            f"              ELSE '{{}}'::jsonb END "
+            f"  ELSE "
+            f"    r.payload || jsonb_build_object('sources', k.remaining, 'weight', 1, "
+            f"                                   'dormant_since', $4::text, "
+            f"                                   'dormant_reason', $5::text) "
+            f"END "
+            f"FROM kept k WHERE r.id = k.id AND r.realm = $1 "
+            f"RETURNING r.id",
+            self.realm, target_space, wanted, now, DORMANT_SOURCES_WITHDRAWN,
+        )
+        return len(rows)
+
+    async def _mark_orphaned_relations(self, space: Optional[str] = None,
+                                       entity_ids: Optional[List[str]] = None) -> int:
+        """Mark dormant any relation whose endpoints have both gone dormant.
+
+        This is how relations written before provenance existed become
+        reachable. Their ``sources`` is null, so withdrawal can never match
+        them and no document deletion could ever retire them --- they simply
+        outlived every document that asserted them, invisibly. Provenance
+        cannot be reconstructed after the fact, but the graph carries the
+        evidence anyway: if neither endpoint is mentioned by any surviving
+        document, nothing in the corpus still asserts the relation.
+
+        Both endpoints, not either. A relation from a dormant entity to a live
+        one is still evidence about the live one, and retiring it would delete
+        knowledge the corpus still supports.
+
+        ``entity_ids`` narrows the scan to relations touching entities whose
+        dormancy just changed, which is what document deletion wants. Without
+        it the rule is applied across the space, which is what the sweep wants.
         """
         target_space = space or self.space
         rels_ref = self.client._get_table_ref("relations", self.realm)
-        wanted = {str(c) for c in chunk_ids}
+        ents_ref = self.client._get_table_ref("entities", self.realm)
+        now = _utc_now()
+
+        args: List[Any] = [self.realm, target_space, now, DORMANT_ORPHANED_ENDPOINTS]
+        scope = ""
+        if entity_ids is not None:
+            if not entity_ids:
+                return 0
+            args.append([int(e) for e in entity_ids])
+            scope = " AND (r.from_id = ANY($5::bigint[]) OR r.to_id = ANY($5::bigint[]))"
+
         rows = await self.client._fetch(
-            f"SELECT id, payload FROM {rels_ref} WHERE realm = $1 AND space = $2",
-            self.realm, target_space,
+            f"UPDATE {rels_ref} r "
+            f"SET payload = r.payload || jsonb_build_object('dormant_since', $3::text, "
+            f"                                              'dormant_reason', $4::text) "
+            f"FROM {ents_ref} a, {ents_ref} b "
+            f"WHERE r.realm = $1 AND r.space = $2 "
+            f"  AND a.realm = $1 AND a.id = r.from_id "
+            f"  AND b.realm = $1 AND b.id = r.to_id "
+            f"  AND (r.payload->>'dormant_since') IS NULL "
+            f"  AND (a.payload->>'dormant_since') IS NOT NULL "
+            f"  AND (b.payload->>'dormant_since') IS NOT NULL"
+            f"{scope} "
+            f"RETURNING r.id",
+            *args,
         )
-        touched = 0
-        for row in rows:
-            payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
-            sources = [s for s in (payload.get("sources") or [])]
-            remaining = [s for s in sources if s not in wanted]
-            if len(remaining) == len(sources):
-                continue
-            payload["sources"] = remaining
-            payload["weight"] = max(1, len(remaining))
-            if remaining:
-                if payload.pop("dormant_since", None) is not None:
-                    # A revival is an event, not just an absence: stamping it is
-                    # what lets changes_since() report it from belief time.
-                    payload["revived_at"] = datetime.now(timezone.utc).isoformat()
-            else:
-                payload["dormant_since"] = datetime.now(timezone.utc).isoformat()
-            await self.client._execute(
-                f"UPDATE {rels_ref} SET payload = $1::jsonb WHERE realm = $2 AND id = $3",
-                json.dumps(payload), self.realm, int(row["id"]),
-            )
-            touched += 1
-        return touched
+        return len(rows)
+
+    async def _revive_orphaned_relations(self, space: Optional[str] = None,
+                                         entity_ids: Optional[List[str]] = None) -> int:
+        """Revive relations that went dormant only because their endpoints had.
+
+        The symmetric half of :meth:`_mark_orphaned_relations`. An entity that is
+        mentioned again revives, and a relation retired purely because both its
+        endpoints were unmentioned has lost its reason to be dormant.
+
+        Restricted to ``orphaned_endpoints``. A relation whose sources were
+        withdrawn is dormant for a stronger reason --- the documents that
+        asserted it are gone --- and a neighbouring entity reappearing does not
+        re-assert it.
+        """
+        target_space = space or self.space
+        rels_ref = self.client._get_table_ref("relations", self.realm)
+        ents_ref = self.client._get_table_ref("entities", self.realm)
+        now = _utc_now()
+
+        args: List[Any] = [self.realm, target_space, DORMANT_ORPHANED_ENDPOINTS, now]
+        scope = ""
+        if entity_ids is not None:
+            if not entity_ids:
+                return 0
+            args.append([int(e) for e in entity_ids])
+            scope = " AND (r.from_id = ANY($5::bigint[]) OR r.to_id = ANY($5::bigint[]))"
+
+        rows = await self.client._fetch(
+            f"UPDATE {rels_ref} r "
+            f"SET payload = (r.payload - 'dormant_since' - 'dormant_reason') "
+            f"              || jsonb_build_object('revived_at', $4::text) "
+            f"FROM {ents_ref} a, {ents_ref} b "
+            f"WHERE r.realm = $1 AND r.space = $2 "
+            f"  AND a.realm = $1 AND a.id = r.from_id "
+            f"  AND b.realm = $1 AND b.id = r.to_id "
+            f"  AND (r.payload->>'dormant_reason') = $3 "
+            f"  AND ((a.payload->>'dormant_since') IS NULL "
+            f"       OR (b.payload->>'dormant_since') IS NULL)"
+            f"{scope} "
+            f"RETURNING r.id",
+            *args,
+        )
+        return len(rows)
+
+    async def sweep_orphaned_relations(self, space: Optional[str] = None) -> int:
+        """Apply the orphaned-endpoint rule across a space; returns rows marked.
+
+        One-shot repair for deployments carrying relations written before
+        provenance existed. Those rows cannot be retired by document deletion
+        however many documents are removed, because there is nothing recorded
+        to withdraw. Running this once retires the ones the corpus no longer
+        supports, without re-indexing and without deleting anything.
+
+        Safe to run repeatedly: it only ever touches relations that are
+        currently live and whose endpoints are both dormant.
+        """
+        return await self._mark_orphaned_relations(space=space)
 
     async def refresh_dormancy(self, entity_ids: List[str], space: Optional[str] = None) -> int:
         """Mark entities with no remaining mentions dormant, and revive the rest.
 
+        Returns the number of entities newly marked dormant. See
+        :meth:`_refresh_dormancy` for the relation bookkeeping this also drives.
+        """
+        counts = await self._refresh_dormancy(entity_ids, space=space)
+        return counts["entities_dormant"]
+
+    async def _refresh_dormancy(self, entity_ids: List[str],
+                                space: Optional[str] = None) -> Dict[str, int]:
+        """Entity dormancy, plus the relation dormancy that follows from it.
+
         Dormancy tracks *document mentions* only. It is deliberately independent
         of relation supersession: a superseded relation still evidences that its
         entities exist, so it must never push an entity dormant.
+
+        Relations are synchronised here because this is the only place entity
+        dormancy changes, and doing it anywhere else would let the two drift.
+        Both directions run: indexing calls this with newly mentioned entities,
+        so a relation stranded by an earlier deletion revives with the entity
+        that came back.
         """
         if not entity_ids:
-            return 0
+            return {"entities_dormant": 0, "relations_orphaned": 0, "relations_revived": 0}
         target_space = space or self.space
         ents_ref = self.client._get_table_ref("entities", self.realm)
         mentions_ref = self.client._get_table_ref("doc_mentions", self.realm)
@@ -326,7 +519,15 @@ class RAGGraphStore:
                 f"UPDATE {ents_ref} SET payload = $1::jsonb WHERE realm = $2 AND id = $3",
                 json.dumps(payload), self.realm, int(row["id"]),
             )
-        return marked
+
+        ids = [str(r["id"]) for r in rows]
+        return {
+            "entities_dormant": marked,
+            "relations_orphaned": await self._mark_orphaned_relations(
+                space=target_space, entity_ids=ids),
+            "relations_revived": await self._revive_orphaned_relations(
+                space=target_space, entity_ids=ids),
+        }
 
     # ---------------------------------------------------------------- entities
 
@@ -608,7 +809,8 @@ class RAGGraphStore:
             self._fts_index_ready = True
 
     async def search_relations_text(self, query: str, top_k: int = 20,
-                                    space: Optional[str] = None) -> List[Tuple[Edge, float]]:
+                                    space: Optional[str] = None,
+                                    include_dormant: bool = False) -> List[Tuple[Edge, float]]:
         """Lexical search over relations, ranked by ts_rank.
 
         The third candidate generator, alongside entity traversal and relation
@@ -638,6 +840,7 @@ class RAGGraphStore:
         tsquery = " | ".join(terms)
         target_space = space or self.space
         table_ref = self.client._get_table_ref("relations", self.realm)
+        dormant_sql = "" if include_dormant else "  AND " + _not_dormant("r") + " "
         rows = await self.client._fetch(
             f"SELECT r.id, r.realm, r.space, r.from_id, r.to_id, r.relation_type, r.payload, "
             f"       r.created_at, r.updated_at, "
@@ -646,6 +849,7 @@ class RAGGraphStore:
             f"               to_tsquery('english', $3)) AS rank "
             f"FROM {table_ref} r "
             f"WHERE r.realm = $1 AND r.space = $2 "
+            f"{dormant_sql}"
             f"  AND to_tsvector('english', coalesce(r.relation_type, '') || ' ' || "
             f"      coalesce(r.payload->>'description', '')) "
             f"      @@ to_tsquery('english', $3) "
@@ -657,7 +861,9 @@ class RAGGraphStore:
             out.append((self._row_to_edge(r), float(r["rank"])))
         return out
 
-    async def search_similar_relations(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Edge, float]]:
+    async def search_similar_relations(self, query_vec: List[float], top_k: int = 5,
+                                       space: Optional[str] = None,
+                                       include_dormant: bool = False) -> List[Tuple[Edge, float]]:
         """Vector similarity search over relation edges.
 
         Optional feature: requires ``RAGConfig.embed_relations``. Most retrieval
@@ -665,9 +871,20 @@ class RAGGraphStore:
         """
         if not self.config.embed_relations:
             return []
-        return await self.client.vector_search_edges(
-            "relations", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+        if include_dormant:
+            return await self.client.vector_search_edges(
+                "relations", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+            )
+        # The edge vector search takes no predicate, so over-fetch and drop the
+        # retired rows rather than returning them. Widened by a fixed factor so
+        # a handful of dormant neighbours cannot starve the channel; a caller
+        # asking for k still gets at most k.
+        hits = await self.client.vector_search_edges(
+            "relations", realm=self.realm, space=space, query_vector=query_vec,
+            top_k=max(top_k * 4, top_k + 20),
         )
+        kept = [(e, d) for e, d in hits if not (e.payload or {}).get("dormant_since")]
+        return kept[:top_k]
 
     async def supersede_conflicting(
         self,
@@ -928,6 +1145,11 @@ class RAGGraphStore:
         relations = []
         for r in rel_rows:
             p = payload(r)
+            # Without this a deleted document comes back through the community
+            # summaries built over its relations, which is the same leak by a
+            # slower route.
+            if p.get("dormant_since"):
+                continue
             relations.append({
                 "id": str(r["id"]), "from_id": str(r["from_id"]), "to_id": str(r["to_id"]),
                 "predicate": r["relation_type"], "description": p.get("description", ""),
@@ -1373,7 +1595,8 @@ class RAGGraphStore:
         to_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=edge.to_id)
         return from_v, to_v
 
-    async def get_neighbors(self, entity_id: str, space: Optional[str] = None) -> List[Tuple[Edge, Vertex]]:
+    async def get_neighbors(self, entity_id: str, space: Optional[str] = None,
+                            include_dormant: bool = False) -> List[Tuple[Edge, Vertex]]:
         """Get 1-hop outward relationships and target entities, scoped by space.
 
         Space scoping matters here: without it, traversal from a matched entity
@@ -1390,6 +1613,11 @@ class RAGGraphStore:
             if target_space and target_space != RESERVED_SPACE_ALL:
                 if step.edge.space != target_space or step.neighbor_vertex.space != target_space:
                     continue
+            # Filtered here rather than in SQL because the traversal helper
+            # returns hydrated edges; the predicate is the same one the SQL
+            # paths apply, and the candidate set is one entity's degree.
+            if not include_dormant and (step.edge.payload or {}).get("dormant_since"):
+                continue
             results.append((step.edge, step.neighbor_vertex))
         return results
 
@@ -1402,6 +1630,7 @@ class RAGGraphStore:
         include_superseded: bool = False,
         relation_types: Optional[List[str]] = None,
         max_edges: int = 200,
+        include_dormant: bool = False,
     ) -> List[Tuple[Edge, Vertex, Vertex, int]]:
         """Relations reachable within ``max_hops`` of an entity, with endpoints.
 
@@ -1424,7 +1653,8 @@ class RAGGraphStore:
                 return []
             return [
                 (edge, source, target, 1)
-                for edge, target in await self.get_neighbors(entity_id, space=space)
+                for edge, target in await self.get_neighbors(
+                    entity_id, space=space, include_dormant=include_dormant)
             ]
 
         target_space = space or self.space
@@ -1437,7 +1667,13 @@ class RAGGraphStore:
             direction="out",
             relation_types=relation_types,
             as_of=as_of,
-            payload_null_keys=None if include_superseded else ["superseded_by"],
+            # Dormancy is filtered inside the walk for the same reason
+            # supersession is: a path routed *through* a retired relation
+            # launders it into a live-looking result.
+            payload_null_keys=(
+                ([] if include_superseded else ["superseded_by"])
+                + ([] if include_dormant else ["dormant_since"])
+            ) or None,
             space=None if target_space == RESERVED_SPACE_ALL else target_space,
         )
 
@@ -1455,10 +1691,11 @@ class RAGGraphStore:
             if len(edge_ids) >= max_edges:
                 break
         edge_ids = edge_ids[:max_edges]
-        loaded = await self.get_relations_by_ids(edge_ids)
+        loaded = await self.get_relations_by_ids(edge_ids, include_dormant=include_dormant)
         return [(e, s, t, hop_of.get(e.id, 1)) for e, s, t in loaded]
 
-    async def get_relations_by_ids(self, edge_ids: List[str]) -> List[Tuple[Edge, Vertex, Vertex]]:
+    async def get_relations_by_ids(self, edge_ids: List[str],
+                                   include_dormant: bool = False) -> List[Tuple[Edge, Vertex, Vertex]]:
         """Load relations and both endpoint vertices in two queries.
 
         Traversal returns identifiers; synthesis needs names and descriptions.
@@ -1469,8 +1706,10 @@ class RAGGraphStore:
             return []
         rel_ref = self.client._get_table_ref("relations", self.realm)
         ent_ref = self.client._get_table_ref("entities", self.realm)
+        dormant_sql = "" if include_dormant else " AND " + _not_dormant()
         rows = await self.client._fetch(
-            f"SELECT * FROM {rel_ref} WHERE realm = $1 AND id = ANY($2::bigint[])",
+            f"SELECT * FROM {rel_ref} WHERE realm = $1 AND id = ANY($2::bigint[])"
+            f"{dormant_sql}",
             self.realm, [int(e) for e in edge_ids],
         )
         wanted = {r["from_id"] for r in rows} | {r["to_id"] for r in rows}
@@ -1512,7 +1751,8 @@ class RAGGraphStore:
             table_name="relations",
         )
 
-    async def get_all_relations(self, limit: int = 50, space: Optional[str] = None) -> List[Tuple[Edge, Vertex, Vertex]]:
+    async def get_all_relations(self, limit: int = 50, space: Optional[str] = None,
+                                include_dormant: bool = False) -> List[Tuple[Edge, Vertex, Vertex]]:
         """Fetch relations with their source and target entity vertices, scoped by space.
 
         Returns list of (edge, from_vertex, to_vertex) tuples.
@@ -1528,8 +1768,208 @@ class RAGGraphStore:
         for entity in entities:
             if len(results) >= limit:
                 break
-            for edge, neighbor in await self.get_neighbors(entity.id, space=target_space):
+            for edge, neighbor in await self.get_neighbors(
+                    entity.id, space=target_space, include_dormant=include_dormant):
                 if len(results) >= limit:
                     break
                 results.append((edge, entity, neighbor))
         return results
+
+    # ------------------------------------------------- per-document statistics
+
+    def _require_space(self, space: Optional[str]) -> str:
+        """Resolve the space for a per-document read, or refuse.
+
+        Space scoping is the tenant boundary. ``RAGConfig.space`` always
+        resolves to something, so the reachable failure is not an absent space
+        but an explicit ``RESERVED_SPACE_ALL``: the cross-space escape hatch
+        that other reads accept is refused here, because these methods resolve
+        a caller-supplied key rather than returning whatever matches.
+        """
+        target = space or self.space
+        if not target or target == RESERVED_SPACE_ALL:
+            raise ValueError(
+                f"A concrete space is required for per-document reads, not "
+                f"{target!r}. A document key is supplied by a caller, and resolving "
+                f"one across every space would return another tenant's document "
+                f"under the key this one asked for."
+            )
+        return target
+
+    async def documents_stats(self, doc_keys: List[str],
+                              space: Optional[str] = None) -> Dict[str, DocumentStats]:
+        """Rollups for many documents in two round trips, whatever the count.
+
+        This is the call a document registry renders its table from, so it is
+        set-based by construction: two ``GROUP BY`` queries over the whole key
+        list rather than a loop issuing queries per document. The chunk and
+        entity families share one query because the entity join multiplies chunk
+        rows, so the chunk rollup has to be aggregated in its own CTE first.
+
+        Keys that match nothing come back as zeroed stats with ``found`` false,
+        so a caller can render a row for every key it asked about without
+        having to reconcile a shorter result against its input.
+        """
+        out: Dict[str, DocumentStats] = {k: DocumentStats(doc_key=k) for k in doc_keys}
+        if not doc_keys:
+            return out
+        target_space = self._require_space(space)
+        docs_ref = self.client._get_table_ref("documents", self.realm)
+        ments_ref = self.client._get_table_ref("doc_mentions", self.realm)
+        ents_ref = self.client._get_table_ref("entities", self.realm)
+        rels_ref = self.client._get_table_ref("relations", self.realm)
+        keys = [str(k) for k in doc_keys]
+
+        rows = await self.client._fetch(
+            f"WITH dc AS ( "
+            f"  SELECT id, payload->>'doc_key' AS doc_key, payload->>'text' AS text, created_at "
+            f"  FROM {docs_ref} "
+            f"  WHERE realm = $1 AND space = $2 AND payload->>'doc_key' = ANY($3::text[]) "
+            f"), chunk_roll AS ( "
+            f"  SELECT doc_key, count(*) AS chunks, "
+            f"         COALESCE(sum(length(COALESCE(text, ''))), 0) AS chunk_bytes, "
+            f"         min(created_at) AS first_indexed_at, max(created_at) AS last_indexed_at "
+            f"  FROM dc GROUP BY doc_key "
+            f"), ent_roll AS ( "
+            f"  SELECT dc.doc_key, "
+            f"         count(DISTINCT m.to_id) AS entities_mentioned, "
+            f"         count(DISTINCT m.to_id) FILTER "
+            f"           (WHERE (e.payload->>'dormant_since') IS NULL) AS entities_current, "
+            f"         count(DISTINCT m.to_id) FILTER "
+            f"           (WHERE (e.payload->>'dormant_since') IS NOT NULL) AS entities_dormant "
+            f"  FROM dc "
+            f"  JOIN {ments_ref} m ON m.realm = $1 AND m.from_id = dc.id "
+            f"  JOIN {ents_ref} e ON e.realm = $1 AND e.id = m.to_id "
+            f"  GROUP BY dc.doc_key "
+            f") "
+            f"SELECT c.doc_key, c.chunks, c.chunk_bytes, c.first_indexed_at, c.last_indexed_at, "
+            f"       COALESCE(er.entities_mentioned, 0) AS entities_mentioned, "
+            f"       COALESCE(er.entities_current, 0) AS entities_current, "
+            f"       COALESCE(er.entities_dormant, 0) AS entities_dormant "
+            f"FROM chunk_roll c LEFT JOIN ent_roll er ON er.doc_key = c.doc_key",
+            self.realm, target_space, keys,
+        )
+        for r in rows:
+            key = r["doc_key"]
+            if key not in out:
+                continue
+            stats = out[key]
+            stats.found = True
+            stats.chunks = int(r["chunks"] or 0)
+            stats.chunk_bytes = int(r["chunk_bytes"] or 0)
+            stats.entities_mentioned = int(r["entities_mentioned"] or 0)
+            stats.entities_current = int(r["entities_current"] or 0)
+            stats.entities_dormant = int(r["entities_dormant"] or 0)
+            stats.first_indexed_at = _as_iso(r["first_indexed_at"])
+            stats.last_indexed_at = _as_iso(r["last_indexed_at"])
+
+        rel_rows = await self.client._fetch(
+            f"WITH dc AS ( "
+            f"  SELECT id, payload->>'doc_key' AS doc_key FROM {docs_ref} "
+            f"  WHERE realm = $1 AND space = $2 AND payload->>'doc_key' = ANY($3::text[]) "
+            f") "
+            f"SELECT dc.doc_key, count(DISTINCT r.id) AS relations "
+            f"FROM {rels_ref} r "
+            f"JOIN LATERAL jsonb_array_elements_text(r.payload->'sources') AS s(val) ON TRUE "
+            f"JOIN dc ON dc.id::text = s.val "
+            f"WHERE r.realm = $1 AND r.space = $2 "
+            f"GROUP BY dc.doc_key",
+            self.realm, target_space, keys,
+        )
+        for r in rel_rows:
+            if r["doc_key"] in out:
+                out[r["doc_key"]].relations = int(r["relations"] or 0)
+        return out
+
+    async def document_stats(self, doc_key: str, space: Optional[str] = None) -> DocumentStats:
+        """Rollup for one document. Absent documents return zeros, not an error.
+
+        ``relations`` counts what this document *contributed*, which is a fact
+        about provenance and does not change when a relation later goes
+        dormant. Entities carry a current/dormant split because a registry row
+        wants to show both; relations report contribution only.
+        """
+        got = await self.documents_stats([doc_key], space=space)
+        return got.get(doc_key, DocumentStats(doc_key=doc_key))
+
+    async def document_graph(self, doc_key: str, space: Optional[str] = None,
+                             max_entities: int = 500,
+                             max_relations: int = 1000) -> Dict[str, Any]:
+        """The subgraph one document contributed, for a drill-down view.
+
+        Caps are explicit and reported. A view that silently stopped at 500
+        entities would read as a complete picture of the document, which is a
+        worse failure than an obviously truncated one --- so each list carries
+        its own flag and the caller can say so.
+        """
+        target_space = self._require_space(space)
+        docs_ref = self.client._get_table_ref("documents", self.realm)
+        ments_ref = self.client._get_table_ref("doc_mentions", self.realm)
+        ents_ref = self.client._get_table_ref("entities", self.realm)
+        rels_ref = self.client._get_table_ref("relations", self.realm)
+
+        ent_rows = await self.client._fetch(
+            f"WITH dc AS ( "
+            f"  SELECT id FROM {docs_ref} "
+            f"  WHERE realm = $1 AND space = $2 AND payload->>'doc_key' = $3 "
+            f") "
+            f"SELECT DISTINCT e.id, e.payload FROM dc "
+            f"JOIN {ments_ref} m ON m.realm = $1 AND m.from_id = dc.id "
+            f"JOIN {ents_ref} e ON e.realm = $1 AND e.id = m.to_id "
+            f"ORDER BY e.id LIMIT $4",
+            self.realm, target_space, doc_key, int(max_entities) + 1,
+        )
+        rel_rows = await self.client._fetch(
+            f"WITH dc AS ( "
+            f"  SELECT id FROM {docs_ref} "
+            f"  WHERE realm = $1 AND space = $2 AND payload->>'doc_key' = $3 "
+            f") "
+            f"SELECT DISTINCT r.id, r.from_id, r.to_id, r.relation_type, r.payload, "
+            f"       a.payload->>'name' AS from_name, b.payload->>'name' AS to_name "
+            f"FROM {rels_ref} r "
+            f"JOIN LATERAL jsonb_array_elements_text(r.payload->'sources') AS s(val) ON TRUE "
+            f"JOIN dc ON dc.id::text = s.val "
+            f"JOIN {ents_ref} a ON a.realm = $1 AND a.id = r.from_id "
+            f"JOIN {ents_ref} b ON b.realm = $1 AND b.id = r.to_id "
+            f"WHERE r.realm = $1 AND r.space = $2 "
+            f"ORDER BY r.id LIMIT $4",
+            self.realm, target_space, doc_key, int(max_relations) + 1,
+        )
+
+        def payload_of(row):
+            raw = row["payload"]
+            return raw if isinstance(raw, dict) else json.loads(raw or "{}")
+
+        ent_trunc = len(ent_rows) > max_entities
+        rel_trunc = len(rel_rows) > max_relations
+        entities = []
+        for r in ent_rows[:max_entities]:
+            pl = payload_of(r)
+            entities.append({
+                "id": str(r["id"]),
+                "name": pl.get("name"),
+                "type": pl.get("type"),
+                "dormant": pl.get("dormant_since") is not None,
+                "dormant_since": pl.get("dormant_since"),
+            })
+        relations = []
+        for r in rel_rows[:max_relations]:
+            pl = payload_of(r)
+            relations.append({
+                "id": str(r["id"]),
+                "from_id": str(r["from_id"]), "from_name": r["from_name"],
+                "to_id": str(r["to_id"]), "to_name": r["to_name"],
+                "type": r["relation_type"],
+                "description": pl.get("description", ""),
+                "confidence": pl.get("confidence"),
+                "negated": bool(pl.get("negated", False)),
+                "dormant": pl.get("dormant_since") is not None,
+            })
+        return {
+            "doc_key": doc_key,
+            "entities": entities,
+            "relations": relations,
+            "truncated": ent_trunc or rel_trunc,
+            "entities_truncated": ent_trunc,
+            "relations_truncated": rel_trunc,
+        }

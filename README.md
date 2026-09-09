@@ -506,6 +506,22 @@ The main orchestrator class for indexing and querying.
 - `await query_data(question, param=None) -> Dict[str, Any]`: Structured retrieval with no synthesis — returns `entities`, `relationships`, `chunks`, `references`.
 - `await close()`: Closes database connection pools.
 
+#### Per-document views (1.13.0)
+
+For a registry or admin UI that lists documents and shows what each one put
+into the graph.
+
+- `await document_stats(doc_key, space=None) -> DocumentStats`: chunks, `chunk_bytes`, `entities_mentioned` split into `entities_current` / `entities_dormant`, `relations` contributed, and `first_indexed_at` / `last_indexed_at`. A document that was never indexed returns zeros with `found=False` rather than raising, so "indexed but empty" stays distinguishable from "not present".
+- `await documents_stats(doc_keys, space=None) -> Dict[str, DocumentStats]`: the batch form, and the one to render a table with. Two SQL round trips for any number of keys — looping over `document_stats` would issue two per row.
+- `await document_graph(doc_key, space=None, max_entities=500, max_relations=1000)`: the entities and relations that document contributed, for a drill-down. Capped, and the caps are reported in `truncated` / `entities_truncated` / `relations_truncated` — a silently truncated subgraph reads as a complete one.
+- `await sweep_orphaned_relations(space=None) -> int`: one-shot repair for graphs written before relation provenance existed. Those relations record no sources, so no document deletion can withdraw them; this retires the ones whose endpoint entities have all gone dormant. Nothing is deleted, and it is safe to re-run.
+
+These refuse `space="__all__"`: they resolve a caller-supplied document key, and doing that across every space would return another tenant's document under the key this one asked for.
+
+#### Deletion and dormancy
+
+`RAGGraphStore.delete_document_chunks(doc_key, space=None)` removes a document's chunks and mention edges. Nothing else is deleted. Entities whose last mention disappears are marked **dormant**; relations left with no contributing chunk are marked dormant too, and so are relations whose endpoint entities have all gone dormant. Dormant relations are excluded from every retrieval path, from `query`/`query_data`, and from community building — pass `include_dormant=True` to the store's read methods to see them for audit. A dormant entity or relation revives automatically if a later document brings it back.
+
 ### `QueryParam`
 
 - `mode`: one of `mix`, `local`, `global`, `hybrid`, `naive`, `bypass`. An unknown mode raises `ValueError`.
@@ -550,8 +566,10 @@ Database layer wrapping [`post-graph`](https://github.com/crajah/post-graph).
 - `add_doc_mention(doc_vertex, entity_vertex, space=None)`: Links a chunk to an entity it mentions.
 - `search_similar_entities(query_vec, top_k, space=None)` / `search_similar_documents(...)`: pgvector HNSW similarity search.
 - `search_similar_relations(query_vec, top_k, space=None)`: Semantic search over relation edges. Returns `[]` unless `embed_relations` is enabled.
-- `get_neighbors(entity_id, space=None)`: 1-hop outgoing relations, scoped to `space`.
-- `get_all_relations(limit, space=None)`: Relations with their endpoint vertices.
+- `get_neighbors(entity_id, space=None, include_dormant=False)`: 1-hop outgoing relations, scoped to `space`.
+- `get_all_relations(limit, space=None, include_dormant=False)`: Relations with their endpoint vertices.
+- `get_neighborhood(entity_id, max_hops=1, ...)` / `get_relations_by_ids(...)` / `search_relations_text(...)`: the other relation read paths. All take `include_dormant=False`, filtered in SQL, so a retired relation cannot reach an answer through any of them.
+- `document_stats(...)` / `documents_stats(...)` / `document_graph(...)` / `sweep_orphaned_relations(space=None)`: as described under `GraphRAG` above.
 
 ---
 

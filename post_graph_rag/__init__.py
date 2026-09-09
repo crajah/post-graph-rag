@@ -24,13 +24,14 @@ from post_graph_rag.models import (
     CommunityCoverage,
     DocumentContext,
     DocumentMetadata,
+    DocumentStats,
     KeywordResult,
     QueryParam,
 )
 from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
 from post_graph_rag.retention import RetentionReport
 
-__version__ = "1.12.0"
+__version__ = "1.13.0"
 __all__ = [
     "CorpusDelta",
     "RetentionReport",
@@ -43,6 +44,7 @@ __all__ = [
     "ExtractionError",
     "DocumentContext",
     "DocumentMetadata",
+    "DocumentStats",
     "QueryParam",
     "KeywordResult",
     "Chunker",
