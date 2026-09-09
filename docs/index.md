@@ -11,6 +11,18 @@ description: "Every production knowledge graph only grows. post-graph-rag closes
 **[GitHub](https://github.com/crajah/post-graph-rag)** · **[PyPI](https://pypi.org/project/post-graph-rag/)** · `pip install post-graph-rag` · Apache 2.0
 
 ---
+
+### Start here
+
+```bash
+pip install post-graph-rag
+createdb mydb && psql -d mydb -c "CREATE EXTENSION vector;"
+```
+
+Then point it at any OpenAI-compatible endpoint and run [`examples/02_supersession.py`](https://github.com/crajah/post-graph-rag/tree/main/examples): three filings arrive in order, each naming a different CFO, and you get one current answer with the other two returned as prior holders rather than as competing present-tense facts. It costs a fraction of a cent and takes about a minute.
+
+**[Read the code](https://github.com/crajah/post-graph-rag)** · **[Seven examples](https://github.com/crajah/post-graph-rag/tree/main/examples)** · **[The paper](https://arxiv.org/abs/2608.24921)** · **[post-graph, the layer underneath](https://github.com/crajah/post-graph)** · Apache 2.0
+
 ---
 
 Almost every Graph RAG system treats extracted relations as **timeless assertions**.
