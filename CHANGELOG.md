@@ -3,6 +3,13 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.13.1
+
+Requires `post-graph >= 1.6.0`, which adds `replace=True` to `upsert_vertex` and
+`upsert_edge`. Without it a payload write could not remove a key: the write
+merged into the stored payload, so writing a payload without a key left the old
+key in the row. No behaviour in this package changes with this release.
+
 ## 1.13.0
 
 ### Fixed
