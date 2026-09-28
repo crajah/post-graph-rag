@@ -24,6 +24,37 @@ class RAGConfig:
     api_key: str = field(default_factory=lambda: _env("OPENAI_API_KEY", _LOCAL_API_KEY_PLACEHOLDER))
     model: str = field(default_factory=lambda: _env("RAG_MODEL", "gemini-3.6-flash"))
     embedding_model: str = field(default_factory=lambda: _env("RAG_EMBEDDING_MODEL", "gemini-embedding-001"))
+
+    # Per-role model overrides. Each is None by default, meaning "use `model`",
+    # so an existing configuration keeps its single-model behaviour exactly.
+    #
+    # One model for every call is a compromise no role actually wants. The
+    # roles have different optima, and the difference is measured rather than
+    # assumed: over one fixed graph, four answering models separate across a
+    # 23-point band, while on the extraction side the models do not even agree
+    # on what a good graph is -- one builds the richest (most relations, most
+    # aliases), another the most queryable (94% predicate-vocabulary adherence
+    # but 40% fewer relations). The volumes differ by an order of magnitude
+    # too: extraction is one or two calls per chunk and runs once, whereas the
+    # query-time roles run on every question for ever.
+    #
+    # WARNING on `extraction_model` specifically: a weak model here does not
+    # fail, it silently degrades the graph. Features that depend on the model
+    # doing something subtle simply stop happening -- one tested model never
+    # once emitted the `negated` field, collapsing "X worked with Y" and
+    # "X never met Y" into the same edge, with no error anywhere.
+    extraction_model: Optional[str] = field(
+        default_factory=lambda: _env("RAG_EXTRACTION_MODEL", "") or None
+    )
+    community_model: Optional[str] = field(
+        default_factory=lambda: _env("RAG_COMMUNITY_MODEL", "") or None
+    )
+    auxiliary_model: Optional[str] = field(
+        default_factory=lambda: _env("RAG_AUXILIARY_MODEL", "") or None
+    )
+    synthesis_model: Optional[str] = field(
+        default_factory=lambda: _env("RAG_SYNTHESIS_MODEL", "") or None
+    )
     embedding_dim: int = field(default_factory=lambda: int(_env("RAG_EMBEDDING_DIM", "1536")))
     # Hops to walk out from a matched entity during retrieval. 1 answers "what is
     # said about X"; chain questions need the edges between X's neighbours, which
@@ -386,3 +417,37 @@ class RAGConfig:
     allow_embedding_fallback: bool = field(
         default_factory=lambda: _env("RAG_ALLOW_EMBEDDING_FALLBACK", "0").lower() in ("1", "true", "yes")
     )
+
+    # Which config field serves which LLM call. Grouped by shared profile
+    # rather than by call site: extraction, gleaning and contradiction
+    # detection are all index-time structured writes, while keywords and query
+    # decomposition are both small per-query calls whose only real cost is
+    # latency.
+    MODEL_ROLES = {
+        "extraction": "extraction_model",
+        "community": "community_model",
+        "auxiliary": "auxiliary_model",
+        "synthesis": "synthesis_model",
+    }
+
+    def model_for(self, role: Optional[str] = None) -> str:
+        """The model serving *role*, falling back to ``model``.
+
+        ``role=None`` returns ``model``, which is what an uninstrumented caller
+        gets and what every caller got before roles existed.
+
+        An unknown role raises rather than silently falling back: a typo at a
+        call site would otherwise route that role to the default model for ever
+        and look like it was working.
+        """
+        if role is None:
+            return self.model
+        try:
+            attr = self.MODEL_ROLES[role]
+        except KeyError:
+            raise ValueError(
+                f"Unknown model role {role!r}. "
+                f"Known roles: {', '.join(sorted(self.MODEL_ROLES))}."
+            ) from None
+        return getattr(self, attr) or self.model
+

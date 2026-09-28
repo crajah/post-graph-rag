@@ -436,7 +436,8 @@ class GraphExtractor:
             {"role": "user", "content": f"{ctx}---Document Text---\n\n{text}"},
         ]
 
-        result = await self.llm_service.chat_completion(messages, response_format=ExtractionResult)
+        result = await self.llm_service.chat_completion(
+            messages, response_format=ExtractionResult, role="extraction")
         if isinstance(result, str):
             result = self._parse_json_result(result)
 
@@ -472,7 +473,8 @@ class GraphExtractor:
             {"role": "user", "content": glean_msg},
         ]
         try:
-            extra = await self.llm_service.chat_completion(messages, response_format=ExtractionResult)
+            extra = await self.llm_service.chat_completion(
+                messages, response_format=ExtractionResult, role="extraction")
             if isinstance(extra, str):
                 extra = self._parse_json_result(extra)
             return extra if isinstance(extra, ExtractionResult) else None
@@ -638,8 +640,11 @@ class GraphExtractor:
             {"role": "user", "content": f"NEW FACT:\n{new_fact}\n\nEXISTING FACTS:\n{listing}"},
         ]
         try:
+            # Extraction's model, not auxiliary: this decides whether an
+            # earlier edge is closed, so a weak model here corrupts the graph
+            # rather than merely answering worse.
             res = await self.llm_service.chat_completion(
-                messages, response_format=ContradictionResultSchema)
+                messages, response_format=ContradictionResultSchema, role="extraction")
             if isinstance(res, ContradictionResultSchema):
                 ids = res.contradicted_ids
             elif isinstance(res, str) and res.strip():
@@ -663,7 +668,8 @@ class GraphExtractor:
             {"role": "user", "content": f"User Query: {query}"},
         ]
         try:
-            res = await self.llm_service.chat_completion(messages, response_format=KeywordResultSchema)
+            res = await self.llm_service.chat_completion(
+                messages, response_format=KeywordResultSchema, role="auxiliary")
             if isinstance(res, KeywordResultSchema):
                 return KeywordResult(
                     high_level_keywords=res.high_level_keywords,

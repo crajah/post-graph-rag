@@ -1293,7 +1293,8 @@ class GraphRAG:
         try:
             out = await self.llm.chat_completion(
                 [{"role": "user",
-                  "content": self._DECOMPOSE_PROMPT.format(question=question)}])
+                  "content": self._DECOMPOSE_PROMPT.format(question=question)}],
+                role="auxiliary")
         except Exception:
             return None                      # retrieval degrades to single-query
         lines = [l.strip("-• \t") for l in (out or "").splitlines()]
@@ -1587,8 +1588,8 @@ class GraphRAG:
             messages.append({"role": "user", "content": question})
 
             if p.stream:
-                return self.llm.chat_completion_stream(messages)
-            answer = await self.llm.chat_completion(messages)
+                return self.llm.chat_completion_stream(messages, role="synthesis")
+            answer = await self.llm.chat_completion(messages, role="synthesis")
             return {
                 "question": question, "answer": answer, "mode": mode,
                 "retrieved_documents": [], "retrieved_entities": [], "retrieved_graph_triples": []
@@ -1694,9 +1695,9 @@ Reference Document List:
         messages.append({"role": "user", "content": prompt})
 
         if p.stream:
-            return self.llm.chat_completion_stream(messages)
+            return self.llm.chat_completion_stream(messages, role="synthesis")
 
-        answer = await self.llm.chat_completion(messages)
+        answer = await self.llm.chat_completion(messages, role="synthesis")
 
         return {
             "question": question,

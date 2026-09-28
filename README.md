@@ -450,7 +450,11 @@ realms indexed on the old scheme.
 | :--- | :--- | :--- | :--- |
 | `api_base` | `OPENAI_API_BASE` | `http://localhost:4000/v1` | Base URL for OpenAI-compatible LLM endpoint |
 | `api_key` | `OPENAI_API_KEY` | `EMPTY` | API key. `EMPTY` is the placeholder local servers accept |
-| `model` | `RAG_MODEL` | `gemini-3.6-flash` | Primary LLM model for triple extraction & synthesis |
+| `model` | `RAG_MODEL` | `gemini-3.6-flash` | Default LLM for every role below that has no override |
+| `extraction_model` | `RAG_EXTRACTION_MODEL` | falls back to `model` | Extraction, gleaning and contradiction detection — the index-time write path |
+| `community_model` | `RAG_COMMUNITY_MODEL` | falls back to `model` | Community report synthesis |
+| `auxiliary_model` | `RAG_AUXILIARY_MODEL` | falls back to `model` | Keyword extraction and query decomposition — small per-query calls |
+| `synthesis_model` | `RAG_SYNTHESIS_MODEL` | falls back to `model` | Answering the question |
 | `embedding_model` | `RAG_EMBEDDING_MODEL` | `gemini-embedding-001` | Model for vector embedding generation |
 | `embedding_dim` | `RAG_EMBEDDING_DIM` | `1536` | Embedding width. Must match the model, and is fixed once tables exist |
 | `db_uri` | `POSTGRES_URI` | `postgresql://localhost:5432/postgres` | PostgreSQL connection DSN |
@@ -479,6 +483,35 @@ realms indexed on the old scheme.
 | `negated_relation_weight` | `RAG_NEGATED_RELATION_WEIGHT` | `0.3` | Clustering weight for denied relations |
 
 Environment variables are read when a `RAGConfig` is constructed, not at import time.
+
+### Model roles
+
+One model for every call is a compromise no role actually wants, so each role
+can take its own. Leave them unset and everything resolves to `model`, which is
+how the library behaved before roles existed — nothing else changes.
+
+```python
+RAGConfig(
+    model="gemini-3.6-flash",           # the default for anything unset
+    extraction_model="MiniMax-M2.7",    # index-time: builds the graph
+    synthesis_model="gemini-3.7-flash", # query-time: reads it
+    auxiliary_model="gemma-4-31B-it",   # keywords and decomposition
+)
+```
+
+Two reasons this is worth using. The roles have **different optima**: over one
+fixed graph, four answering models separate across a 23-point band, while on
+the extraction side the models do not even agree on what a good graph is — one
+builds the richest (most relations, most aliases), another the most queryable
+(94% predicate-vocabulary adherence but 40% fewer relations). And they have
+**different economics**: extraction is one or two calls per chunk and runs
+once, whereas `auxiliary` and `synthesis` run on every question for ever.
+
+> **Be careful with `extraction_model`.** A weak model here does not fail, it
+> silently degrades the graph. Anything that depends on the model doing
+> something subtle simply stops happening — one tested model never once emitted
+> the `negated` field, collapsing "X worked with Y" and "X never met Y" into the
+> same edge, with no error anywhere. Extraction is the role to spend on.
 
 ### `schema_per_realm`
 

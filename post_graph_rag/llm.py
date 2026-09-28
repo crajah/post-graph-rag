@@ -238,16 +238,22 @@ class LLMService:
                     await asyncio.sleep(self.config.retry_backoff_secs * tries)
         raise last if last else RuntimeError(f"{what} failed")
 
-    def _model_candidates(self) -> List[str]:
-        """Primary model first, then declared fallbacks, preserving order."""
+    def _model_candidates(self, role: Optional[str] = None) -> List[str]:
+        """The role's model first, then declared fallbacks, preserving order.
+
+        Fallbacks are shared across roles deliberately. They exist for provider
+        outages and exhausted credits, which are properties of the endpoint
+        rather than of the job -- a role-specific fallback list would have to be
+        maintained five times to say the same thing.
+        """
         seen, models = set(), []
-        for name in [self.config.model, *self.config.fallback_models]:
+        for name in [self.config.model_for(role), *self.config.fallback_models]:
             if name and name not in seen:
                 seen.add(name)
                 models.append(name)
         return models
 
-    async def _with_failover(self, attempt, what: str) -> Any:
+    async def _with_failover(self, attempt, what: str, role: Optional[str] = None) -> Any:
         """Run ``attempt(model)`` across candidate models with backoff.
 
         Retries the same model for transient failures, then moves to the next
@@ -256,7 +262,8 @@ class LLMService:
         """
         last: Optional[Exception] = None
         deadline = self._deadline()
-        for model in self._model_candidates():
+        candidates = self._model_candidates(role)
+        for model in candidates:
             for tries in range(1, max(1, self.config.max_retries) + 1):
                 try:
                     result = await attempt(model)
@@ -282,16 +289,21 @@ class LLMService:
             logger.warning("%s: giving up on model '%s'; trying next candidate.", what, model)
 
         raise LLMError(
-            f"{what} failed for all models {self._model_candidates()} at "
+            f"{what} failed for all models {candidates} at "
             f"{self.config.api_base}: {last}"
         ) from last
 
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
-        response_format: Optional[Type[BaseModel]] = None
+        response_format: Optional[Type[BaseModel]] = None,
+        role: Optional[str] = None
     ) -> Any:
         """Call the LLM completion endpoint, optionally enforcing structured output.
+
+        ``role`` selects the configured model for that job -- see
+        :meth:`RAGConfig.model_for`. It is optional and defaults to ``model``,
+        so a caller that does not care keeps the single-model behaviour.
 
         Retries and fails over across ``fallback_models``. Raises
         :class:`LLMError` when every candidate is exhausted. Previously this
@@ -308,7 +320,7 @@ class LLMService:
                 return response.choices[0].message.parsed
 
             try:
-                parsed = await self._with_failover(structured, "Structured completion")
+                parsed = await self._with_failover(structured, "Structured completion", role)
                 if parsed is not None:
                     return parsed
                 logger.warning("Structured output returned no parsed value; retrying unstructured.")
@@ -322,11 +334,12 @@ class LLMService:
             )
             return response.choices[0].message.content or ""
 
-        return await self._with_failover(plain, "Chat completion")
+        return await self._with_failover(plain, "Chat completion", role)
 
     async def chat_completion_stream(
         self,
-        messages: List[Dict[str, str]]
+        messages: List[Dict[str, str]],
+        role: Optional[str] = None
     ) -> AsyncIterator[str]:
         """Stream completion content chunks.
 
@@ -342,7 +355,7 @@ class LLMService:
 
         # Failover applies to opening the stream. Once tokens have been yielded a
         # retry would duplicate output, so mid-stream failures propagate.
-        stream = await self._with_failover(open_stream, "Streaming chat completion")
+        stream = await self._with_failover(open_stream, "Streaming chat completion", role)
 
         try:
             async for chunk in stream:

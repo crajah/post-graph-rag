@@ -53,6 +53,8 @@ class FakeLLM(LLMService):
         self.embed_calls = []
         self.batch_calls = []
         self.chat_calls = []
+        self.roles = []
+        self.models_used = []
         self._structured_calls = 0
 
     async def get_embedding(self, text: str):
@@ -70,9 +72,15 @@ class FakeLLM(LLMService):
         self.embed_calls.extend(texts)
         return [fake_embed(t) for t in texts]
 
-    async def chat_completion(self, messages, response_format=None):
+    async def chat_completion(self, messages, response_format=None, role=None):
         from post_graph_rag.errors import LLMError
         self.chat_calls.append((messages, response_format))
+        # Which role each call declared, so a test can assert that extraction
+        # and synthesis really are routed separately rather than merely
+        # configurable.
+        self.roles.append(role)
+        if role is not None:
+            self.models_used.append(self.config.model_for(role))
         if self._fail:
             raise LLMError("fake LLM failure")
         if response_format is not None and self._extraction is not None:
@@ -91,8 +99,11 @@ class FakeLLM(LLMService):
             return response_format()
         return self._answer
 
-    async def chat_completion_stream(self, messages):
+    async def chat_completion_stream(self, messages, role=None):
         from post_graph_rag.errors import LLMError
+        self.roles.append(role)
+        if role is not None:
+            self.models_used.append(self.config.model_for(role))
         if self._fail:
             raise LLMError("fake LLM failure")
         for token in self._answer.split():

@@ -235,8 +235,13 @@ async def main():
                 for arm in args.arms:
                     if row["arms"].get(arm, {}).get("judge") is not None:
                         continue
-                    # The graph is already built; this only changes who reads it.
-                    rag.config.model = arm
+                    # The graph is already built; this only changes who reads
+                    # it. Setting the synthesis role rather than `model` says
+                    # exactly that: behaviour is identical here because nothing
+                    # in this loop re-indexes, but naming the role means a
+                    # future index call in this loop could not silently swap
+                    # the extraction model along with the reader.
+                    rag.config.synthesis_model = arm
                     lmarks, jmarks, detail = [], [], []
                     arm_error = None
                     for _ in range(args.repeats):

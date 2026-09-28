@@ -118,7 +118,8 @@ class CommunityReporter:
             {"role": "user", "content": body},
         ]
 
-        result = await self.llm_service.chat_completion(messages, response_format=CommunityReport)
+        result = await self.llm_service.chat_completion(
+            messages, response_format=CommunityReport, role="community")
         if isinstance(result, str):
             result = self._parse(result)
 

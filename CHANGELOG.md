@@ -3,6 +3,42 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.14.0
+
+### Added
+
+**Per-role model selection.** One model served every LLM call, which is a
+compromise no role actually wants. `RAGConfig` now takes four optional
+overrides, each falling back to `model` when unset:
+
+- `extraction_model` (`RAG_EXTRACTION_MODEL`) — extraction, gleaning and
+  contradiction detection, the index-time write path.
+- `community_model` (`RAG_COMMUNITY_MODEL`) — community report synthesis.
+- `auxiliary_model` (`RAG_AUXILIARY_MODEL`) — keyword extraction and query
+  decomposition, the small per-query calls.
+- `synthesis_model` (`RAG_SYNTHESIS_MODEL`) — answering the question.
+
+The roles have different optima and different economics. Over one fixed graph
+four answering models separate across a 23-point band, while on the extraction
+side the models disagree about what a good graph is at all — one builds the
+richest, another the most queryable at 40% fewer relations. Extraction runs one
+or two calls per chunk and runs once; the query-time roles run on every question
+for ever.
+
+`RAGConfig.model_for(role)` resolves a role, and `LLMService.chat_completion`
+and `chat_completion_stream` take an optional `role`. An unknown role raises
+rather than falling back, so a typo at a call site cannot route that role to the
+default model indefinitely while appearing to work.
+
+Nothing else changes: no pipeline stages were added and no retrieval or
+assembly behaviour was touched. A configuration with no overrides resolves every
+role to `model` and behaves exactly as before, which is covered by a test that
+indexes and queries end to end and asserts a single model was used throughout.
+
+Beware `extraction_model` specifically: a weak model there does not fail, it
+silently degrades the graph. One tested model never emitted the `negated` field,
+collapsing "X worked with Y" and "X never met Y" into the same edge.
+
 ## 1.13.1
 
 Requires `post-graph >= 1.6.0`, which adds `replace=True` to `upsert_vertex` and
