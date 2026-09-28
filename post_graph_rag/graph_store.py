@@ -706,7 +706,13 @@ class RAGGraphStore:
                 # observations, which is the only signal available.
                 sources = sorted(prior_sources)
                 weight = int(prev.get("weight", 1)) + 1
-            payload = {
+            # Start from what is stored so nothing written by another path --
+            # supersession pointers, audit stamps -- is lost, then overwrite
+            # only the fields this assertion actually determines. The write
+            # below replaces the payload rather than merging into it, which is
+            # what makes the revival a few lines down possible at all.
+            payload = dict(prev)
+            payload.update({
                 "description": description or prev.get("description", ""),
                 "sources": sources,
                 "weight": weight,
@@ -721,9 +727,24 @@ class RAGGraphStore:
                 # resetting this would erase that from the record.
                 "t_created": prev.get("t_created") or _utc_now(),
                 "t_expired": prev.get("t_expired"),
-            }
-            if prev.get("superseded_by") is not None:
-                payload["superseded_by"] = prev["superseded_by"]
+            })
+
+            # A document asserting this relation again revives it. Without this
+            # a relation retired when its last source was deleted stayed
+            # invisible for ever: the new chunk joined `sources`, the weight
+            # went back up, and the relation still answered nothing, because
+            # dormancy was never cleared. Both dormancy reasons revive here --
+            # a document asserting the relation outright is stronger evidence
+            # than the orphaned-endpoint rule that may have retired it.
+            #
+            # Only on a documented assertion. A direct store write with no
+            # provenance is not a corpus saying the relation holds again, so it
+            # must not resurrect what a deletion retired.
+            if source_chunk and prev.get("dormant_since") is not None:
+                payload.pop("dormant_since", None)
+                payload.pop("dormant_reason", None)
+                payload["revived_at"] = _utc_now()
+
             return await self.client.upsert_edge(
                 "relations",
                 realm=self.realm,
@@ -734,7 +755,11 @@ class RAGGraphStore:
                 relation_type=relation_type,
                 payload=payload,
                 check_cycle=False,
-                embedding=embedding if self.config.embed_relations else None
+                embedding=embedding if self.config.embed_relations else None,
+                # Requires post-graph >= 1.6.0. Merging cannot remove a key, so
+                # under a merge the dormancy popped above would survive in the
+                # row and the relation would stay retired.
+                replace=True,
             )
 
         payload = {

@@ -413,3 +413,73 @@ async def test_engine_exposes_the_document_apis(rag_factory):
     graph = await rag.document_graph("a.txt")
     assert [r["type"] for r in graph["relations"]] == ["married_to"]
     assert await rag.sweep_orphaned_relations() == 0
+
+
+# ------------------------------------------------ revival by re-assertion
+
+@pytest.mark.asyncio
+async def test_a_new_document_asserting_a_retired_relation_revives_it(rag_factory):
+    """The gap the neighbour-revival test did not cover: a relation retired
+    when its last source was deleted, then asserted outright by a new document.
+
+    The new chunk joined `sources` and the weight went back up, but dormancy was
+    never cleared, so the relation stayed invisible to every read path while a
+    live document said it held."""
+    rag = await rag_factory()
+    store = rag.store
+    _, verts = await _index(store, "first.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
+    edge = await store.find_relation(verts["Zeus"].id, "married_to", verts["Hera"].id, space=SPACE)
+
+    await store.delete_document_chunks("first.txt", space=SPACE)
+    assert (await _relation_row(store, edge.id))["dormant_reason"] == "sources_withdrawn"
+    assert await store.get_neighbors(verts["Zeus"].id, space=SPACE) == []
+
+    # A different document asserts the same relation.
+    await _index(store, "second.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
+
+    payload = await _relation_row(store, edge.id)
+    assert payload.get("dormant_since") is None, "re-assertion must revive it"
+    assert payload.get("dormant_reason") is None
+    assert payload.get("revived_at")
+    assert [e.relation_type for e, _ in await store.get_neighbors(verts["Zeus"].id, space=SPACE)] \
+        == ["married_to"]
+
+
+@pytest.mark.asyncio
+async def test_revival_preserves_supersession_and_provenance(rag_factory):
+    """Reviving replaces the payload, so anything written by another path has
+    to survive it -- a supersession pointer above all."""
+    rag = await rag_factory()
+    store = rag.store
+    _, verts = await _index(store, "first.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
+    edge = await store.find_relation(verts["Zeus"].id, "married_to", verts["Hera"].id, space=SPACE)
+
+    ref = store.client._get_table_ref("relations", store.realm)
+    await store.client._execute(
+        f"UPDATE {ref} SET payload = payload || '{{\"superseded_by\": \"999\"}}'::jsonb "
+        f"WHERE realm = $1 AND id = $2", store.realm, int(edge.id))
+
+    await store.delete_document_chunks("first.txt", space=SPACE)
+    await _index(store, "second.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
+
+    payload = await _relation_row(store, edge.id)
+    assert payload["superseded_by"] == "999", "replace must not drop other paths' writes"
+    assert payload.get("t_created"), "transaction time must survive"
+    assert payload.get("dormant_since") is None
+
+
+@pytest.mark.asyncio
+async def test_a_direct_write_without_provenance_does_not_revive(rag_factory):
+    """Only a corpus assertion revives. A bare store write is not a document
+    saying the relation holds again, so it must not undo a deletion."""
+    rag = await rag_factory()
+    store = rag.store
+    _, verts = await _index(store, "only.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
+    edge = await store.find_relation(verts["Zeus"].id, "married_to", verts["Hera"].id, space=SPACE)
+    await store.delete_document_chunks("only.txt", space=SPACE)
+
+    await store.add_relation(verts["Zeus"], verts["Hera"], "married_to", "no provenance",
+                             space=SPACE)          # no source_chunk
+
+    assert (await _relation_row(store, edge.id)).get("dormant_since") is not None
+    assert await store.get_neighbors(verts["Zeus"].id, space=SPACE) == []

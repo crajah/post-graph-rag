@@ -3,6 +3,36 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.14.1
+
+### Fixed
+
+**A relation retired by a deletion stayed retired when a later document
+asserted it again.** `add_relation` rebuilt the payload without carrying or
+clearing `dormant_since`, and the write merged rather than replaced, so a
+relation whose last source had been deleted took the new chunk into `sources`,
+had its weight go back up, and remained dormant -- invisible to every read
+path while a live document said it held.
+
+A documented re-assertion now revives it: dormancy is cleared and `revived_at`
+stamped. Both dormancy reasons revive this way, since a document asserting the
+relation outright is stronger evidence than the orphaned-endpoint rule that may
+have retired it. A direct store write with no `source_chunk` does not revive --
+that is not a corpus saying the relation holds again, and it must not undo a
+deletion.
+
+The payload is now built from the stored one and written with `replace=True`,
+so keys written by other paths (a supersession pointer, transaction time)
+survive while the two dormancy keys are genuinely removed. Merging cannot
+remove a key, which is why the previous write could not express this.
+
+### Changed
+
+Requires `post-graph >= 1.7.0` for the `replace=True` write above, and for the
+auditing controls it adds: a table can decline its shadow audit table
+(`create_vertex_table(..., audited=False)`) and an existing one can be dropped
+(`drop_audit_table`).
+
 ## 1.14.0
 
 ### Added
