@@ -3,6 +3,39 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.14.2
+
+### Fixed
+
+**A chunk whose extraction yielded nothing lost its passage as well as its
+structure.** `_prepare_document` gathered the embedding and the extraction
+together, so an `ExtractionError` discarded the embedding too and the chunk was
+skipped entirely. The text was then in the corpus and retrievable by nothing --
+absent from every count, and indistinguishable from text that was never
+ingested. Measured on a live corpus at 3 chunks in 180.
+
+`ExtractionError` from the extractor is now treated as an empty extraction
+rather than a failed chunk: the passage and its embedding are written, and it
+stays retrievable by vector search. The refusal to invent structure is
+unchanged -- an empty extraction writes no entities and no relations, and the
+extractor still raises for callers using it directly.
+
+**Only `ExtractionError`.** A timeout, a dropped connection and a malformed
+response still fail the chunk exactly as before. Collapsing those into "the
+passage had no entities" would let a dead extraction model read as a corpus
+with no entities in it, silently, which is worse than the bug being fixed.
+`_assert_any_progress` still refuses a run in which nothing was indexed.
+
+`index_document`, the single-chunk method, behaves the same way rather than
+raising. It is the same bug seen one chunk at a time, and a caller handed an
+exception cannot recover the embedding already paid for, whereas a caller who
+wants this treated as fatal can read the new field and raise.
+
+### Added
+
+Results carry `extraction_empty: bool`, so a caller can count these and tell
+"nothing extractable here" apart from "never indexed".
+
 ## 1.14.1
 
 ### Fixed

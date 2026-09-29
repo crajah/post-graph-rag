@@ -2,7 +2,6 @@
 import pytest
 
 from post_graph_rag import DocumentMetadata, QueryParam
-from post_graph_rag.errors import ExtractionError
 from post_graph_rag.extractor import Entity, ExtractionResult, Triple
 
 ZEUS_DOC = (
@@ -93,16 +92,31 @@ async def test_retrieval_is_relevance_ranked(rag_factory):
 
 
 @pytest.mark.asyncio
-async def test_extraction_failure_aborts_indexing(rag_factory):
-    """No partial graph of fabricated edges on LLM failure."""
+async def test_nothing_extractable_writes_no_structure(rag_factory):
+    """No partial graph of fabricated edges when the extractor finds nothing.
+
+    This previously also asserted that indexing raised. It no longer does: the
+    refusal to write placeholder structure is what matters, and it is unchanged,
+    but the passage itself is kept and stays retrievable by vector search.
+    Dropping it left text that was in the corpus and reachable by nothing. See
+    tests/test_entity_free_chunks.py.
+    """
     rag = await rag_factory(extraction=ExtractionResult())
-    with pytest.raises(ExtractionError):
-        await rag.index_document(ZEUS_DOC)
+    res = await rag.index_document(ZEUS_DOC)
+
+    assert res["extraction_empty"] is True
+    assert res["entities_extracted"] == 0
+    assert res["relations_added"] == 0
 
     rows = await rag.store.client._fetch(
         f'SELECT count(*) AS n FROM "{rag.config.realm}"."entities"'
     )
     assert rows[0]["n"] == 0
+
+    docs = await rag.store.client._fetch(
+        f'SELECT count(*) AS n FROM "{rag.config.realm}"."documents"'
+    )
+    assert docs[0]["n"] == 1, "the passage survives even though its structure did not"
 
 
 @pytest.mark.asyncio

@@ -11,7 +11,7 @@ from post_graph import Vertex
 from post_graph_rag.chunking import make_paragraph_chunker
 from post_graph_rag.communities import default_detector, group_by_community
 from post_graph_rag.config import RAGConfig
-from post_graph_rag.errors import RAGError
+from post_graph_rag.errors import ExtractionError, RAGError
 from post_graph_rag.extractor import ExtractionResult, GraphExtractor, date_sort_key
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.llm import LLMService
@@ -502,6 +502,31 @@ class GraphRAG:
         prepared = await self._prepare_document(text, metadata, space, context)
         return await self._write_document(prepared)
 
+    async def _extract_or_empty(self, text: str, context) -> ExtractionResult:
+        """Extraction, with "nothing extractable" treated as a result.
+
+        ``ExtractionError`` means the extractor looked and found nothing it was
+        willing to write -- an empty result, a wholly pronominal one, candidates
+        that every gate rejected. That is a fact about the passage, not a
+        failure of the run, and the chunk and its embedding still belong in the
+        corpus. The refusal to invent structure is unchanged: an empty
+        extraction writes no entities and no relations.
+
+        Only ExtractionError. A timeout, a dropped connection, a malformed
+        response and an entity-free passage are different events, and widening
+        this to Exception would let a dead extraction model read as a corpus
+        with no entities in it -- silently, which is worse than the bug this
+        fixes. Everything else propagates and still costs the chunk.
+        """
+        try:
+            return await self.extractor.extract_from_text(text, context=context)
+        except ExtractionError as e:
+            logger.info(
+                "No extractable structure in chunk (%d chars); storing the passage "
+                "without entities: %s", len(text), str(e)[:160],
+            )
+            return ExtractionResult(entities=[], triples=[])
+
     async def _prepare_document(
         self,
         text: str,
@@ -520,11 +545,15 @@ class GraphRAG:
         if context is None and (meta_obj.document or meta_obj.source):
             context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
 
-        # The chunk embedding and the extraction are independent.
+        # The chunk embedding and the extraction are independent -- which is
+        # the whole point here. The vector channel never needed entities, so a
+        # passage the extractor can make nothing of is still a passage a reader
+        # should reach by meaning.
         doc_emb, extraction = await asyncio.gather(
             self.llm.get_embedding(text),
-            self.extractor.extract_from_text(text, context=context),
+            self._extract_or_empty(text, context),
         )
+        extraction_empty = not (extraction.entities or extraction.triples)
 
         entity_texts = [
             f"{e.name} ({e.type}): {e.description}" + (f" Also known as: {', '.join(e.aliases)}." if e.aliases else "")
@@ -555,6 +584,7 @@ class GraphRAG:
         return {
             "text": text, "meta": meta_obj, "space": target_space,
             "doc_emb": doc_emb, "extraction": extraction,
+            "extraction_empty": extraction_empty,
             "entity_embs": entity_embs, "missing": missing, "stub_embs": stub_embs,
             "rel_embs": list(rel_embs) or [None] * len(extraction.triples),
         }
@@ -658,6 +688,11 @@ class GraphRAG:
 
         return {
             "document_id": doc_vertex.id,
+            # Lets a caller count these and tell "nothing extractable here"
+            # apart from "never indexed", which the skip path made
+            # indistinguishable.
+            "extraction_empty": bool(prepared.get("extraction_empty",
+                                                  not (extraction.entities or extraction.triples))),
             "entities_extracted": len(extraction.entities),
             "triples_extracted": len(extraction.triples),
             "relations_added": len(added_relations),
