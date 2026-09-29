@@ -6,7 +6,13 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from post_graph import RESERVED_SPACE_ALL, AsyncPostGraph, Edge, Vertex
+from post_graph import (
+    RESERVED_SPACE_ALL,
+    AsyncPostGraph,
+    Edge,
+    Vertex,
+    is_concurrent_creation,
+)
 
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import SchemaError
@@ -171,6 +177,9 @@ class RAGGraphStore:
                 f"ON {table_ref} USING gin ((payload->'sources'))"
             )
         except Exception as e:
+            if is_concurrent_creation(e):
+                logger.debug("Relation sources index created concurrently.")
+                return
             logger.warning("Could not create relation sources index: %s", e)
 
     async def _verify_vector_columns(self):
@@ -219,6 +228,14 @@ class RAGGraphStore:
                 f"(realm, space, lower(payload->>'name'))"
             )
         except Exception as e:
+            # Replicas provisioning the same realm at once collide on pg_class:
+            # IF NOT EXISTS checks the catalog and then creates, so more than
+            # one can pass the check. Losing that race is not a failure -- the
+            # index exists afterwards, which is the whole contract. A genuine
+            # duplicate-rows conflict still raises, and must.
+            if is_concurrent_creation(e):
+                logger.debug("Entity name index %r created concurrently.", index_name)
+                return
             raise SchemaError(
                 f"Failed to create entity name uniqueness index: {e}. Existing duplicate "
                 f"entity rows must be merged before entity resolution can be enforced."

@@ -3,6 +3,31 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.15.1
+
+### Fixed
+
+**A multi-replica deployment could not provision a new realm.** Every replica
+calls `initialize_schema`, and `_ensure_entity_name_index` raised a
+`SchemaError` for all but one of them: `IF NOT EXISTS` checks the catalog and
+then creates, so more than one session passes the check and the losers collide
+on `pg_class`. Measured against a live cluster at six replicas, five failed.
+The relation-sources index logged a warning on the same race.
+
+Both now tolerate a concurrent creator. Losing that race is not a failure --
+the index exists afterwards, which is the whole contract -- while a genuine
+duplicate-rows conflict still raises, because that one means entity resolution
+cannot be enforced and must not be swallowed.
+
+### Changed
+
+Requires `post-graph >= 1.8.0`, which makes table, index and schema creation
+tolerate a concurrent creator throughout and exports `is_concurrent_creation`
+so this package can apply the same rule to its own provisioning.
+
+Verified live at 6, 12, 20 and 32 replicas initializing one realm at once: all
+succeed, and the realm is writable afterwards.
+
 ## 1.15.0
 
 ### Added
