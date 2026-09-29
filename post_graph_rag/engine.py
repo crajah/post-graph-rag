@@ -177,6 +177,9 @@ class GraphRAG:
             drop_negated=self.config.drop_negated_relations,
             reject_possessive_entities=self.config.reject_possessive_entities,
             extract_validity=self.config.extract_validity,
+            extraction_fn=self.config.extraction_fn,
+            extraction_fn_mode=self.config.extraction_fn_mode,
+            validate_external=self.config.validate_external_extraction,
         )
         self.chunker = chunker or make_paragraph_chunker(
             chunk_chars=self.config.chunk_chars,

@@ -3,6 +3,48 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.15.0
+
+### Added
+
+**Structure can come from your own code, not only from the model.**
+`RAGConfig.extraction_fn` takes a callable `(text, context)` returning triples.
+Imports, call edges, ownership and deployment topology are recoverable exactly
+from an AST, an LSP index or a build file, and asking a model to infer them is
+strictly worse than reading them. Extraction then earns its cost on the
+unwritten part -- rationale, causation, what a decision was for.
+
+The function may be sync or async, and may return an `ExtractionResult`, an
+`{"entities": [...], "triples": [...]}` mapping, a bare sequence of triples, or
+`None` for "nothing here". Endpoints not also described as entities become
+stubs, the same path the model's own unmatched endpoints take, so a
+triples-only source still produces a traversable graph.
+
+`extraction_fn_mode` (`RAG_EXTRACTION_FN_MODE`, default `replace`) chooses
+whether the function replaces the LLM or runs alongside it. Under `merge` both
+run and their results are unioned, which is how a deterministic code graph and
+the model's reading of the prose around it end up in one graph. Each source is
+gated on its own way in, so an exact external record is not held to the LLM's
+vocabulary and an LLM record is not let through ungated.
+
+`validate_external_extraction` (`RAG_VALIDATE_EXTERNAL`, default on) puts
+externally supplied records through the same gates as the model's: pronominal
+and phrase-shaped names dropped, vague predicates and self-loops rejected,
+predicates snapped onto the vocabulary. That is what makes "extraction output
+is untrusted input" true of every source rather than only of the model. Turn it
+off when the source is already exact and the vocabulary would mangle it --
+`calls` and `imports` from an AST do not want snapping.
+
+Two behaviours worth knowing. An exception from the function fails the chunk,
+deliberately: a broken external extractor is the same event as a dead model,
+and swallowing it would let an import that stopped resolving read as a corpus
+with no call edges in it. Returning nothing, by contrast, keeps the passage,
+consistent with 1.14.2. Relations from the function carry the chunk that
+asserted them, so deleting that document withdraws them exactly as it would the
+model's.
+
+Nothing changes for a configuration that does not set `extraction_fn`.
+
 ## 1.14.2
 
 ### Fixed

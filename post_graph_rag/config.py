@@ -1,7 +1,7 @@
 """Configuration dataclass for post-graph-rag."""
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 # Placeholder accepted by local OpenAI-compatible servers (vLLM, LiteLLM, Ollama)
 # that do not authenticate. Real deployments set OPENAI_API_KEY.
@@ -237,6 +237,31 @@ class RAGConfig:
 
     # Override the extraction system prompt wholesale. None uses the built-in
     # prompt, rendered from `entity_types` and `predicate_vocabulary`.
+    # Structure from somewhere other than the LLM. Set to a callable taking
+    # (text, DocumentContext|None) and returning triples -- an ExtractionResult,
+    # a {"entities": [...], "triples": [...]} mapping, a bare sequence of
+    # triples, or None for "nothing here". Sync or async both work.
+    #
+    # The motivating case is structure that should never have been guessed at.
+    # Imports, call edges, ownership and deployment topology are recoverable
+    # exactly from an AST, an LSP index or a build file, and asking a model to
+    # infer them is strictly worse than reading them. Extraction earns its cost
+    # on the unwritten part -- rationale, causation, what a decision was for.
+    extraction_fn: Optional[Callable[..., Any]] = None
+    # "replace" uses the function instead of the LLM. "merge" runs both and
+    # unions them, which is how a deterministic code graph and an LLM's reading
+    # of the prose around it end up in one graph.
+    extraction_fn_mode: str = field(
+        default_factory=lambda: _env("RAG_EXTRACTION_FN_MODE", "replace")
+    )
+    # Put externally supplied records through the same gates as the LLM's:
+    # pronominal and phrase-shaped names dropped, vague predicates and
+    # self-loops rejected, predicates snapped onto the vocabulary. Turn it off
+    # when the source is already exact and the vocabulary would mangle it --
+    # `calls` and `imports` from an AST do not want snapping.
+    validate_external_extraction: bool = field(
+        default_factory=lambda: _env("RAG_VALIDATE_EXTERNAL", "1").lower() in ("1", "true", "yes")
+    )
     extraction_prompt: Optional[str] = None
 
     # Preferred entity types. Empty uses the library defaults.

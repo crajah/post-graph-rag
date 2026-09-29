@@ -468,6 +468,9 @@ realms indexed on the old scheme.
 | `max_retries` | `RAG_MAX_RETRIES` | `5` | Attempts per model before moving to the next |
 | `gleaning_passes` | `RAG_GLEANING_PASSES` | `1` | Extra "what did you miss?" extraction passes. `0` halves LLM cost at the price of recall |
 | `extraction_prompt` | — | `None` | Replace the extraction system prompt wholesale |
+| `extraction_fn` | — | `None` | Supply triples from your own code instead of (or alongside) the LLM — see below |
+| `extraction_fn_mode` | `RAG_EXTRACTION_FN_MODE` | `replace` | `replace` uses your function instead of the LLM; `merge` runs both and unions them |
+| `validate_external_extraction` | `RAG_VALIDATE_EXTERNAL` | `1` | Put your function's records through the same gates as the LLM's |
 | `entity_types` | `RAG_ENTITY_TYPES` | library defaults | Preferred entity type list |
 | `predicate_vocabulary` | `RAG_PREDICATE_VOCABULARY` | — | Preferred predicates; extracted ones are snapped onto this list |
 | `predicate_aliases` | — | `{}` | Explicit synonym map, e.g. `{"collaborated_with": "worked_with"}` |
@@ -483,6 +486,49 @@ realms indexed on the old scheme.
 | `negated_relation_weight` | `RAG_NEGATED_RELATION_WEIGHT` | `0.3` | Clustering weight for denied relations |
 
 Environment variables are read when a `RAGConfig` is constructed, not at import time.
+
+### External extraction (`extraction_fn`)
+
+Some structure should never be guessed at. Imports, call edges, ownership and
+deployment topology are recoverable *exactly* from an AST, an LSP index or a
+build file, and asking a model to infer them is strictly worse than reading
+them. `extraction_fn` lets you hand those in directly.
+
+```python
+def ast_edges(text, context=None):
+    return [{"subject": "checkout_service", "predicate": "calls",
+             "object": "ledger_service"}]
+
+RAGConfig(extraction_fn=ast_edges)          # replaces the LLM
+RAGConfig(extraction_fn=ast_edges, extraction_fn_mode="merge")   # runs both
+```
+
+The function takes `(text, context)` and may be sync or async. It can return an
+`ExtractionResult`, a `{"entities": [...], "triples": [...]}` mapping, a bare
+sequence of triples, or `None` for "nothing here". Endpoints you do not also
+describe as entities become stubs, the same path the LLM's own unmatched
+endpoints take — so a triples-only source still produces a traversable graph.
+
+**`merge` is the interesting mode.** A deterministic code graph and the model's
+reading of the prose around it end up in one graph, with extraction spending
+its cost only on the unwritten part: rationale, causation, what a decision was
+for. Each source is gated on its own way in, so an exact external record is not
+held to the LLM's vocabulary and an LLM record is not let through ungated.
+
+Your records go through the same validation as the model's by default —
+pronominal and phrase-shaped names dropped, vague predicates and self-loops
+rejected, predicates snapped onto the vocabulary. That is what makes
+"extraction output is untrusted input" true of *every* source rather than only
+of the model. Set `validate_external_extraction=False` when the source is
+already exact and the vocabulary would mangle it: `calls` and `imports` from an
+AST do not want snapping.
+
+Two behaviours worth knowing. An exception from your function **fails the
+chunk**, deliberately — a broken external extractor is the same event as a dead
+model, and swallowing it would let an import that stopped resolving read as a
+corpus with no call edges in it. And relations from your function carry the
+chunk that asserted them, so deleting that document withdraws them exactly as
+it would the model's.
 
 ### Model roles
 

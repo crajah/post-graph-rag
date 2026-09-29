@@ -1,8 +1,14 @@
 """Domain-agnostic Knowledge Graph entity and triple extraction module."""
+import inspect
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional, Sequence
+
+# collections.abc for the isinstance checks: typing's aliases are not
+# usable as the second argument to isinstance.
+from collections.abc import Mapping
+from collections.abc import Sequence as AbcSequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from pydantic import BaseModel, Field
 
@@ -331,6 +337,9 @@ class GraphExtractor:
         drop_negated: bool = False,
         reject_possessive_entities: bool = False,
         extract_validity: bool = True,
+        extraction_fn: Optional[Callable[..., Any]] = None,
+        extraction_fn_mode: str = "replace",
+        validate_external: bool = True,
     ):
         self.llm_service = llm_service
         self._system_prompt = system_prompt
@@ -345,6 +354,13 @@ class GraphExtractor:
         self.drop_negated = drop_negated
         self.reject_possessive_entities = reject_possessive_entities
         self.extract_validity = extract_validity
+        self.extraction_fn = extraction_fn
+        if extraction_fn_mode not in ("replace", "merge"):
+            raise ValueError(
+                f"extraction_fn_mode must be 'replace' or 'merge', not {extraction_fn_mode!r}."
+            )
+        self.extraction_fn_mode = extraction_fn_mode
+        self.validate_external = validate_external
 
     # ------------------------------------------------------------------ prompt
 
@@ -430,6 +446,30 @@ class GraphExtractor:
         indistinguishable from genuine extracted structure once written, so a
         transient LLM outage would permanently poison the graph.
         """
+        external = await self._extract_external(text, context)
+        if self.extraction_fn is not None and self.extraction_fn_mode == "replace":
+            if external is None or not (external.entities or external.triples):
+                raise ExtractionError(
+                    "The configured extraction_fn returned no usable entities or triples. "
+                    "Refusing to write placeholder structure into the graph."
+                )
+            return external
+
+        result = await self._extract_via_llm(text, context)
+
+        if external is not None and (external.entities or external.triples):
+            # Each source is gated on its own way in before the union, so an
+            # exact external record is not held to the LLM's vocabulary and an
+            # LLM record is not let through ungated.
+            result = self._merge(result, external)
+        return result
+
+    async def _extract_via_llm(
+        self,
+        text: str,
+        context: Optional[DocumentContext] = None,
+    ) -> ExtractionResult:
+        """The LLM path, unchanged: prompt, glean, gate."""
         ctx = self._context_block(context)
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -456,6 +496,58 @@ class GraphExtractor:
             result = self._merge(result, extra)
 
         return self._validate(result)
+
+    async def _extract_external(
+        self,
+        text: str,
+        context: Optional[DocumentContext],
+    ) -> Optional[ExtractionResult]:
+        """Run the configured extraction_fn, if there is one.
+
+        Exceptions propagate deliberately. A broken external extractor is the
+        same event as a dead LLM -- the chunk could not be read -- and
+        swallowing it would let an import that stopped resolving read as a
+        corpus with no call edges in it.
+        """
+        if self.extraction_fn is None:
+            return None
+        produced = self.extraction_fn(text, context)
+        if inspect.isawaitable(produced):
+            produced = await produced
+        result = self._coerce_extraction(produced)
+        if result is None:
+            return None
+        return self._validate(result) if self.validate_external else result
+
+    @staticmethod
+    def _coerce_extraction(produced: Any) -> Optional[ExtractionResult]:
+        """Accept the shapes an external extractor plausibly returns.
+
+        A bare sequence of triples is the common case and is supported without
+        ceremony: endpoints the caller did not also describe as entities become
+        stubs on the way in, which is the same path the LLM's own unmatched
+        endpoints take.
+        """
+        if produced is None:
+            return None
+        if isinstance(produced, ExtractionResult):
+            return produced
+        if isinstance(produced, Mapping):
+            return ExtractionResult(
+                entities=[e if isinstance(e, Entity) else Entity(**e)
+                          for e in (produced.get("entities") or [])],
+                triples=[t if isinstance(t, Triple) else Triple(**t)
+                         for t in (produced.get("triples") or [])],
+            )
+        if isinstance(produced, AbcSequence) and not isinstance(produced, (str, bytes)):
+            return ExtractionResult(
+                entities=[],
+                triples=[t if isinstance(t, Triple) else Triple(**t) for t in produced],
+            )
+        raise ExtractionError(
+            f"extraction_fn returned {type(produced).__name__}, which is not an "
+            f"ExtractionResult, a mapping of entities/triples, or a sequence of triples."
+        )
 
     async def _glean(
         self, text: str, ctx: str, so_far: ExtractionResult, pass_no: int
