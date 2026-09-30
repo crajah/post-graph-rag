@@ -11,7 +11,7 @@ from post_graph import Vertex
 from post_graph_rag.chunking import make_paragraph_chunker
 from post_graph_rag.communities import default_detector, group_by_community
 from post_graph_rag.config import RAGConfig
-from post_graph_rag.errors import ExtractionError, RAGError
+from post_graph_rag.errors import EmbeddingError, ExtractionError, RAGError
 from post_graph_rag.extractor import ExtractionResult, GraphExtractor, date_sort_key
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.llm import LLMService
@@ -353,6 +353,32 @@ class GraphRAG:
         await self.store.close()
 
     # ---------------------------------------------------------------- indexing
+    #
+    # THE INVARIANT, stated once because it has now been re-derived three times
+    # from three separate bugs:
+    #
+    #   A chunk's passage and its own vector are the irreducible unit.
+    #   Extraction, entity embeddings, relation embeddings, supersession,
+    #   mentions and community membership are all DERIVED -- recoverable by
+    #   re-indexing -- and none of them may take the passage with it.
+    #
+    # Text that is in the corpus and retrievable by nothing is the worst
+    # outcome available here: absent from every count, and indistinguishable
+    # from text that was never ingested. Losing derived structure is merely
+    # expensive, and a re-index fixes it.
+    #
+    # Two things the invariant does NOT license. The chunk's own embedding
+    # failing still fails the chunk, because a passage with no vector IS the
+    # unretrievable text above. And nothing invents structure to paper over a
+    # failure: a placeholder is indistinguishable from genuine extracted
+    # structure once stored, so an outage mid-run would poison the graph
+    # permanently. Derived failures are dropped and counted, never faked.
+    #
+    # Where a failure lands decides how it is handled. Before the passage is
+    # written, the chunk can still be skipped. After it is written, nothing may
+    # raise -- an exception there leaves the passage stored while reporting the
+    # chunk as skipped, and a caller comparing posted against indexed counts
+    # then fires on a mismatch that is wrong about what is actually there.
 
     async def index_text(
         self,
@@ -578,16 +604,41 @@ class GraphRAG:
             for t in extraction.triples
         ] if (self.config.embed_relations and extraction.triples) else []
 
-        entity_embs, stub_embs, rel_embs = await asyncio.gather(
-            self.llm.get_embeddings(entity_texts),
-            self.llm.get_embeddings(missing),
-            self.llm.get_embeddings(rel_texts),
-        )
+        # These three are embeddings of what the extractor *derived*. The
+        # chunk's own vector is already in hand from the gather above, and it
+        # is the only one the passage needs to be retrievable -- so losing
+        # these is the same class of event as losing the extraction, and is
+        # handled the same way: keep the passage, write no structure.
+        #
+        # Writing the structure with missing vectors was the alternative and is
+        # worse. An entity stored without an embedding is invisible to the
+        # similarity search that is the main way entities are found, while
+        # looking complete in the graph, and no later re-index would notice.
+        # Dropping it means a re-index restores it in full.
+        embeddings_degraded = False
+        try:
+            entity_embs, stub_embs, rel_embs = await asyncio.gather(
+                self.llm.get_embeddings(entity_texts),
+                self.llm.get_embeddings(missing),
+                self.llm.get_embeddings(rel_texts),
+            )
+        except EmbeddingError as e:
+            logger.warning(
+                "Could not embed the structure extracted from a chunk (%d entities, "
+                "%d triples); storing the passage without it: %s",
+                len(extraction.entities), len(extraction.triples), str(e)[:200],
+            )
+            extraction = ExtractionResult(entities=[], triples=[])
+            entity_embs, stub_embs, rel_embs = [], [], []
+            missing = []
+            extraction_empty = True
+            embeddings_degraded = True
 
         return {
             "text": text, "meta": meta_obj, "space": target_space,
             "doc_emb": doc_emb, "extraction": extraction,
             "extraction_empty": extraction_empty,
+            "embeddings_degraded": embeddings_degraded,
             "entity_embs": entity_embs, "missing": missing, "stub_embs": stub_embs,
             "rel_embs": list(rel_embs) or [None] * len(extraction.triples),
         }
@@ -612,25 +663,41 @@ class GraphRAG:
             prepared["text"], prepared["doc_emb"], stamped, space=target_space
         )
 
+        # Everything from here on is derived, and the passage is already
+        # written. Nothing below may raise past this point: an exception here
+        # would leave the passage in the corpus and report the chunk as
+        # skipped, which is worse than losing it outright -- the caller's
+        # posted-against-indexed check would then fire on a mismatch that is
+        # actively wrong about what is stored. Failures are counted and
+        # reported instead, and a re-index restores what they cost.
+        structure_errors: List[BaseException] = []
+
         entity_vertex_map: Dict[str, Vertex] = {}
         for entity, emb in zip(extraction.entities, prepared["entity_embs"]):
-            e_vertex = await self.store.upsert_entity(
-                name=entity.name,
-                entity_type=entity.type,
-                description=entity.description,
-                embedding=emb,
-                space=target_space,
-                aliases=entity.aliases,
-            )
+            try:
+                e_vertex = await self.store.upsert_entity(
+                    name=entity.name,
+                    entity_type=entity.type,
+                    description=entity.description,
+                    embedding=emb,
+                    space=target_space,
+                    aliases=entity.aliases,
+                )
+            except Exception as e:
+                structure_errors.append(e)
+                continue
             entity_vertex_map[entity.name.lower()] = e_vertex
             for alias in entity.aliases:
                 entity_vertex_map.setdefault(alias.lower(), e_vertex)
 
         for name, emb in zip(prepared["missing"], prepared["stub_embs"]):
             if name.lower() not in entity_vertex_map:
-                entity_vertex_map[name.lower()] = await self.store.upsert_entity(
-                    name, "Concept", "", emb, space=target_space
-                )
+                try:
+                    entity_vertex_map[name.lower()] = await self.store.upsert_entity(
+                        name, "Concept", "", emb, space=target_space
+                    )
+                except Exception as e:
+                    structure_errors.append(e)
 
         added_relations, superseded = [], []
         for triple, rel_emb in zip(extraction.triples, prepared["rel_embs"]):
@@ -638,56 +705,83 @@ class GraphRAG:
             obj_vertex = entity_vertex_map.get(triple.object.lower())
             if subj_vertex is None or obj_vertex is None:
                 continue
-            edge = await self.store.add_relation(
-                subj_vertex, obj_vertex, triple.predicate, triple.description,
-                space=target_space, embedding=rel_emb,
-                negated=triple.negated, confidence=triple.confidence,
-                valid_from=triple.valid_from, valid_to=triple.valid_to,
-                source_chunk=doc_vertex.id,
-            )
+            try:
+                edge = await self.store.add_relation(
+                    subj_vertex, obj_vertex, triple.predicate, triple.description,
+                    space=target_space, embedding=rel_emb,
+                    negated=triple.negated, confidence=triple.confidence,
+                    valid_from=triple.valid_from, valid_to=triple.valid_to,
+                    source_chunk=doc_vertex.id,
+                )
+            except Exception as e:
+                structure_errors.append(e)
+                continue
             added_relations.append(edge)
-            declared = []
-            if self.config.exclusive_predicate_groups:
-                declared = await self.store.supersede_conflicting(
-                    subj_vertex.id, obj_vertex.id, triple.predicate, edge.id,
-                    self.config.exclusive_predicate_groups, space=target_space,
-                )
-                superseded.extend(declared)
 
-            # The declarative pass only fires on predicate pairs someone
-            # declared in advance, and only between the same two entities. A
-            # contradiction that changes the object — "lives in Paris" then
-            # "lives in Berlin" — cannot be seen that way, and reaches
-            # retrieval with both sides looking current. Ask the model, but
-            # only about what is left: the deterministic path has already run,
-            # and anything it resolved is excluded below.
-            if self.config.contradiction_detection and not declared:
-                candidates = [
-                    c for c in await self.store.find_contradiction_candidates(
-                        subj_vertex.id, edge.id,
-                        limit=self.config.contradiction_candidates,
-                        space=target_space)
-                    if c["id"] not in set(superseded)
-                ]
-                contradicted = await self.extractor.detect_contradictions(
-                    f"{subj_vertex.payload.get('name', subj_vertex.id)} "
-                    f"-[{triple.predicate}]-> "
-                    f"{obj_vertex.payload.get('name', obj_vertex.id)}"
-                    + (f": {triple.description}" if triple.description else ""),
-                    candidates,
-                )
-                superseded.extend(await self.store.mark_superseded(
-                    contradicted, edge.id, space=target_space))
+            # Supersession is enrichment of a relation that is now stored, and
+            # contradiction detection inside it is an LLM call -- the flakiest
+            # thing in the write path. Losing it must not lose the relation, so
+            # this is caught around the whole block rather than around the
+            # write above.
+            declared = []
+            try:
+                if self.config.exclusive_predicate_groups:
+                    declared = await self.store.supersede_conflicting(
+                        subj_vertex.id, obj_vertex.id, triple.predicate, edge.id,
+                        self.config.exclusive_predicate_groups, space=target_space,
+                    )
+                    superseded.extend(declared)
+
+                # The declarative pass only fires on predicate pairs someone
+                # declared in advance, and only between the same two entities. A
+                # contradiction that changes the object — "lives in Paris" then
+                # "lives in Berlin" — cannot be seen that way, and reaches
+                # retrieval with both sides looking current. Ask the model, but
+                # only about what is left: the deterministic path has already run,
+                # and anything it resolved is excluded below.
+                if self.config.contradiction_detection and not declared:
+                    candidates = [
+                        c for c in await self.store.find_contradiction_candidates(
+                            subj_vertex.id, edge.id,
+                            limit=self.config.contradiction_candidates,
+                            space=target_space)
+                        if c["id"] not in set(superseded)
+                    ]
+                    contradicted = await self.extractor.detect_contradictions(
+                        f"{subj_vertex.payload.get('name', subj_vertex.id)} "
+                        f"-[{triple.predicate}]-> "
+                        f"{obj_vertex.payload.get('name', obj_vertex.id)}"
+                        + (f": {triple.description}" if triple.description else ""),
+                        candidates,
+                    )
+                    superseded.extend(await self.store.mark_superseded(
+                        contradicted, edge.id, space=target_space))
+            except Exception as e:
+                structure_errors.append(e)
 
         # Link the chunk to every entity it mentions, populating doc_mentions.
         mentioned = {v.id: v for v in entity_vertex_map.values()}
         mentions = 0
         for e_vertex in mentioned.values():
-            if await self.store.add_doc_mention(doc_vertex, e_vertex, space=target_space):
-                mentions += 1
+            try:
+                if await self.store.add_doc_mention(doc_vertex, e_vertex, space=target_space):
+                    mentions += 1
+            except Exception as e:
+                structure_errors.append(e)
 
         if mentioned:
-            await self.store.refresh_dormancy(list(mentioned), space=target_space)
+            try:
+                await self.store.refresh_dormancy(list(mentioned), space=target_space)
+            except Exception as e:
+                structure_errors.append(e)
+
+        if structure_errors:
+            logger.warning(
+                "Chunk %s stored, but %d of its structural writes failed; a re-index "
+                "restores them. First: %s: %s",
+                doc_vertex.id, len(structure_errors),
+                type(structure_errors[0]).__name__, str(structure_errors[0])[:200],
+            )
 
         return {
             "document_id": doc_vertex.id,
@@ -696,6 +790,17 @@ class GraphRAG:
             # indistinguishable.
             "extraction_empty": bool(prepared.get("extraction_empty",
                                                   not (extraction.entities or extraction.triples))),
+            # Distinct from extraction_empty, which says no structure was
+            # written. This says why: the extractor found structure and its
+            # embeddings could not be obtained. Countable, so a caller can see
+            # the difference between a corpus with little structure and an
+            # embedding endpoint that is refusing work.
+            "embeddings_degraded": bool(prepared.get("embeddings_degraded", False)),
+            # Structural writes that failed after the passage was stored. Zero
+            # on a healthy run. Aggregate it: a corpus that indexed every chunk
+            # with structure_errors on every chunk is complete and useless, and
+            # no other count in this dict would say so.
+            "structure_errors": len(structure_errors),
             "entities_extracted": len(extraction.entities),
             "triples_extracted": len(extraction.triples),
             "relations_added": len(added_relations),

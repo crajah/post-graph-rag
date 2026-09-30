@@ -3,6 +3,58 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.15.2
+
+### Fixed
+
+**An embedding failure on a chunk's derived batches lost the passage.**
+`_prepare_document` embeds the chunk, then embeds what the extractor derived
+from it -- entities, stub endpoints, relations. A failure on that second set
+aborted the chunk, discarding the chunk's own vector, which had already been
+computed successfully. The vector channel never needed entities: the same
+argument that keeps an unextractable passage now keeps an unembeddable one. The
+passage is written with its own vector and no structure.
+
+**The cause: embedding requests were never batched.** `get_embeddings` sent the
+whole list in one request. Endpoints cap inputs per request and exceeding the
+cap is a 400 -- not retryable -- so a chunk that extracted more entities than
+the cap lost its entire passage on a limit that had nothing to do with the
+passage. Requests are now split to `embedding_batch_size`
+(`RAG_EMBEDDING_BATCH_SIZE`, default 64). Without this, the tolerance above
+would merely have traded lost passages for quietly lost structure on every
+dense chunk.
+
+The chunk's own embedding failing still fails the chunk. A passage stored with
+no vector is in the corpus and retrievable by nothing, which is the failure all
+of this exists to prevent.
+
+**A failure after the passage was written raised, leaving a partial write and
+reporting the chunk as skipped.** Seven operations in `_write_document` run
+after `add_document`, one of them an LLM call (contradiction detection inside
+supersession). Any of them raising produced a state worse than losing the
+chunk: the passage stored, structure partial, the chunk reported skipped -- so
+a caller comparing posted against indexed counts fired on a mismatch that was
+actively wrong about what was stored.
+
+Structural writes now degrade at their own granularity and are counted. A
+failing entity write costs that entity; a failing relation write costs that
+triple; a failing supersession or contradiction check costs neither the
+passage nor the relation it was enriching.
+
+### Added
+
+- `embedding_batch_size` (`RAG_EMBEDDING_BATCH_SIZE`, default 64).
+- Results carry `embeddings_degraded: bool` -- structure was extracted but
+  could not be embedded, so it was not written. Distinct from
+  `extraction_empty`, which says no structure was written without saying why.
+- Results carry `structure_errors: int` -- structural writes that failed after
+  the passage was stored. Zero on a healthy run. **Aggregate it:** a corpus
+  that indexed every chunk with `structure_errors` on every chunk is complete
+  and useless, and no other count reports that.
+
+The invariant behind all three fixes is now recorded at the top of the indexing
+section of `engine.py`.
+
 ## 1.15.1
 
 ### Fixed

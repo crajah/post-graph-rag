@@ -105,14 +105,36 @@ class LLMService:
         return vec
 
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Embed several texts in one request.
+        """Embed several texts, in as few requests as the endpoint allows.
 
         Indexing a chunk needs one embedding per extracted entity. Issued one at
         a time those round trips dominate indexing latency, and the OpenAI
         embeddings endpoint accepts a batch natively.
+
+        Batched rather than sent whole, because endpoints cap inputs per
+        request and exceeding the cap is a 400 -- not retryable, so the request
+        simply fails. Unbatched, a densely populated chunk that extracted more
+        entities than the cap lost its entire passage on a limit that has
+        nothing to do with the passage.
         """
         if not texts:
             return []
+
+        size = max(1, self.config.embedding_batch_size)
+        if len(texts) <= size:
+            return await self._embed_batch(texts)
+
+        out: List[List[float]] = []
+        for start in range(0, len(texts), size):
+            out.extend(await self._embed_batch(texts[start:start + size]))
+        if len(out) != len(texts):
+            raise EmbeddingError(
+                f"Batched embedding returned {len(out)} vectors for {len(texts)} inputs."
+            )
+        return out
+
+    async def _embed_batch(self, texts: List[str]) -> List[List[float]]:
+        """One embedding request, within the endpoint's input limit."""
 
         async def attempt(_model: str):
             response = await self.client.embeddings.create(

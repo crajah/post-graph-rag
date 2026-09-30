@@ -457,6 +457,7 @@ realms indexed on the old scheme.
 | `synthesis_model` | `RAG_SYNTHESIS_MODEL` | falls back to `model` | Answering the question |
 | `embedding_model` | `RAG_EMBEDDING_MODEL` | `gemini-embedding-001` | Model for vector embedding generation |
 | `embedding_dim` | `RAG_EMBEDDING_DIM` | `1536` | Embedding width. Must match the model, and is fixed once tables exist |
+| `embedding_batch_size` | `RAG_EMBEDDING_BATCH_SIZE` | `64` | Inputs per embedding request. Endpoints cap this and exceeding the cap is a non-retryable 400, so requests are split to stay under it |
 | `db_uri` | `POSTGRES_URI` | `postgresql://localhost:5432/postgres` | PostgreSQL connection DSN |
 | `realm` | `RAG_REALM` | `default` | Multi-tenant graph namespace |
 | `space` | `RAG_SPACE` | `default` | Sub-grouping within a realm (`production`, `sandbox`, …) |

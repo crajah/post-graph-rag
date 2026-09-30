@@ -56,6 +56,14 @@ class RAGConfig:
         default_factory=lambda: _env("RAG_SYNTHESIS_MODEL", "") or None
     )
     embedding_dim: int = field(default_factory=lambda: int(_env("RAG_EMBEDDING_DIM", "1536")))
+    # Inputs per embedding request. Endpoints cap this, and exceeding the cap
+    # is a 400 rather than a retryable error, so an unbatched request simply
+    # fails: a chunk yielding more entities than the cap took its whole
+    # passage down with it. 64 is the common limit; raise it if your endpoint
+    # allows more, since fewer round trips is the only reason this is batched.
+    embedding_batch_size: int = field(
+        default_factory=lambda: int(_env("RAG_EMBEDDING_BATCH_SIZE", "64"))
+    )
     # Hops to walk out from a matched entity during retrieval. 1 answers "what is
     # said about X"; chain questions need the edges between X's neighbours, which
     # are never adjacent to X. Above 1, fan-out grows fast on a dense graph, so
