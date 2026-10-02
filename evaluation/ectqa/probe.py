@@ -83,6 +83,8 @@ async def main():
     ap.add_argument("--f1-threshold", type=float, default=0.60)
     ap.add_argument("--judges", nargs="*", default=["gemini-3.7-flash"])
     ap.add_argument("--query-concurrency", type=int, default=4)
+    ap.add_argument("--max-answer-chars", type=int, default=10000,
+                    help="Max characters to store per answer (default: 10000, 0=unlimited)")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
@@ -158,7 +160,7 @@ async def main():
                                 "full_correct": bool(full_ok),
                                 "line_correct": bool(line_ok),
                                 "full_votes": full_v, "line_votes": line_v,
-                                "answer": answer[:600]}
+                                "answer": answer[:args.max_answer_chars] if args.max_answer_chars > 0 else answer}
 
         await asyncio.gather(*(ask(r) for r in old))
         await rag.close()
