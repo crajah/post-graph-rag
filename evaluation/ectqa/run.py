@@ -178,12 +178,13 @@ NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 # 0.38-0.59 against a 0.60 threshold. Stripped from gold and answer alike, so
 # the comparison stays symmetric.
 _NOT_A_FIGURE = re.compile(
-    r"\[\d+\]"                                   # citation markers
-    r"|\b(?:19|20)\d{2}-q[1-4]\b"                # 2023-q2
-    r"|\b(?:19|20)\d{2}-\d{2}(?:-\d{2})?\b"     # ISO dates
-    r"|\bq[1-4]\s+(?:19|20)\d{2}\b"             # Q3 2022
-    r"|\b(?:fy\s*)?(?:19|20)\d{2}\b"            # bare years, FY2023
-    r"|\bq[1-4]\b",                              # bare quarter labels
+    r"\[\d+\]"
+    r"|\b(?:19|20)\d{2}-q[1-4]\b"
+    r"|\b(?:19|20)\d{2}-\d{2}(?:-\d{2})?\b"
+    r"|\bq[1-4]\s+(?:19|20)\d{2}\b"
+    r"|\b(?:fy\s*)?(?:19|20)\d{2}\b"
+    r"|\bh[1-2]\s+(?:19|20)\d{2}\b"
+    r"|\bq[1-4]\b",
     re.I)
 
 
@@ -195,25 +196,59 @@ def _numbers(text: str):
     return [float(x) for x in NUMBER.findall(_NOT_A_FIGURE.sub(" ", text or ""))]
 
 
-_PERIOD = re.compile(r"\b(?:q([1-4])[\s-]*((?:19|20)\d{2})|((?:19|20)\d{2})[\s-]*q([1-4]))\b", re.I)
+_PERIOD = re.compile(
+    r"\b(?:"
+    r"q([1-4])[\s-]*((?:19|20)\d{2})"
+    r"|((?:19|20)\d{2})[\s-]*q([1-4])"
+    r"|(January|February|March|April|May|June|July|August|September|October|November|December)"
+    r"\s+((?:19|20)\d{2})"
+    r"|((?:19|20)\d{2})-(0[1-9]|1[0-2])"
+    r"|h([1-2])\s*((?:19|20)\d{2})"
+    r"|fy\s*((?:19|20)\d{2})"
+    r")\b",
+    re.I)
 
 
 def _periods(text: str):
-    """Quarter-year tokens, normalised so 'Q1 2022' and '2022-q1' compare equal.
-
-    Needed because some gold answers ARE periods — "in which quarter was the
-    margin highest" is answered by a quarter, not a figure. Those tokens are
-    chronology in a prose answer but the value itself in that gold, so they get
-    their own matching tier rather than being stripped or being counted as
-    numbers.
-    """
+    """Period tokens, normalised so equivalent formats compare equal."""
     out = set()
-    for m in _PERIOD.finditer(text or ""):
-        q = m.group(1) or m.group(4)
-        y = m.group(2) or m.group(3)
-        out.add(f"{y}-q{q}")
-    return out
 
+    months = {
+        "january": "01",
+        "february": "02",
+        "march": "03",
+        "april": "04",
+        "may": "05",
+        "june": "06",
+        "july": "07",
+        "august": "08",
+        "september": "09",
+        "october": "10",
+        "november": "11",
+        "december": "12",
+    }
+
+    for m in _PERIOD.finditer(text or ""):
+        if m.group(1) or m.group(4):
+            q = m.group(1) or m.group(4)
+            y = m.group(2) or m.group(3)
+            out.add(f"{y}-q{q}")
+
+        elif m.group(5):
+            month = m.group(5).lower()
+            y = m.group(6)
+            out.add(f"{y}-{months[month]}")
+
+        elif m.group(7):
+            out.add(f"{m.group(7)}-{m.group(8)}")
+
+        elif m.group(9):
+            out.add(f"{m.group(10)}-h{m.group(9)}")
+
+        elif m.group(11):
+            out.add(f"{m.group(11)}-fy")
+
+    return out
 
 _SUPERLATIVE = re.compile(
     r"\b(highest|lowest|greatest|largest|smallest|peak|best|worst|maximum|"
@@ -227,10 +262,41 @@ _CONSTRAINT = re.compile(
 
 
 def _norm_period(m):
-    q = m.group(1) or m.group(4)
-    y = m.group(2) or m.group(3)
-    return f"{y}-q{q}"
+    months = {
+        "january": "01",
+        "february": "02",
+        "march": "03",
+        "april": "04",
+        "may": "05",
+        "june": "06",
+        "july": "07",
+        "august": "08",
+        "september": "09",
+        "october": "10",
+        "november": "11",
+        "december": "12",
+    }
 
+    if m.group(1) or m.group(4):
+        q = m.group(1) or m.group(4)
+        y = m.group(2) or m.group(3)
+        return f"{y}-q{q}"
+
+    if m.group(5):
+        month = m.group(5).lower()
+        y = m.group(6)
+        return f"{y}-{months[month]}"
+
+    if m.group(7):
+        return f"{m.group(7)}-{m.group(8)}"
+
+    if m.group(9):
+        return f"{m.group(10)}-h{m.group(9)}"
+
+    if m.group(11):
+        return f"{m.group(11)}-fy"
+
+    return None
 
 def asserted_period(answer: str):
     """The quarter an answer names AS its answer, not the ones it compares.
