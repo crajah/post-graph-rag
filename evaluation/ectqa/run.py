@@ -197,13 +197,20 @@ def _numbers(text: str):
 
 _PERIOD = re.compile(
     r"\b(?:"
-    r"q(?P<q1>[1-4])[\s-]*(?P<y1>(?:19|20)\d{2})"
+    r"q(?P<q1>[1-4])[\s-]*(?:fy[\s-]*)?(?P<y1>(?:19|20)\d{2})"
     r"|(?P<y2>(?:19|20)\d{2})[\s-]*q(?P<q2>[1-4])"
     r"|(?P<m_name>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[,\s-]+(?P<y3>(?:19|20)\d{2})"
     r"|(?P<y4>(?:19|20)\d{2})-(?P<m_num>0[1-9]|1[0-2])(?!\-\d)"
-    r"|h(?P<h1>[1-2])[\s-]*(?P<y5>(?:19|20)\d{2})"
+    r"|h(?P<h1>[1-2])[\s-]*(?:fy[\s-]*)?(?P<y5>(?:19|20)\d{2})"
     r"|(?P<y6>(?:19|20)\d{2})[\s-]*h(?P<h2>[1-2])"
-    r"|fy[\s-]*(?P<y7>(?:19|20)\d{2})"
+    # A fiscal year, but only when it stands alone. Transcripts write a
+    # quarter inside a fiscal year -- "Q3 FY2023", "FY 2020 Q4" -- and
+    # asserted_period takes the FIRST match in the span it examines, so an
+    # unguarded fy branch wins over the adjacent quarter and the specific
+    # period is thrown away. Measured over the stored answers, that
+    # replaced the asserted quarter with its fiscal year in 40 of them,
+    # which is the error asserted_period exists to prevent.
+    r"|(?<![qh][1-4][\s-])fy[\s-]*(?P<y7>(?:19|20)\d{2})(?![\s-]*[qh][1-4]\b)"
     r")\b", re.I
 )
 
