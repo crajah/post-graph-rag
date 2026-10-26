@@ -179,11 +179,11 @@ NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
 # the comparison stays symmetric.
 _NOT_A_FIGURE = re.compile(
     r"\[\d+\]"                                   # citation markers
-    r"|\b(?:19|20)\d{2}-q[1-4]\b"                # 2023-q2
+    r"|\b(?:19|20)\d{2}-(?:q[1-4]|h[1-2])\b"     # 2023-q2, 2023-h1
     r"|\b(?:19|20)\d{2}-\d{2}(?:-\d{2})?\b"     # ISO dates
-    r"|\bq[1-4]\s+(?:19|20)\d{2}\b"             # Q3 2022
+    r"|\b(?:q[1-4]|h[1-2])\s+(?:19|20)\d{2}\b"   # Q3 2022, H1 2022
     r"|\b(?:fy\s*)?(?:19|20)\d{2}\b"            # bare years, FY2023
-    r"|\bq[1-4]\b",                              # bare quarter labels
+    r"|\b(?:q[1-4]|h[1-2])\b",                   # bare quarter/half labels
     re.I)
 
 
@@ -195,11 +195,45 @@ def _numbers(text: str):
     return [float(x) for x in NUMBER.findall(_NOT_A_FIGURE.sub(" ", text or ""))]
 
 
-_PERIOD = re.compile(r"\b(?:q([1-4])[\s-]*((?:19|20)\d{2})|((?:19|20)\d{2})[\s-]*q([1-4]))\b", re.I)
+_PERIOD = re.compile(
+    r"\b(?:"
+    r"q(?P<q1>[1-4])[\s-]*(?P<y1>(?:19|20)\d{2})"
+    r"|(?P<y2>(?:19|20)\d{2})[\s-]*q(?P<q2>[1-4])"
+    r"|(?P<m_name>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[,\s-]+(?P<y3>(?:19|20)\d{2})"
+    r"|(?P<y4>(?:19|20)\d{2})-(?P<m_num>0[1-9]|1[0-2])(?!\-\d)"
+    r"|h(?P<h1>[1-2])[\s-]*(?P<y5>(?:19|20)\d{2})"
+    r"|(?P<y6>(?:19|20)\d{2})[\s-]*h(?P<h2>[1-2])"
+    r"|fy[\s-]*(?P<y7>(?:19|20)\d{2})"
+    r")\b", re.I
+)
+
+_MONTH_NUMS = {
+    "jan": "01", "january": "01", "feb": "02", "february": "02",
+    "mar": "03", "march": "03", "apr": "04", "april": "04",
+    "may": "05", "jun": "06", "june": "06", "jul": "07", "july": "07",
+    "aug": "08", "august": "08", "sep": "09", "september": "09",
+    "oct": "10", "october": "10", "nov": "11", "november": "11",
+    "dec": "12", "december": "12",
+}
+
+
+def _norm_period(m: re.Match) -> str:
+    d = m.groupdict()
+    y = next(v for k, v in d.items() if k.startswith("y") and v is not None)
+    if d.get("q1") or d.get("q2"):
+        return f"{y}-q{d.get('q1') or d.get('q2')}"
+    elif d.get("h1") or d.get("h2"):
+        return f"{y}-h{d.get('h1') or d.get('h2')}"
+    elif d.get("m_num"):
+        return f"{y}-{d['m_num']}"
+    elif d.get("m_name"):
+        return f"{y}-{_MONTH_NUMS[d['m_name'].lower()]}"
+    else:
+        return f"{y}-fy"
 
 
 def _periods(text: str):
-    """Quarter-year tokens, normalised so 'Q1 2022' and '2022-q1' compare equal.
+    """Temporal tokens, normalised so 'Q1 2022' and '2022-q1' compare equal.
 
     Needed because some gold answers ARE periods — "in which quarter was the
     margin highest" is answered by a quarter, not a figure. Those tokens are
@@ -209,9 +243,7 @@ def _periods(text: str):
     """
     out = set()
     for m in _PERIOD.finditer(text or ""):
-        q = m.group(1) or m.group(4)
-        y = m.group(2) or m.group(3)
-        out.add(f"{y}-q{q}")
+        out.add(_norm_period(m))
     return out
 
 
@@ -225,11 +257,6 @@ _CONSTRAINT = re.compile(
     r"\b(prior to|before|after|between|from|during the period|in the period|"
     r"spanning|through|up to|since)\b[^.]{0,40}?$", re.I)
 
-
-def _norm_period(m):
-    q = m.group(1) or m.group(4)
-    y = m.group(2) or m.group(3)
-    return f"{y}-q{q}"
 
 
 def asserted_period(answer: str):
