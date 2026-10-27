@@ -58,11 +58,66 @@ def _utc_now() -> str:
 
 
 class RAGGraphStore:
-    def __init__(self, config: RAGConfig):
+    def __init__(self, config: RAGConfig, connection=None):
+        """The graph store, over its own pool or one the caller supplies.
+
+        ``connection`` takes an asyncpg ``Connection`` or ``Pool``. Supplying
+        one hands the caller everything this library decides about the
+        database session, which is the only way to reach a schema this
+        library's own credential may not reach.
+
+        The case that motivated it: a tenant per PostgreSQL schema, where no
+        single role is permitted ``USAGE`` on every tenant's schema -- that
+        reach being the thing per-tenant schemas exist to remove. A worker
+        connects as itself and assumes a per-tenant role for the work. The
+        library cannot do that from a DSN, because the role is not a property
+        of the connection string; it is a property of the request.
+
+        With a ``Pool``, assume the role in asyncpg's ``setup`` callback,
+        which runs on every acquisition::
+
+            async def setup(conn):
+                await conn.execute('SET ROLE "tenant_42"')
+
+            pool = await asyncpg.create_pool(dsn, setup=setup)
+            rag = GraphRAG(config, connection=pool)
+
+        That reaches reads as well as writes. Most read paths here do not open
+        a transaction, so a *transaction*-local role (``SET LOCAL ROLE``) set
+        outside the library would not survive to them; a session-level
+        ``SET ROLE`` on the acquired connection does, and asyncpg's own
+        ``RESET ALL`` on release keeps it from outliving the acquisition.
+
+        With a single ``Connection``, assume the role inside a transaction you
+        open and hold for the call -- post-graph nests its own transactions as
+        savepoints, so the role persists through them. A single connection is
+        safe here because every database write goes through one sequential
+        path; only embedding and extraction run concurrently.
+
+        One grant is easy to miss. The role needs ``USAGE`` on the schema
+        holding the ``vector`` extension as well as on its own realm, because
+        pgvector's type lives there. Without it every vector read fails with
+        ``type "vector" does not exist`` -- a message naming neither the
+        privilege nor the schema that is missing. A database whose ``public``
+        carries owner-only defaults, which is what ``CREATE DATABASE`` leaves
+        on PostgreSQL 15 and later, gives a new role no ``USAGE`` on it, so
+        this is the ordinary case rather than the exotic one::
+
+            GRANT USAGE ON SCHEMA public TO "tenant_42";   -- where vector lives
+
+        The caller keeps ownership: :meth:`close` closes only a pool this
+        store created, never one passed in.
+        """
         self.config = config
-        self.client = AsyncPostGraph(
-            dsn=config.db_uri, schema_per_realm=config.schema_per_realm,
-            pool_min_size=config.pool_min_size, pool_max_size=config.pool_max_size)
+        self._owns_connection = connection is None
+        if connection is not None:
+            self.client = AsyncPostGraph(
+                connection_or_pool=connection,
+                schema_per_realm=config.schema_per_realm)
+        else:
+            self.client = AsyncPostGraph(
+                dsn=config.db_uri, schema_per_realm=config.schema_per_realm,
+                pool_min_size=config.pool_min_size, pool_max_size=config.pool_max_size)
         self.realm = config.realm
         self.space = config.space or "default"
         # Guards the lazily-built lexical index against concurrent first use.
@@ -70,10 +125,24 @@ class RAGGraphStore:
         self._fts_index_lock = asyncio.Lock()
 
     async def connect(self):
-        await self.client.connect()
+        """Open the pool, or accept the connection the caller supplied.
+
+        post-graph's connect() is already a no-op once a connection is set, so
+        this is safe either way; the branch is here to make the intent legible
+        rather than incidental.
+        """
+        if self._owns_connection:
+            await self.client.connect()
 
     async def close(self):
-        await self.client.close()
+        """Close the pool this store opened. A supplied connection is left alone.
+
+        Closing a caller's pool would be worse than the problem the injection
+        solves: a shared pool torn down by a library that merely borrowed it.
+        post-graph only closes a pool it created, and this will not ask it to.
+        """
+        if self._owns_connection:
+            await self.client.close()
 
     # ------------------------------------------------------------------ schema
 

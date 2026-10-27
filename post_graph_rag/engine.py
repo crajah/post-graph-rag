@@ -153,6 +153,13 @@ class GraphRAG:
 
     The LLM service, extractor and chunker can all be replaced, so callers can
     tune extraction or supply their own splitter without forking the library.
+
+    ``connection`` replaces the database session too: pass an asyncpg
+    ``Connection`` or ``Pool`` and this engine uses it instead of opening one
+    from ``config.db_uri``, leaving ownership -- and anything the caller has
+    decided about that session, a ``SET ROLE`` above all -- with the caller.
+    See :class:`~post_graph_rag.graph_store.RAGGraphStore` for the two shapes
+    and why a session-level role is the one that reaches retrieval.
     """
 
     def __init__(
@@ -163,6 +170,7 @@ class GraphRAG:
         chunker: Optional[Callable[[str], List[str]]] = None,
         community_detector: Optional[Callable[..., Dict[str, int]]] = None,
         reporter: Optional[CommunityReporter] = None,
+        connection=None,
     ):
         self.config = config or RAGConfig()
         self.llm = llm or LLMService(self.config)
@@ -189,7 +197,7 @@ class GraphRAG:
         self.reporter = reporter or CommunityReporter(
             self.llm, system_prompt=self.config.community_report_prompt
         )
-        self.store = RAGGraphStore(self.config)
+        self.store = RAGGraphStore(self.config, connection=connection)
 
     async def initialize(self):
         """Initialize database connection and schema."""

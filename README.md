@@ -158,6 +158,49 @@ rag = GraphRAG(config, chunker=my_splitter)
 await rag.index_text(long_text, metadata=DocumentMetadata(document="babbage.txt"))
 ```
 
+### Bring your own connection
+
+`GraphRAG` opens a pool from `config.db_uri` by default. Pass `connection=` an
+asyncpg `Connection` or `Pool` and it uses yours instead, leaving ownership — and
+anything you have decided about that session — with you.
+
+This exists for one shape in particular: a tenant per PostgreSQL schema, where no
+single role may hold `USAGE` on every tenant's schema, that reach being the thing
+per-tenant schemas exist to remove. A worker connects as itself and assumes a
+per-tenant role for the work. A DSN cannot express that, because the role is not a
+property of the connection string; it is a property of the request.
+
+```python
+async def setup(conn):                       # runs on every acquisition
+    await conn.execute('SET ROLE "tenant_42"')
+
+pool = await asyncpg.create_pool(dsn, setup=setup)
+rag = GraphRAG(config, connection=pool)      # reads and writes arrive as tenant_42
+```
+
+Use a **session-level `SET ROLE`**, not `SET LOCAL ROLE`. Most read paths underneath
+do not open a transaction, so a transaction-local role set outside the library never
+reaches retrieval — you would get a working index and an empty recall. asyncpg's
+`RESET ALL` on release keeps the session-level role from outliving the acquisition.
+
+A single `Connection` works too: assume the role in a transaction you open and hold
+for the call. post-graph nests its own transactions as savepoints, so the role
+persists through them. One connection is enough because every database write here
+runs on one sequential path — only embedding and extraction run concurrently.
+
+Two things to get right:
+
+- **Grant `USAGE` on the schema holding the `vector` extension**, as well as on the
+  tenant's own schema. pgvector's type lives there, and without it every vector read
+  fails with `type "vector" does not exist`, naming neither the privilege nor the
+  schema that is missing. A database whose `public` carries owner-only defaults —
+  what `CREATE DATABASE` leaves on PostgreSQL 15+ — gives a new role no `USAGE` on it.
+- **The library never closes a connection you supplied.** `close()` closes only a pool
+  it opened itself.
+
+`SET ROLE` cannot escalate: PostgreSQL refuses a role the connecting user is not a
+member of, so this grants no privilege the caller did not already hold.
+
 ### Community summarisation
 
 Corpus-level questions — "what are the main themes here?" — cannot be answered by
