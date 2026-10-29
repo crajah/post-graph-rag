@@ -140,7 +140,7 @@ class RAGConfig:
     merge_strategy: str = field(
         default_factory=lambda: _env("RAG_MERGE_STRATEGY", "rrf"))
     # Lexical (full-text) retrieval over relations, the third channel. Costs a
-    # GIN index, built on first use.
+    # GIN index, created by initialize_schema when this is on.
     lexical_search: bool = field(
         default_factory=lambda: _env("RAG_LEXICAL_SEARCH", "1").lower() in ("1", "true", "yes"))
     lexical_top_k: int = field(default_factory=lambda: int(_env("RAG_LEXICAL_TOP_K", "50")))

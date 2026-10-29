@@ -226,6 +226,23 @@ class RAGGraphStore:
         await self.client.create_payload_index("communities", realm=self.realm,
                                                key="level", numeric=True)
 
+        if self.config.lexical_search:
+            # The lexical channel's GIN index, created here rather than on the
+            # first query that needs it. CREATE INDEX requires ownership of the
+            # table -- and PostgreSQL checks that *before* it evaluates IF NOT
+            # EXISTS, so a role that does not own the tables cannot issue the
+            # statement even when the index is already there. Nothing a
+            # deployer does in advance makes a lazy CREATE safe for a
+            # non-owner; only not issuing it does.
+            #
+            # A deployment that provisions as an owning role and then queries
+            # as a restricted one -- the shape row-level security requires,
+            # since an owner can turn RLS off -- therefore needs every index
+            # it will ever need by the time initialize_schema returns.
+            # Existing realms gain it by running initialize_schema again as
+            # the owner, which is idempotent.
+            await self._ensure_relation_fts_index()
+
         await self._verify_vector_columns()
         await self._ensure_entity_name_index()
 
@@ -879,9 +896,19 @@ class RAGGraphStore:
     async def _ensure_relation_fts_index(self):
         """GIN index over the relation text, for the lexical channel.
 
-        Built lazily on first use rather than at schema creation, so an existing
-        deployment gains it without a migration and one that never calls the
-        lexical channel never pays for it.
+        Created by ``initialize_schema`` when ``lexical_search`` is on, and
+        also reachable from the first lexical query, which is how a realm
+        initialised before this index existed gains it without a migration and
+        how a deployment that never calls the lexical channel never pays for
+        it.
+
+        The query-path call creates nothing when the index is already there: it
+        asks the catalogue first. That is what lets a deployment provision its
+        realm as an owning role and query it as a restricted one -- the shape
+        row-level security requires, since an owner may turn RLS off -- because
+        CREATE INDEX demands ownership of the table and PostgreSQL checks for
+        it before evaluating IF NOT EXISTS, so the statement is refused to a
+        non-owner even when it would have done nothing.
 
         `IF NOT EXISTS` is not atomic. Two sessions can both find the index
         absent and then race to insert into pg_class, and the loser gets a
@@ -902,6 +929,20 @@ class RAGGraphStore:
                 return
             table_ref = self.client._get_table_ref("relations", self.realm)
             index_name = f"{self.realm}_relations_fts"
+
+            # Look before creating. Not an optimisation: CREATE INDEX requires
+            # ownership of the table, and PostgreSQL checks that *before* it
+            # evaluates IF NOT EXISTS — so for a role that does not own the
+            # table the statement is refused whether or not the index is
+            # already there, and nothing a deployer does in advance can make a
+            # lazy CREATE safe. The catalogue read below needs only USAGE on
+            # the schema, so a realm initialised by its owner stays queryable
+            # by a restricted role, which is the point of initialising as one
+            # role and querying as another.
+            if await self._relation_exists(index_name):
+                self._fts_index_ready = True
+                return
+
             try:
                 await self.client._execute(
                     f'CREATE INDEX IF NOT EXISTS "{index_name}" ON {table_ref} USING gin ('
@@ -914,10 +955,46 @@ class RAGGraphStore:
                 # and must not be swallowed — a missing index would otherwise
                 # turn into an empty lexical channel that looks disabled.
                 text = f"{getattr(e, 'sqlstate', '')} {e}".lower()
-                if "23505" not in text and "duplicate key" not in text:
+                if "23505" in text or "duplicate key" in text:
+                    logger.debug("Relation FTS index %r created concurrently.",
+                                 index_name)
+                elif "42501" in text or "must be owner" in text:
+                    # The check above found no index, so this is a non-owner
+                    # against a realm that genuinely lacks one. The driver's
+                    # message names a table the caller never asked to alter, so
+                    # say what to do about it instead.
+                    if await self._relation_exists(index_name):
+                        logger.debug("Relation FTS index %r appeared concurrently.",
+                                     index_name)
+                    else:
+                        raise SchemaError(
+                            f"The lexical retrieval channel needs the index "
+                            f"{index_name!r}, and this role may not create it: {e}. "
+                            f"CREATE INDEX requires ownership of the table, so a "
+                            f"role holding only SELECT/INSERT/UPDATE cannot build "
+                            f"it on demand. Run initialize_schema() against this "
+                            f"realm as the role that owns its tables — it is "
+                            f"idempotent and creates this index when lexical_search "
+                            f"is on — or set lexical_search=False to retrieve "
+                            f"without this channel."
+                        ) from e
+                else:
                     raise
-                logger.debug("Relation FTS index %r created concurrently.", index_name)
             self._fts_index_ready = True
+
+    async def _relation_exists(self, name: str) -> bool:
+        """Whether a relation of this name exists in the realm's schema.
+
+        A catalogue read, which any role holding USAGE on the schema may make:
+        no DDL and no ownership. ``to_regclass`` answers NULL rather than
+        raising when the name does not resolve, including when the schema
+        itself does not exist.
+        """
+        qualified = (f'"{self.realm}"."{name}"' if self.client.schema_per_realm
+                     else f'"{name}"')
+        rows = await self.client._fetch(
+            "SELECT to_regclass($1) IS NOT NULL AS present", qualified)
+        return bool(rows and rows[0]["present"])
 
     async def search_relations_text(self, query: str, top_k: int = 20,
                                     space: Optional[str] = None,
@@ -1497,10 +1574,18 @@ class RAGGraphStore:
                 # The flag can be turned on after a realm was initialised, and
                 # a missing table would otherwise make every event write a
                 # silent no-op forever -- the worst failure shape for
-                # telemetry. Same lazy-create idiom as the lexical index.
-                await self.client.create_vertex_table("retrieval_events", realm=self.realm)
-                await self.client.create_payload_index("retrieval_events",
-                                                       realm=self.realm, key="ts")
+                # telemetry. Same lazy-create idiom as the lexical index, and
+                # the same catalogue check first: CREATE TABLE here needs
+                # CREATE on the schema, which a role that only reads and writes
+                # rows does not hold, so a realm whose table already exists
+                # must not be made to issue the statement. Without the check
+                # this failed quietly -- it is best-effort -- which means the
+                # events simply stopped, which is worse than noisy.
+                if not await self._relation_exists("retrieval_events"):
+                    await self.client.create_vertex_table("retrieval_events",
+                                                          realm=self.realm)
+                    await self.client.create_payload_index("retrieval_events",
+                                                           realm=self.realm, key="ts")
                 self._events_table_ready = True
             await self.client.add_vertex(
                 "retrieval_events", realm=self.realm, space=space or self.space,

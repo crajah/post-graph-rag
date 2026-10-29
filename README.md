@@ -206,6 +206,35 @@ Two things to get right:
 `SET ROLE` cannot escalate: PostgreSQL refuses a role the connecting user is not a
 member of, so this grants no privilege the caller did not already hold.
 
+#### Querying as a role that does not own the tables
+
+The stricter version of the same deployment: the tables are created by a provisioning
+role, row-level security is enabled and **forced** on them, and the role that queries
+holds only `SELECT, INSERT, UPDATE` — it must *not* own them, since an owner may
+`ALTER TABLE … NO FORCE ROW LEVEL SECURITY` and take the wall down.
+
+For that, **no index is created on the query path.** `initialize_schema()` creates
+every index the engine will ever need, including the lexical channel's GIN index when
+`lexical_search` is on, so run it as the owning role at provisioning time. The lexical
+query path still checks for that index, but by reading the catalogue — a read any role
+with `USAGE` on the schema may make — and issues no DDL when it is there.
+
+This has to be done by not issuing the statement, not by recovering from it:
+`CREATE INDEX` requires ownership of the table, and PostgreSQL checks for that
+*before* it evaluates `IF NOT EXISTS`. So the statement is refused to a non-owner even
+when the index already exists, and nothing a deployer creates in advance can make a
+lazy `CREATE` safe.
+
+Realms provisioned by an earlier release gain the index by running
+`initialize_schema()` against them again as the owner; it is idempotent. Until then a
+lexical query raises a `SchemaError` that says exactly that, rather than asyncpg's
+`must be owner of table relations`. Setting `lexical_search=False` retrieves without
+that channel, at the cost of the one that recovers rare identifiers — statute
+sections, exhibit numbers, part numbers.
+
+`record_retrieval_events` behaves the same way: its table is created by
+`initialize_schema()` when the flag is on, and the query path checks before creating.
+
 ### Community summarisation
 
 Corpus-level questions — "what are the main themes here?" — cannot be answered by

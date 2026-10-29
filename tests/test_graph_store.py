@@ -156,12 +156,24 @@ class _RacingClient:
     rather than the silent no-op the clause suggests.
     """
 
-    def __init__(self, fail_times=1):
+    schema_per_realm = True
+
+    def __init__(self, fail_times=1, index_present=False):
         self.attempts = 0
         self.fail_times = fail_times
+        # What the catalogue says when the store looks before creating. The
+        # store asks first now, because CREATE INDEX needs ownership of the
+        # table and PostgreSQL checks for it before evaluating IF NOT EXISTS,
+        # so a non-owner is refused even when the index is already there.
+        self.index_present = index_present
+        self.catalogue_reads = 0
 
     def _get_table_ref(self, table, realm):
         return f'"{realm}"."{table}"'
+
+    async def _fetch(self, sql, *args):
+        self.catalogue_reads += 1
+        return [{"present": self.index_present}]
 
     async def _execute(self, sql, *args):
         self.attempts += 1
@@ -196,6 +208,22 @@ async def test_fts_index_is_created_once_under_concurrency():
     store = _store_with(client)
     await asyncio.gather(*(store._ensure_relation_fts_index() for _ in range(6)))
     assert client.attempts == 1
+
+
+@pytest.mark.asyncio
+async def test_fts_index_issues_no_ddl_when_the_catalogue_says_it_exists():
+    """The query path must not even attempt CREATE INDEX on an existing index.
+
+    Attempting and recovering is not equivalent: the statement is refused to a
+    role that does not own the table whether or not the index exists, so the
+    only safe lazy path is one that looks first.
+    """
+    client = _RacingClient(fail_times=0, index_present=True)
+    store = _store_with(client)
+    await store._ensure_relation_fts_index()
+    assert store._fts_index_ready
+    assert client.attempts == 0, "no DDL may be issued"
+    assert client.catalogue_reads == 1
 
 
 @pytest.mark.asyncio
