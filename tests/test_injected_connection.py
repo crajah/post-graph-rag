@@ -354,3 +354,137 @@ class TestTheWholeSeatPath:
             except Exception:
                 pass
             await admin.close()
+
+
+class TestASuppliedPoolNeedNotBeAnAsyncpgPool:
+    """A *wrapper* around a pool is the shape that works behind a pooler.
+
+    `GraphRAG(config, connection=...)` hands whatever it is given to
+    `AsyncPostGraph`, which used to decide pool-or-connection by
+    `isinstance(..., asyncpg.Pool)`. Anything else was driven as a single
+    connection, `acquire()` was never called, and the first statement died on
+    `AttributeError: 'X' object has no attribute 'fetch'`.
+
+    The object that falls through that test is exactly the useful one. A
+    session-level `SET ROLE` is unsafe through PgBouncer in transaction mode --
+    the server connection keeps the role for whoever borrows it next -- so the
+    role has to be assumed per acquisition, inside a transaction, by a wrapper.
+    Subclassing `asyncpg.Pool` to be recognised would oblige the caller to
+    import asyncpg, which is what a caller routing all its SQL through this
+    library is trying to avoid.
+    """
+
+    class _TxRolePool:
+        """Wraps a pool; each acquisition is a transaction wearing *role*.
+
+        Presents `acquire()` and nothing else -- no `fetch`, no `execute` -- so
+        any site that mistakes it for a connection raises rather than quietly
+        working on the wrong credential.
+        """
+
+        def __init__(self, pool, role):
+            self._pool = pool
+            self._role = role
+            self.acquisitions = 0
+
+        def acquire(self):
+            outer = self
+
+            class _Ctx:
+                async def __aenter__(self):
+                    outer.acquisitions += 1
+                    self._cm = outer._pool.acquire()
+                    self._conn = await self._cm.__aenter__()
+                    self._tx = self._conn.transaction()
+                    await self._tx.start()
+                    await self._conn.execute(f'SET LOCAL ROLE "{outer._role}"')
+                    return self._conn
+
+                async def __aexit__(self, exc_type, exc, tb):
+                    if exc_type is None:
+                        await self._tx.commit()
+                    else:
+                        await self._tx.rollback()
+                    return await self._cm.__aexit__(exc_type, exc, tb)
+
+            return _Ctx()
+
+    @pytest.mark.asyncio
+    async def test_retrieval_runs_through_a_pool_wrapper(self, role_name):
+        seeded, config = await _seeded_realm(answer="through the wrapper")
+        admin = await asyncpg.connect(TEST_DSN)
+        try:
+            await admin.execute(f'CREATE ROLE "{role_name}" NOLOGIN')
+            await _grant_realm_to_role(admin, config.realm, role_name)
+            await seeded.close()
+
+            raw = await asyncpg.create_pool(TEST_DSN, min_size=1, max_size=4)
+            try:
+                wrapper = self._TxRolePool(raw, role_name)
+                rag = GraphRAG(config, connection=wrapper)
+                rag.llm = FakeLLM(config, answer="through the wrapper")
+                rag.extractor.llm_service = rag.llm
+
+                # The read path: no transaction of its own, so this is the one
+                # the wrapper has to cover.
+                hits = await rag.store.search_similar_documents(
+                    [0.1] * config.embedding_dim, top_k=5)
+                assert hits, "the seeded passage must be retrievable"
+
+                # The write path, which goes through _run_in_tx.
+                await rag.store.client.upsert_vertex(
+                    "documents", realm=config.realm, vertex_id=999999,
+                    payload={"text": "written through the wrapper"})
+
+                # And the delta reader, which had its own copy of the
+                # pool-or-connection decision and the same mistake in it.
+                from post_graph_rag.deltas import DeltaReader
+                as_of = await DeltaReader(rag.store)._db_now()
+                assert as_of
+
+                assert wrapper.acquisitions >= 3
+            finally:
+                await raw.close()
+        finally:
+            await admin.execute(f'DROP SCHEMA IF EXISTS "{config.realm}" CASCADE')
+            try:
+                await admin.execute(f'DROP OWNED BY "{role_name}"')
+                await admin.execute(f'DROP ROLE "{role_name}"')
+            except Exception:
+                pass
+            await admin.close()
+
+    @pytest.mark.asyncio
+    async def test_the_wrapper_really_carried_the_role(self, role_name):
+        """The control: without the grant the same wrapper is refused.
+
+        Otherwise the test above would pass just as well if the wrapper's
+        `SET LOCAL ROLE` never ran.
+        """
+        seeded, config = await _seeded_realm()
+        admin = await asyncpg.connect(TEST_DSN)
+        try:
+            await admin.execute(f'CREATE ROLE "{role_name}" NOLOGIN')  # no grant
+            await seeded.close()
+
+            raw = await asyncpg.create_pool(TEST_DSN, min_size=1, max_size=4)
+            try:
+                rag = GraphRAG(config,
+                               connection=self._TxRolePool(raw, role_name))
+                rag.llm = FakeLLM(config)
+                rag.extractor.llm_service = rag.llm
+                with pytest.raises(Exception) as exc:
+                    await rag.store.client.count_vertices("documents",
+                                                          realm=config.realm)
+                assert "permission denied" in str(exc.value).lower(), (
+                    f"expected a refusal, got {exc.value!r}")
+            finally:
+                await raw.close()
+        finally:
+            await admin.execute(f'DROP SCHEMA IF EXISTS "{config.realm}" CASCADE')
+            try:
+                await admin.execute(f'DROP OWNED BY "{role_name}"')
+                await admin.execute(f'DROP ROLE "{role_name}"')
+            except Exception:
+                pass
+            await admin.close()

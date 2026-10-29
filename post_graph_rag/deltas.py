@@ -54,16 +54,18 @@ class DeltaReader:
 
         A poller stamping its own clock can miss a write that committed in the
         skew between the two; the server's now() cannot.
+
+        This goes through the client's own ``_fetchrow`` rather than reaching
+        for ``self.client.connection`` and branching on whether it was a pool.
+        That branch was a second copy of a decision the client already makes
+        at twenty-two sites, and it made the same mistake: it asked
+        ``isinstance(..., asyncpg.Pool)``, so a caller-supplied pool *wrapper*
+        -- the shape that assumes a role on acquisition -- was driven as a
+        single connection and the delta poll died on ``AttributeError``. One
+        caller fewer that has to know.
         """
-        async def _op(conn):
-            return await conn.fetchval("SELECT now()")
-        import asyncpg
-        if isinstance(self.client.connection, asyncpg.Pool):
-            async with self.client.connection.acquire() as conn:
-                ts = await _op(conn)
-        else:
-            ts = await _op(self.client.connection)
-        return ts.astimezone(timezone.utc).isoformat()
+        row = await self.client._fetchrow("SELECT now() AS now")
+        return row["now"].astimezone(timezone.utc).isoformat()
 
     async def changes_since(
         self,

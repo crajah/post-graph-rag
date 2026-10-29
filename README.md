@@ -162,7 +162,12 @@ await rag.index_text(long_text, metadata=DocumentMetadata(document="babbage.txt"
 
 `GraphRAG` opens a pool from `config.db_uri` by default. Pass `connection=` an
 asyncpg `Connection` or `Pool` and it uses yours instead, leaving ownership — and
-anything you have decided about that session — with you.
+anything you have decided about that session — with you. A **wrapper** of your own
+works too: anything with an `acquire()` that is not an asyncpg `Connection` is driven
+as a pool, so you can do something to each connection on the way out (see post-graph's
+README). That is the shape to use behind PgBouncer in transaction mode, where a
+session-level `SET ROLE` would leave a server connection wearing one tenant's role for
+the next client that borrows it.
 
 This exists for one shape in particular: a tenant per PostgreSQL schema, where no
 single role may hold `USAGE` on every tenant's schema, that reach being the thing
