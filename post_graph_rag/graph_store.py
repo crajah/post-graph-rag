@@ -115,9 +115,17 @@ class RAGGraphStore:
                 connection_or_pool=connection,
                 schema_per_realm=config.schema_per_realm)
         else:
+            # Only pass what was set, so a caller who configured neither gets
+            # asyncpg's own defaults rather than this module's idea of them.
+            conn_kwargs: Dict[str, Any] = {}
+            if config.statement_cache_size is not None:
+                conn_kwargs["statement_cache_size"] = config.statement_cache_size
+            if config.server_settings is not None:
+                conn_kwargs["server_settings"] = dict(config.server_settings)
             self.client = AsyncPostGraph(
                 dsn=config.db_uri, schema_per_realm=config.schema_per_realm,
-                pool_min_size=config.pool_min_size, pool_max_size=config.pool_max_size)
+                pool_min_size=config.pool_min_size, pool_max_size=config.pool_max_size,
+                **conn_kwargs)
         self.realm = config.realm
         self.space = config.space or "default"
         # Guards the lazily-built lexical index against concurrent first use.
@@ -246,6 +254,18 @@ class RAGGraphStore:
         await self._verify_vector_columns()
         await self._ensure_entity_name_index()
 
+        if self.config.owner_role:
+            # Last, so everything above is included. A batch writer that is the
+            # first session to reach a realm creates its tables and owns them,
+            # which locks the owning role out of ALTER and stops pg_dump taking
+            # ACCESS SHARE -- nightly backups then fail on tables the owner is
+            # supposed to own. Handing over here closes that whether the realm
+            # is new or was provisioned by a writer in an earlier release.
+            #
+            # Database-wide, not realm-scoped: see the post-graph method. With
+            # one role owning objects beyond this realm, those go too.
+            await self.client.reassign_owned_to(self.config.owner_role)
+
     async def _ensure_relation_sources_index(self):
         """GIN index over relation provenance, for the withdrawal predicate.
 
@@ -326,6 +346,21 @@ class RAGGraphStore:
                 f"Failed to create entity name uniqueness index: {e}. Existing duplicate "
                 f"entity rows must be merged before entity resolution can be enforced."
             ) from e
+
+
+    async def reassign_owned_to(self, role: str) -> None:
+        """Hand every object this store's role owns to *role*.
+
+        A pass-through to :meth:`post_graph.AsyncPostGraph.reassign_owned_to`,
+        for repairing a realm whose tables a subordinate writer created. Read
+        that docstring first: the hand-over covers the whole database rather
+        than this store's realm.
+
+        :attr:`RAGConfig.owner_role` calls this at the end of
+        :meth:`initialize_schema`, which is the version that keeps the
+        invariant rather than restoring it once.
+        """
+        await self.client.reassign_owned_to(role)
 
     # --------------------------------------------------------------- documents
 

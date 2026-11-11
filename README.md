@@ -206,6 +206,46 @@ Two things to get right:
 `SET ROLE` cannot escalate: PostgreSQL refuses a role the connecting user is not a
 member of, so this grants no privilege the caller did not already hold.
 
+#### Behind a connection pooler
+
+`RAGConfig` forwards two asyncpg options to the pool it opens:
+
+```python
+RAGConfig(statement_cache_size=0,                       # RAG_STATEMENT_CACHE_SIZE
+          server_settings={"statement_timeout": "15000"})
+```
+
+Set `statement_cache_size=0` behind PgBouncer in **transaction** or **statement**
+pooling mode. Server connections rotate between transactions there, so asyncpg's
+per-connection prepared statements collide under concurrency as
+`DuplicatePreparedStatementError`. Left unset, asyncpg keeps its own default, so
+nothing changes for existing callers. `server_settings` carries session startup
+parameters — a `statement_timeout` a pooler would otherwise discard from the
+startup packet. Both apply to a pool this store opens; with `connection=` you
+configure your own.
+
+#### When a batch writer provisions the realm
+
+If a subordinate role is the first session to reach a realm, it creates the
+tables and **owns** them — all seven, their `_data` and `_audit` companions,
+every sequence and index. The owning role can then neither `ALTER` them nor let
+`pg_dump` take `ACCESS SHARE`, so nightly backups fail on tables it is supposed
+to own.
+
+```python
+RAGConfig(owner_role="app_owner")        # RAG_OWNER_ROLE
+```
+
+With that set, `initialize_schema()` hands everything over before it returns, so
+the invariant holds however the realm got provisioned — and a realm left in that
+state by an earlier release is repaired the next time the writer initialises.
+`RAGGraphStore.reassign_owned_to(role)` does it once, on demand. The writer
+keeps working afterwards provided it is `IN ROLE` the owner.
+
+Off by default, and **the hand-over is database-wide, not realm-scoped** — see
+post-graph's `reassign_owned_to`. A role owning objects beyond this realm hands
+those over too.
+
 #### Querying as a role that does not own the tables
 
 The stricter version of the same deployment: the tables are created by a provisioning

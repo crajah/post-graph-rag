@@ -214,6 +214,32 @@ class RAGConfig:
     # is exposed rather than left to be discovered.
     pool_min_size: int = field(default_factory=lambda: int(_env("RAG_POOL_MIN_SIZE", "10")))
     pool_max_size: int = field(default_factory=lambda: int(_env("RAG_POOL_MAX_SIZE", "10")))
+
+    # Passed to asyncpg when this store opens its own pool. Set 0 behind
+    # PgBouncer in transaction or statement pooling mode: server connections
+    # rotate between transactions there, so asyncpg's per-connection prepared
+    # statements collide under concurrency as DuplicatePreparedStatementError.
+    # None leaves asyncpg's own default of 100 alone, so existing callers see
+    # no change.
+    statement_cache_size: Optional[int] = field(
+        default_factory=lambda: (
+            int(v) if (v := _env("RAG_STATEMENT_CACHE_SIZE", "")) != "" else None
+        )
+    )
+    # Session startup parameters forwarded to asyncpg.create_pool, e.g.
+    # {"statement_timeout": "15000"} when connecting straight to PostgreSQL.
+    # A plain field with no environment variable behind it: a mapping has no
+    # sensible reading of a bare string, and the ones here are all scalars.
+    server_settings: Optional[Dict[str, str]] = None
+
+    # The role that should own what this store creates. When set,
+    # initialize_schema hands everything over before it returns, so a batch
+    # writer that happens to provision a realm first cannot leave the owner
+    # locked out of its own tables. Off by default, and read the method's
+    # docstring before turning it on: the hand-over is database-wide.
+    owner_role: Optional[str] = field(
+        default_factory=lambda: _env("RAG_OWNER_ROLE", "") or None)
+
     realm: str = field(default_factory=lambda: _env("RAG_REALM", "default"))
     space: str = field(default_factory=lambda: _env("RAG_SPACE", "default"))
 
