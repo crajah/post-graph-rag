@@ -12,31 +12,15 @@ concurrency:
 
 jobs:
   test:
-    name: Tests (Python ${{ matrix.python }})
-    # Pinned per version rather than ubuntu-latest. On 2026-11-11 that label
-    # rolled to Ubuntu 26.04, which actions/python-versions no longer builds
-    # 3.9 for, and the job began failing in setup-python before a single test
-    # ran -- on every commit, with nothing wrong in the tree. requires-python
-    # still says >=3.9, so the floor keeps being tested on an image that has
-    # it rather than being dropped because a runner label moved.
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # Oldest supported and current. The middle versions rarely break
-        # independently, and two jobs keep the feedback loop short.
-        include:
-          - python: "3.9"
-            runner: ubuntu-22.04
-          - python: "3.13"
-            runner: ubuntu-latest
+    name: Tests (Python 3.13, PG 18)
+    runs-on: ubuntu-latest
 
     services:
       # The suite talks to a real PostgreSQL with pgvector rather than mocking
       # the database, because the behaviour under test -- generated columns,
       # JSONB predicates, vector search, cascades -- lives in the database.
       postgres:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
@@ -54,7 +38,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.13"
           cache: pip
 
       - name: Install
