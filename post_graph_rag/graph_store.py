@@ -400,18 +400,51 @@ class RAGGraphStore:
             out.append({"id": str(r["id"]), "content_hash": payload.get("content_hash"), "payload": payload})
         return out
 
-    async def delete_document_chunks(self, doc_key: str, space: Optional[str] = None) -> Dict[str, int]:
+    async def delete_document_chunks(self, doc_key: str,
+                                     space: Optional[str] = None,
+                                     *, purge_audit: bool = False) -> Dict[str, int]:
         """Remove a document's chunks and their mention edges.
 
         Entities are never deleted here. One whose last mention disappears is
         marked dormant instead, so the graph keeps what it learned while no
         longer presenting it as current.
+
+        ``purge_audit=True`` also removes the shadow audit rows for those
+        chunks and mention edges, and adds ``audit_rows_purged`` to the
+        receipt.
+
+        It is off by default because for most corpora the audit trail is the
+        point: a public reference shelf being re-indexed wants its history
+        kept. It exists because for some content the trail is the problem.
+        ``documents`` and ``doc_mentions`` are created audited, so every chunk
+        of every document ever indexed is held twice more -- once under
+        ``new_row`` from the INSERT and once under ``old_row`` from the DELETE
+        -- with the chunk text and its embedding in both. Dropping the realm
+        clears it, but that is everything a person has rather than the one
+        document they asked to remove.
+
+        This method is also the only place that can do it: by the time it
+        returns, the ids it would need are gone from the live tables.
+
+        The purge runs **after** the deletes, not before. Those DELETEs are
+        themselves audited, so purging first would leave the row each one
+        writes on its way out -- the copy with the full text under
+        ``old_row``.
+
+        Entity and relation audit rows are left alone. Entities are marked
+        dormant rather than deleted, and both they and relations are shared:
+        another document in the same space may have contributed the same
+        assertion. Only ``documents`` and ``doc_mentions`` belong to this
+        ``doc_key`` alone.
         """
         target_space = space or self.space
         chunks = await self.find_document_chunks(doc_key, space=target_space)
         if not chunks:
-            return {"chunks": 0, "mentions": 0, "dormant": 0,
-                    "relations_withdrawn": 0, "relations_orphaned": 0}
+            empty = {"chunks": 0, "mentions": 0, "dormant": 0,
+                     "relations_withdrawn": 0, "relations_orphaned": 0}
+            if purge_audit:
+                empty["audit_rows_purged"] = 0
+            return empty
 
         chunk_ids = [int(c["id"]) for c in chunks]
         mentions_ref = self.client._get_table_ref("doc_mentions", self.realm)
@@ -430,16 +463,32 @@ class RAGGraphStore:
             self.realm, chunk_ids,
         )
 
+        audit_rows_purged = 0
+        if purge_audit:
+            # After the DELETEs above, which are themselves audited: each one
+            # writes a final old_row carrying the chunk text and its embedding,
+            # so purging before them would leave exactly the copy the caller
+            # asked to be rid of.
+            mention_ids = [int(r["id"]) for r in removed]
+            if mention_ids:
+                audit_rows_purged += await self.client.purge_record_audit(
+                    "doc_mentions", self.realm, mention_ids)
+            audit_rows_purged += await self.client.purge_record_audit(
+                "documents", self.realm, chunk_ids)
+
         withdrawn = await self._withdraw_relation_sources(chunk_ids, space=target_space)
         # Entity dormancy first: the orphaned-endpoint rule reads it, and running
         # it before the entities are marked would find every endpoint still live.
         counts = await self._refresh_dormancy(
             [str(t["to_id"]) for t in touched], space=target_space
         )
-        return {"chunks": len(chunk_ids), "mentions": len(removed),
-                "dormant": counts["entities_dormant"],
-                "relations_withdrawn": withdrawn,
-                "relations_orphaned": counts["relations_orphaned"]}
+        receipt = {"chunks": len(chunk_ids), "mentions": len(removed),
+                   "dormant": counts["entities_dormant"],
+                   "relations_withdrawn": withdrawn,
+                   "relations_orphaned": counts["relations_orphaned"]}
+        if purge_audit:
+            receipt["audit_rows_purged"] = audit_rows_purged
+        return receipt
 
     async def _withdraw_relation_sources(self, chunk_ids: List[int], space: Optional[str] = None) -> int:
         """Remove deleted chunks from relation provenance and recompute weight.

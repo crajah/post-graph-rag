@@ -19,6 +19,10 @@ The graph layer underneath is [post-graph](https://github.com/crajah/post-graph)
 pip install post-graph-rag
 ```
 
+**Requires Python 3.13 and PostgreSQL 18 with `pgvector`.** Those are the
+versions CI runs, and the only ones claimed — the behaviour here lives in the
+database, so a PostgreSQL version nothing exercises is not a version supported.
+
 Point it at PostgreSQL with `pgvector` and any OpenAI-compatible endpoint:
 
 ```python
@@ -205,6 +209,31 @@ Two things to get right:
 
 `SET ROLE` cannot escalate: PostgreSQL refuses a role the connecting user is not a
 member of, so this grants no privilege the caller did not already hold.
+
+#### Deleting a document, including the copies the audit trail kept
+
+`documents` and `doc_mentions` are created audited, so every chunk is held three
+times: once live, once under `new_row` from the INSERT that wrote it, and once
+under `old_row` from the DELETE that removed it — with the chunk text and its
+embedding in each. For a public reference shelf that is the point. For a
+document somebody asked to have deleted, it is the whole of the problem.
+
+```python
+receipt = await store.delete_document_chunks(doc_key, space=space,
+                                             purge_audit=True)
+receipt["audit_rows_purged"]      # only present when purge_audit=True
+```
+
+Off by default, and additive in the receipt, so an existing caller — a shelf
+being re-indexed, say — sees no change at all. The purge runs **after** the
+deletes, because those are themselves audited and purging first would leave the
+row each one writes on its way out. Entity and relation audit rows are left
+alone: entities are marked dormant rather than deleted, and both are shared, so
+another document in the space may have contributed the same assertion. Only
+`documents` and `doc_mentions` belong to one `doc_key`.
+
+This method is also the only place that can do it: by the time it returns, the
+ids it would need are gone from the live tables.
 
 #### Behind a connection pooler
 
