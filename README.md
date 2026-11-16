@@ -96,7 +96,7 @@ A standalone library, if you want the graph without the RAG. It makes PostgreSQL
 - **Append-only history and trigger-based audit logging** on every table, capturing old and new state with the acting user
 - **Promoted payload columns and server-side range queries** — filter, order and bulk-delete on JSONB fields at the database, not in Python
 
-[`pip install post-graph`](https://github.com/crajah/post-graph) · Apache 2.0 · 635 tests
+[`pip install post-graph`](https://github.com/crajah/post-graph) · Apache 2.0 · 850 tests against real PostgreSQL
 
 ---
 

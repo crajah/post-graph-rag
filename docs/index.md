@@ -47,7 +47,7 @@ To be precise about what is novel here, since the field moves quickly:
 
 | | GraphRAG | LightRAG 1.5.6 | Graphiti / Zep | post-graph-rag |
 | :--- | :---: | :---: | :---: | :---: |
-| Community detection + summaries | ✅ | ❌ | ❌ | ✅ |
+| Community detection + summaries | ✅ | ❌ | ✅ | ✅ |
 | Bi-temporal model (validity **and** belief time) | ❌ | ❌ | ✅ | ✅ |
 | Supersession inferred from document order | ❌ | ❌ | ❌ | ✅ |
 | Controlled predicate vocabulary | ❌ | ❌ | ❌ | ✅ |

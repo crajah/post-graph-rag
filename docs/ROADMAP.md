@@ -30,7 +30,7 @@ delta = await rag.changes_since(
     "2026-09-01T00:00:00+00:00",
     space="production",              # optional; RESERVED_SPACE_ALL to widen
     include=("relations", "entities", "documents", "communities"),
-    limit=500, after=None,           # keyset pagination on t_created (text-ordered ISO)
+    limit=500, summary=True,         # as shipped; keyset pagination (`after=`) was not built
 )
 # CorpusDelta:
 #   .new_relations          t_created > T, not superseded at read time
