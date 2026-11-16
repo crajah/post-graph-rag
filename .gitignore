@@ -263,3 +263,5 @@ evaluation/ectqa/filelist.txt
 !evaluation/longmemeval/ablation_mmr.json
 !evaluation/longmemeval/ablation_nodedistance.json
 !evaluation/longmemeval/ablation_contradiction.json
+
+**/.DS_Store
