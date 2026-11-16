@@ -12,15 +12,35 @@ concurrency:
 
 jobs:
   test:
-    name: Tests (Python 3.13, PG 18)
+    name: Tests (Python ${{ matrix.python }}, PG ${{ matrix.pg }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The combinations a user is actually on, not a cross-product.
+        #
+        # 3.11 is the oldest Python still receiving security support and the
+        # floor requires-python claims. PostgreSQL 16 is where most
+        # deployments are; 18 is where the newest are, and it changed a
+        # default that bears on this library directly --
+        # `GENERATED ALWAYS AS (expr)` with no storage keyword used to be an
+        # error and now means VIRTUAL, which cannot be indexed. A promoted
+        # payload column exists only to carry an index, so that would make it
+        # an expensive no-op on 18 alone. Hence a job on each.
+        include:
+          - python: "3.11"
+            pg: "16"
+          - python: "3.13"
+            pg: "16"
+          - python: "3.13"
+            pg: "18"
 
     services:
       # The suite talks to a real PostgreSQL with pgvector rather than mocking
       # the database, because the behaviour under test -- generated columns,
       # JSONB predicates, vector search, cascades -- lives in the database.
       postgres:
-        image: pgvector/pgvector:pg18
+        image: pgvector/pgvector:pg${{ matrix.pg }}
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
@@ -38,7 +58,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python }}
           cache: pip
 
       - name: Install

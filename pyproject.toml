@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "post-graph-rag"
-version = "1.19.0"
+version = "1.19.1"
 description = "Graph RAG library leveraging post-graph space sub-grouping and pgvector on PostgreSQL with OpenAI-compatible LLMs."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "Chandan Rajah", email = "chandan.rajah@gmail.com" }
@@ -15,12 +15,15 @@ authors = [
 keywords = ["graph-rag", "rag", "knowledge-graph", "post-graph", "pgvector", "llm", "openai"]
 # The licence classifier is what PyPI's search filters read; the `license`
 # field above only drives what is displayed. The Python versions mirror
-# requires-python, which is now the single version CI exercises.
+# requires-python, which is the oldest Python still receiving
+# security support; CI exercises that floor and the current release.
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Database",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -50,7 +53,7 @@ Homepage = "https://github.com/crajah/post-graph-rag"
 Repository = "https://github.com/crajah/post-graph-rag"
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 exclude = ["evaluation/lightrag_work", "evaluation/corpus", ".venv"]
 

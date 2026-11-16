@@ -3,7 +3,8 @@
 [![CI](https://github.com/crajah/post-graph-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/crajah/post-graph-rag/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/post-graph-rag.svg)](https://pypi.org/project/post-graph-rag/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![PostgreSQL 16+](https://img.shields.io/badge/PostgreSQL-16%20%7C%2018-blue.svg)](https://www.postgresql.org/)
 
 **Graph RAG with a memory of time — on the PostgreSQL you already run.**
 
@@ -12,36 +13,6 @@
 No separate vector store. No graph engine to operate. One database, one consistency model, one backup — and transactions that span your graph *and* your application tables.
 
 The graph layer underneath is [post-graph](https://github.com/crajah/post-graph), also usable on its own — [more below](#post-graph).
-
-## ⚡ Try it
-
-```bash
-pip install post-graph-rag
-```
-
-**Requires Python 3.13 and PostgreSQL 18 with `pgvector`.** Those are the
-versions CI runs, and the only ones claimed — the behaviour here lives in the
-database, so a PostgreSQL version nothing exercises is not a version supported.
-
-Point it at PostgreSQL with `pgvector` and any OpenAI-compatible endpoint:
-
-```python
-from post_graph_rag import GraphRAG, RAGConfig
-
-rag = GraphRAG(RAGConfig(
-    api_base="https://your-router/v1", api_key=..., model="gemini-3.6-flash",
-    embedding_model="gemini-embedding-001", embedding_dim=1536,
-    db_uri="postgresql://localhost:5432/postgres", realm="my_kb"))
-await rag.initialize()
-
-await rag.index_document("Helena Voss is CFO of Calder Industries.", metadata={"source": "2019.txt"})
-await rag.index_document("Priya Nair has been appointed CFO, succeeding Helena Voss.", metadata={"source": "2023.txt"})
-
-answer = await rag.query("Who is the CFO of Calder Industries?")
-# Priya Nair — the earlier fact is closed, not competing
-```
-
-**[→ Seven runnable examples](examples/)** · [Full installation](#install) · [Configuration reference](#config)
 
 ## 📈 Benchmarks
 
@@ -79,6 +50,36 @@ A second judge from a different model family scores the same answers at 0.805 �
 The breakdown is more useful than the total: **incorrect elements sit at 0.14**, refusals at 0.05, and relative-time questions produce no incorrect elements at all. When this system commits to a figure on this corpus, it is usually right.
 
 *Same qualifications apply, plus two specific to this comparison: their judge model is not available on our router, and their verbatim rubric is truncated in the public HTML, so ours reproduces their described categories rather than their text. Their figures are on their corpus slice; ours is 78 questions over 6 companies. Read a few points of margin as approximate rather than decisive.*
+
+## ⚡ Try it
+
+```bash
+pip install post-graph-rag
+```
+
+**Needs Python 3.11+ and PostgreSQL 16 or 18 with `pgvector`.** CI runs 3.11
+on 16, and 3.13 on both 16 and 18 — the behaviour here lives in the database,
+so each PostgreSQL version is exercised rather than assumed.
+
+Point it at PostgreSQL with `pgvector` and any OpenAI-compatible endpoint:
+
+```python
+from post_graph_rag import GraphRAG, RAGConfig
+
+rag = GraphRAG(RAGConfig(
+    api_base="https://your-router/v1", api_key=..., model="gemini-3.6-flash",
+    embedding_model="gemini-embedding-001", embedding_dim=1536,
+    db_uri="postgresql://localhost:5432/postgres", realm="my_kb"))
+await rag.initialize()
+
+await rag.index_document("Helena Voss is CFO of Calder Industries.", metadata={"source": "2019.txt"})
+await rag.index_document("Priya Nair has been appointed CFO, succeeding Helena Voss.", metadata={"source": "2023.txt"})
+
+answer = await rag.query("Who is the CFO of Calder Industries?")
+# Priya Nair — the earlier fact is closed, not competing
+```
+
+**[→ Seven runnable examples](examples/)** · [Full installation](#install) · [Configuration reference](#config)
 
 ---
 
