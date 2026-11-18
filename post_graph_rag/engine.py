@@ -12,7 +12,12 @@ from post_graph_rag.chunking import make_paragraph_chunker
 from post_graph_rag.communities import default_detector, group_by_community
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import EmbeddingError, ExtractionError, RAGError
-from post_graph_rag.extractor import ExtractionResult, GraphExtractor, date_sort_key
+from post_graph_rag.extractor import (
+    ExtractionResult,
+    GraphExtractor,
+    date_sort_key,
+    normalise_predicate,
+)
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.llm import LLMService
 from post_graph_rag.models import (
@@ -171,9 +176,11 @@ class GraphRAG:
         community_detector: Optional[Callable[..., Dict[str, int]]] = None,
         reporter: Optional[CommunityReporter] = None,
         connection=None,
+        *,
+        llm_service: Optional[LLMService] = None,
     ):
         self.config = config or RAGConfig()
-        self.llm = llm or LLMService(self.config)
+        self.llm = llm or llm_service or LLMService(self.config)
         self.extractor = extractor or GraphExtractor(
             self.llm,
             system_prompt=self.config.extraction_prompt,
@@ -188,6 +195,7 @@ class GraphRAG:
             extraction_fn=self.config.extraction_fn,
             extraction_fn_mode=self.config.extraction_fn_mode,
             validate_external=self.config.validate_external_extraction,
+            functional_predicates=self.config.functional_predicates or None,
         )
         self.chunker = chunker or make_paragraph_chunker(
             chunk_chars=self.config.chunk_chars,
@@ -198,6 +206,35 @@ class GraphRAG:
             self.llm, system_prompt=self.config.community_report_prompt
         )
         self.store = RAGGraphStore(self.config, connection=connection)
+
+    def set_functional_predicates(self, preds: Set[str]) -> None:
+        """Replace active functional predicates on both config and extractor."""
+        normed = {normalise_predicate(p) for p in (preds or set()) if p}
+        self.config.functional_predicates = set(normed)
+        self.extractor.functional_predicates = set(normed)
+
+    def _sync_extractor_rules(self) -> Set[str]:
+        """Propagate runtime mutations on ``config`` rules into ``extractor``."""
+        cfg_funcs = {
+            normalise_predicate(p)
+            for p in (self.config.functional_predicates or set())
+            if p
+        }
+        ext_funcs = set(getattr(self.extractor, "functional_predicates", set()) or set())
+        merged_funcs = cfg_funcs | ext_funcs
+        self.extractor.functional_predicates = merged_funcs
+        if self.config.predicate_aliases:
+            for k, v in self.config.predicate_aliases.items():
+                if k and v:
+                    self.extractor.predicate_aliases[normalise_predicate(k)] = normalise_predicate(v)
+        if self.config.predicate_vocabulary:
+            existing_vocab = set(self.extractor.predicate_vocabulary)
+            for p in self.config.predicate_vocabulary:
+                np = normalise_predicate(p)
+                if np and np not in existing_vocab:
+                    self.extractor.predicate_vocabulary.append(np)
+                    existing_vocab.add(np)
+        return merged_funcs
 
     async def initialize(self):
         """Initialize database connection and schema."""
@@ -326,13 +363,59 @@ class GraphRAG:
         """
         return await self.store.document_stats(doc_key, space=space)
 
-    async def documents_stats(self, doc_keys, space=None):
+    async def documents_stats(self, doc_keys=None, space=None):
         """The batch form of document_stats: two round trips for any key count.
 
         Use this to render a table of documents. Looping over document_stats
-        would issue two queries per row; this issues two in total.
+        would issue two queries per row; this issues two in total. When
+        *doc_keys* is omitted, returns stats for all documents in *space*.
         """
-        return await self.store.documents_stats(list(doc_keys), space=space)
+        keys = None if doc_keys is None else list(doc_keys)
+        return await self.store.documents_stats(keys, space=space)
+
+    async def retract_relations(
+        self,
+        edge_ids: List[str],
+        superseded_by_edge_id: str,
+        space: Optional[str] = None,
+    ) -> List[str]:
+        """Explicitly close active relation edges in favour of a newer assertion."""
+        target_space = space or self.config.space
+        return await self.store.mark_superseded(
+            [str(eid) for eid in (edge_ids or [])],
+            str(superseded_by_edge_id),
+            space=target_space,
+        )
+
+    async def active_relations_for_entities(
+        self,
+        entity_names: List[str],
+        space: Optional[str] = None,
+        exclude_edge_ids: Optional[Set[str]] = None,
+        limit_per_entity: int = 5,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Active outgoing relations for each named entity, keyed by canonical name."""
+        target_space = space or self.config.space
+        out: Dict[str, List[Dict[str, Any]]] = {}
+        seen_ids: Set[str] = set()
+        for raw_name in entity_names or []:
+            name = (raw_name or "").strip()
+            if not name:
+                continue
+            vertex = await self.store.find_entity(name, space=target_space)
+            if vertex is None or str(vertex.id) in seen_ids:
+                continue
+            seen_ids.add(str(vertex.id))
+            canonical = (vertex.payload or {}).get("name") or name
+            active = await self.store.get_active_subject_relations(
+                vertex.id,
+                space=target_space,
+                exclude_edge_ids=exclude_edge_ids,
+                limit=limit_per_entity,
+            )
+            if active:
+                out[canonical] = active
+        return out
 
     async def document_graph(self, doc_key: str, space=None,
                              max_entities: int = 500, max_relations: int = 1000):
@@ -393,6 +476,7 @@ class GraphRAG:
         text: str,
         metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None,
         space: Optional[str] = None,
+        context: Optional[DocumentContext] = None,
     ) -> List[Dict[str, Any]]:
         """Chunk a whole document and index the chunks.
 
@@ -407,7 +491,16 @@ class GraphRAG:
         """
         meta_obj = metadata if isinstance(metadata, DocumentMetadata) else DocumentMetadata.from_dict(metadata or {})
         chunks = self.chunker(text)
-        context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
+        context = (
+            DocumentContext(
+                title=context.title or meta_obj.document,
+                source=context.source or meta_obj.source,
+                summary=context.summary,
+                known_entities=list(context.known_entities),
+            )
+            if context is not None
+            else DocumentContext(title=meta_obj.document, source=meta_obj.source)
+        )
         batch_size = max(1, self.config.max_concurrent_chunks)
 
         # Re-indexing replaces rather than appends. Without this a refresh
@@ -534,9 +627,12 @@ class GraphRAG:
         metadata: Optional[Union[Dict[str, Any], DocumentMetadata]] = None,
         space: Optional[str] = None,
         context: Optional[DocumentContext] = None,
+        extraction: Optional[ExtractionResult] = None,
     ) -> Dict[str, Any]:
         """Index one chunk: extract entities/triples, embed, and populate the graph."""
-        prepared = await self._prepare_document(text, metadata, space, context)
+        prepared = await self._prepare_document(
+            text, metadata, space, context, extraction=extraction
+        )
         return await self._write_document(prepared)
 
     async def _extract_or_empty(self, text: str, context) -> ExtractionResult:
@@ -570,6 +666,7 @@ class GraphRAG:
         metadata: Optional[Union[Dict[str, Any], DocumentMetadata]],
         space: Optional[str],
         context: Optional[DocumentContext],
+        extraction: Optional[ExtractionResult] = None,
     ) -> Dict[str, Any]:
         """Do the network-bound work for one chunk. Touches no database state.
 
@@ -578,18 +675,39 @@ class GraphRAG:
         """
         meta_obj = metadata if isinstance(metadata, DocumentMetadata) else DocumentMetadata.from_dict(metadata or {})
         target_space = space or meta_obj.space or self.config.space
+        self._sync_extractor_rules()
 
         if context is None and (meta_obj.document or meta_obj.source):
             context = DocumentContext(title=meta_obj.document, source=meta_obj.source)
 
-        # The chunk embedding and the extraction are independent -- which is
-        # the whole point here. The vector channel never needed entities, so a
-        # passage the extractor can make nothing of is still a passage a reader
-        # should reach by meaning.
-        doc_emb, extraction = await asyncio.gather(
-            self.llm.get_embedding(text),
-            self._extract_or_empty(text, context),
-        )
+        # When caller-supplied extraction is passed directly, validate it
+        # without touching shared extractor callbacks or making a chat-LLM call.
+        if extraction is not None:
+            doc_emb = await self.llm.get_embedding(text)
+            coerced = self.extractor._coerce_extraction(extraction)
+            if coerced is None or not (coerced.entities or coerced.triples):
+                extraction = ExtractionResult(entities=[], triples=[])
+            elif self.config.validate_external_extraction:
+                try:
+                    extraction = self.extractor._validate(coerced)
+                except ExtractionError as e:
+                    logger.info(
+                        "Supplied extraction had no valid structure in chunk (%d chars); "
+                        "storing the passage without entities: %s",
+                        len(text), str(e)[:160],
+                    )
+                    extraction = ExtractionResult(entities=[], triples=[])
+            else:
+                extraction = coerced
+        else:
+            # The chunk embedding and the extraction are independent -- which is
+            # the whole point here. The vector channel never needed entities, so a
+            # passage the extractor can make nothing of is still a passage a reader
+            # should reach by meaning.
+            doc_emb, extraction = await asyncio.gather(
+                self.llm.get_embedding(text),
+                self._extract_or_empty(text, context),
+            )
         extraction_empty = not (extraction.entities or extraction.triples)
 
         entity_texts = [
@@ -707,7 +825,8 @@ class GraphRAG:
                 except Exception as e:
                     structure_errors.append(e)
 
-        added_relations, superseded = [], []
+        active_funcs = self._sync_extractor_rules()
+        added_relations, superseded, superseded_details = [], [], []
         for triple, rel_emb in zip(extraction.triples, prepared["rel_embs"]):
             subj_vertex = entity_vertex_map.get(triple.subject.lower())
             obj_vertex = entity_vertex_map.get(triple.object.lower())
@@ -731,22 +850,55 @@ class GraphRAG:
             # thing in the write path. Losing it must not lose the relation, so
             # this is caught around the whole block rather than around the
             # write above.
-            declared = []
+            declared: List[str] = []
             try:
+                pol_details = await self.store.supersede_opposite_polarity(
+                    subj_vertex.id, obj_vertex.id, triple.predicate,
+                    triple.negated, edge.id, space=target_space,
+                )
+                if pol_details:
+                    pol_ids = [d["id"] for d in pol_details]
+                    declared.extend(pol_ids)
+                    superseded.extend(pol_ids)
+                    superseded_details.extend(pol_details)
+
                 if self.config.exclusive_predicate_groups:
-                    declared = await self.store.supersede_conflicting(
+                    excl_ids = await self.store.supersede_conflicting(
                         subj_vertex.id, obj_vertex.id, triple.predicate, edge.id,
                         self.config.exclusive_predicate_groups, space=target_space,
                     )
-                    superseded.extend(declared)
+                    if excl_ids:
+                        declared.extend(excl_ids)
+                        superseded.extend(excl_ids)
+                        subj_name = (subj_vertex.payload or {}).get("name", str(subj_vertex.id))
+                        obj_name = (obj_vertex.payload or {}).get("name", str(obj_vertex.id))
+                        for eid in excl_ids:
+                            old_edge = await self.store.client.get_edge(
+                                "relations", realm=self.store.realm, edge_id=str(eid)
+                            )
+                            superseded_details.append({
+                                "id": str(eid),
+                                "subject": subj_name,
+                                "predicate": old_edge.relation_type if old_edge else triple.predicate,
+                                "old_object": obj_name,
+                                "closed_by_edge_id": str(edge.id),
+                                "reason": "exclusive_predicate_group",
+                            })
 
-                # The declarative pass only fires on predicate pairs someone
-                # declared in advance, and only between the same two entities. A
-                # contradiction that changes the object — "lives in Paris" then
-                # "lives in Berlin" — cannot be seen that way, and reaches
-                # retrieval with both sides looking current. Ask the model, but
-                # only about what is left: the deterministic path has already run,
-                # and anything it resolved is excluded below.
+                if active_funcs and not triple.negated:
+                    func_details = await self.store.supersede_functional(
+                        subj_vertex.id, obj_vertex.id, triple.predicate, edge.id,
+                        active_funcs, space=target_space,
+                    )
+                    if func_details:
+                        func_ids = [d["id"] for d in func_details]
+                        declared.extend(func_ids)
+                        superseded.extend(func_ids)
+                        superseded_details.extend(func_details)
+
+                # The declarative passes only fire on polarity flips, declared
+                # exclusive pairs, or functional predicates. Ask the model only
+                # about what remains unresolved.
                 if self.config.contradiction_detection and not declared:
                     candidates = [
                         c for c in await self.store.find_contradiction_candidates(
@@ -762,8 +914,33 @@ class GraphRAG:
                         + (f": {triple.description}" if triple.description else ""),
                         candidates,
                     )
-                    superseded.extend(await self.store.mark_superseded(
-                        contradicted, edge.id, space=target_space))
+                    closed_llm = await self.store.mark_superseded(
+                        contradicted, edge.id, space=target_space)
+                    if closed_llm:
+                        superseded.extend(closed_llm)
+                        cand_by_id = {str(c["id"]): c for c in candidates}
+                        subj_name = (subj_vertex.payload or {}).get("name", str(subj_vertex.id))
+                        for eid in closed_llm:
+                            c_info = cand_by_id.get(str(eid), {})
+                            old_to_id = c_info.get("to_id")
+                            old_obj_v = (
+                                await self.store.client.get_vertex(
+                                    "entities", realm=self.store.realm, vertex_id=str(old_to_id)
+                                )
+                                if old_to_id else None
+                            )
+                            old_obj_name = (
+                                (old_obj_v.payload or {}).get("name", str(old_to_id))
+                                if old_obj_v else str(old_to_id or "")
+                            )
+                            superseded_details.append({
+                                "id": str(eid),
+                                "subject": subj_name,
+                                "predicate": c_info.get("relation_type", ""),
+                                "old_object": old_obj_name,
+                                "closed_by_edge_id": str(edge.id),
+                                "reason": "contradiction_detection",
+                            })
             except Exception as e:
                 structure_errors.append(e)
 
@@ -791,6 +968,15 @@ class GraphRAG:
                 type(structure_errors[0]).__name__, str(structure_errors[0])[:200],
             )
 
+        superseded_ids = list(dict.fromkeys(str(s) for s in superseded))
+        deduped_details: List[Dict[str, Any]] = []
+        seen_detail_ids: Set[str] = set()
+        for detail in superseded_details:
+            did = str(detail.get("id"))
+            if did not in seen_detail_ids:
+                seen_detail_ids.add(did)
+                deduped_details.append(detail)
+
         return {
             "document_id": doc_vertex.id,
             # Lets a caller count these and tell "nothing extractable here"
@@ -812,7 +998,10 @@ class GraphRAG:
             "entities_extracted": len(extraction.entities),
             "triples_extracted": len(extraction.triples),
             "relations_added": len(added_relations),
-            "relations_superseded": len(superseded),
+            "relations_superseded": len(superseded_ids),
+            "added_edge_ids": [str(e.id) for e in added_relations],
+            "superseded_ids": superseded_ids,
+            "superseded_details": deduped_details,
             "mentions_added": mentions,
             "negated_relations": sum(1 for t in extraction.triples if t.negated),
             "entities": [e.name for e in extraction.entities],
@@ -1045,6 +1234,11 @@ class GraphRAG:
         mode = p.mode.lower()
         if mode not in RETRIEVAL_MODES:
             raise ValueError(f"Unknown retrieval mode '{p.mode}'. Expected one of {RETRIEVAL_MODES}.")
+        direction = (p.direction or "out").lower()
+        if direction not in ("out", "in", "both"):
+            raise ValueError(
+                f"Unknown traversal direction '{p.direction}'. Expected one of ('out', 'in', 'both')."
+            )
         target_space = p.space or self.config.space
 
         if mode == "bypass":
@@ -1110,22 +1304,27 @@ class GraphRAG:
                 p.include_superseded if p.include_superseded is not None
                 else self.config.include_superseded
             )
+            # When temporal point-in-time axes are active, admit superseded
+            # edges during traversal so _filter_temporal can evaluate whether
+            # an edge was believed active at as_believed_at or carried an
+            # explicit [valid_from..valid_to] interval covering as_of.
+            walk_include_superseded = bool(
+                include_superseded or p.as_believed_at or p.as_of
+            )
+            walk_as_of = None if (p.as_of or p.as_believed_at) else p.as_of
             # Hop count per vertex, accumulated from the walk. The channels that
             # do not walk have no distance of their own, and this is the only
             # place a real one is known.
             node_distances.update({v.id: 0 for v, _ in similar_entities})
             for entity_vertex, _dist in similar_entities:
-                # Supersession and as-of are applied inside the walk as well as
-                # after it. Filtering only the result set would still let a path
-                # travel *through* a closed or out-of-period edge to reach
-                # something that then looks like current context.
                 for edge, source, target, hops in await self.store.get_neighborhood(
                     entity_vertex.id,
                     max_hops=max_hops,
                     space=target_space,
-                    as_of=p.as_of,
-                    include_superseded=include_superseded,
+                    as_of=walk_as_of,
+                    include_superseded=walk_include_superseded,
                     max_edges=self.config.max_relation_edges,
+                    direction=direction,
                 ):
                     graph_triples.append(self._format_triple(edge, source, target, hops))
                     for endpoint in (source, target):
@@ -1470,13 +1669,31 @@ class GraphRAG:
 
         kept = []
         for t in triples:
-            if t.get("superseded_by") and not include_superseded:
-                continue
-            if p.as_of and not _valid_at(t.get("valid_from"), t.get("valid_to"), p.as_of):
-                continue
-            if p.as_believed_at and not _known_at(
-                    t.get("t_created"), t.get("t_expired"), p.as_believed_at):
-                continue
+            if p.as_believed_at:
+                if p.as_of and not _valid_at(t.get("valid_from"), t.get("valid_to"), p.as_of):
+                    continue
+                if include_superseded:
+                    if t.get("t_created") and t["t_created"] > p.as_believed_at:
+                        continue
+                else:
+                    if t.get("superseded_by") and t.get("t_expired") is None:
+                        continue
+                    if not _known_at(
+                        t.get("t_created"), t.get("t_expired"), p.as_believed_at
+                    ):
+                        continue
+            elif p.as_of:
+                if not _valid_at(t.get("valid_from"), t.get("valid_to"), p.as_of):
+                    continue
+                if t.get("superseded_by") and not include_superseded:
+                    has_stated_validity = (
+                        t.get("valid_from") is not None or t.get("valid_to") is not None
+                    )
+                    if not has_stated_validity:
+                        continue
+            else:
+                if t.get("superseded_by") and not include_superseded:
+                    continue
             kept.append(t)
 
         # Nearest hop first, then most recently asserted, so a later
@@ -1540,6 +1757,7 @@ class GraphRAG:
         for channel in channels:
             for rank, triple in enumerate(channel, start=1):
                 key = "\u0000".join((
+                    str(triple.get("edge_id") or ""),
                     str(triple.get("src_id", "")).lower(),
                     str(triple.get("relation_type", "")).lower(),
                     str(triple.get("tgt_id", "")).lower(),
@@ -1702,11 +1920,21 @@ class GraphRAG:
 
     @staticmethod
     def _dedupe_triples(triples: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Remove duplicate relations that entity-hop and global passes both found."""
+        """Remove duplicate relations that entity-hop and global passes both found.
+
+        Includes ``edge_id`` when present so distinct belief epochs (for example,
+        an ``A -> B -> A`` revert or a polarity flip) stay distinct, while the
+        same stored edge reached by multiple channels still collapses once.
+        """
         seen = set()
         out = []
         for t in triples:
-            key = (str(t.get("src_id")).lower(), str(t.get("relation_type")).lower(), str(t.get("tgt_id")).lower())
+            key = (
+                str(t.get("edge_id") or ""),
+                str(t.get("src_id")).lower(),
+                str(t.get("relation_type")).lower(),
+                str(t.get("tgt_id")).lower(),
+            )
             if key in seen:
                 continue
             seen.add(key)

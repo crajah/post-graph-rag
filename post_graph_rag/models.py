@@ -152,6 +152,7 @@ class QueryParam:
     # fusion step already knows how to rank candidates from several sources.
     subqueries: Optional[List[str]] = None
     max_hops: Optional[int] = None              # Hops to walk from a matched entity (None = config default)
+    direction: str = "out"                      # Neighborhood walk direction: "out", "in", or "both"
     conversation_history: List[Dict[str, str]] = field(default_factory=list) # Multi-turn chat history
     hl_keywords: List[str] = field(default_factory=list) # Custom high-level search terms
     ll_keywords: List[str] = field(default_factory=list) # Custom low-level search terms

@@ -17,7 +17,13 @@ from post_graph_rag.errors import (
     RAGError,
     SchemaError,
 )
-from post_graph_rag.extractor import Entity, ExtractionResult, GraphExtractor, Triple
+from post_graph_rag.extractor import (
+    Entity,
+    ExtractionResult,
+    GraphExtractor,
+    Triple,
+    normalise_predicate,
+)
 from post_graph_rag.graph_store import RAGGraphStore
 from post_graph_rag.llm import LLMService
 from post_graph_rag.models import (
@@ -31,7 +37,7 @@ from post_graph_rag.models import (
 from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
 from post_graph_rag.retention import RetentionReport
 
-__version__ = "1.19.2"
+__version__ = "1.20.0"
 __all__ = [
     "CorpusDelta",
     "RetentionReport",
@@ -62,6 +68,7 @@ __all__ = [
     "Entity",
     "Triple",
     "ExtractionResult",
+    "normalise_predicate",
     "RAGGraphStore",
     "GraphRAG"
 ]

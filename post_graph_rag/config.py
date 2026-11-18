@@ -363,6 +363,18 @@ class RAGConfig:
     # Resolution needs no dates from the model, only document order.
     exclusive_predicate_groups: List[Set[str]] = field(default_factory=list)
 
+    # Single-valued predicates per subject: when a new positive assertion lands
+    # with a different object, active positive edges sharing the normalized
+    # predicate on that subject are superseded automatically (e.g. "uses_auth",
+    # "deployed_on", "port_is"). Objects of functional predicates also bypass
+    # bare-quantity rejection during extraction validation so scalar values
+    # such as ports or versions survive while prose currency guards stay intact.
+    functional_predicates: Set[str] = field(
+        default_factory=lambda: {
+            p.strip() for p in _env("RAG_FUNCTIONAL_PREDICATES", "").split(",") if p.strip()
+        }
+    )
+
     # Include relations that a later assertion has superseded. Off by default:
     # the history is kept, but a superseded fact should not be presented as
     # current unless explicitly asked for.
@@ -475,6 +487,14 @@ class RAGConfig:
     # comparable with API embeddings, so mixing them silently breaks retrieval.
     allow_embedding_fallback: bool = field(
         default_factory=lambda: _env("RAG_ALLOW_EMBEDDING_FALLBACK", "0").lower() in ("1", "true", "yes")
+    )
+
+    # Record the embedding model name in realm_metadata on initialize_schema()
+    # and raise SchemaError if a realm is reopened under a different embedding
+    # model of the same vector width (e.g. two distinct 384-d models whose
+    # cosine spaces are incompatible, which _verify_vector_columns cannot catch).
+    enforce_embedding_model_match: bool = field(
+        default_factory=lambda: _env("RAG_ENFORCE_EMBEDDING_MODEL", "1").lower() in ("1", "true", "yes")
     )
 
     # Which config field serves which LLM call. Grouped by shared profile

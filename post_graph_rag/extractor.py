@@ -8,7 +8,7 @@ import re
 # usable as the second argument to isinstance.
 from collections.abc import Mapping
 from collections.abc import Sequence as AbcSequence
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set
 
 from pydantic import BaseModel, Field
 
@@ -92,14 +92,18 @@ BARE_QUANTITY = re.compile(
 )
 
 
-def is_phrase_not_entity(name: str, reject_possessive: bool = False) -> bool:
+def is_phrase_not_entity(
+    name: str,
+    reject_possessive: bool = False,
+    allow_bare_quantity: bool = False,
+) -> bool:
     """True for compound phrases that name a relationship rather than an entity."""
     n = (name or "").strip()
     if not n:
         return False
     if len(n) > MAX_ENTITY_NAME_CHARS:
         return True
-    if BARE_QUANTITY.match(n):
+    if not allow_bare_quantity and BARE_QUANTITY.match(n):
         return True
     if CONJUNCTION_ENTITY.match(n):
         return True
@@ -340,6 +344,7 @@ class GraphExtractor:
         extraction_fn: Optional[Callable[..., Any]] = None,
         extraction_fn_mode: str = "replace",
         validate_external: bool = True,
+        functional_predicates: Optional[Set[str]] = None,
     ):
         self.llm_service = llm_service
         self._system_prompt = system_prompt
@@ -348,6 +353,9 @@ class GraphExtractor:
         self.predicate_aliases = {
             normalise_predicate(k): normalise_predicate(v)
             for k, v in (predicate_aliases or {}).items()
+        }
+        self.functional_predicates: Set[str] = {
+            normalise_predicate(p) for p in (functional_predicates or set()) if p
         }
         self.gleaning_passes = max(0, gleaning_passes)
         self.min_confidence = min_confidence
@@ -641,10 +649,24 @@ class GraphExtractor:
         relation surviving into the graph always says something specific about a
         pair of entities that can actually be identified.
         """
+        functional_objects: Set[str] = set()
+        if self.functional_predicates:
+            for t in result.triples:
+                obj = (t.object or "").strip()
+                if not obj:
+                    continue
+                pred = self._canonical_predicate(t.predicate)
+                if (pred in self.functional_predicates
+                        or normalise_predicate(t.predicate) in self.functional_predicates):
+                    functional_objects.add(obj.lower())
+
         entities, dropped_names = [], set()
         for e in result.entities:
             name = (e.name or "").strip()
-            if not name or is_pronominal(name) or is_phrase_not_entity(name, self.reject_possessive_entities):
+            allow_qty = bool(name and name.lower() in functional_objects)
+            if (not name or is_pronominal(name)
+                    or is_phrase_not_entity(name, self.reject_possessive_entities,
+                                            allow_bare_quantity=allow_qty)):
                 if name:
                     dropped_names.add(name.lower())
                     logger.debug("Dropping non-entity name: %s", name)
@@ -661,6 +683,11 @@ class GraphExtractor:
             subject = (t.subject or "").strip()
             obj = (t.object or "").strip()
             predicate = self._canonical_predicate(t.predicate)
+            is_functional = bool(
+                self.functional_predicates
+                and (predicate in self.functional_predicates
+                     or normalise_predicate(t.predicate) in self.functional_predicates)
+            )
 
             if not subject or not obj or not predicate:
                 continue
@@ -672,7 +699,8 @@ class GraphExtractor:
             if is_pronominal(subject) or is_pronominal(obj):
                 continue
             if (is_phrase_not_entity(subject, self.reject_possessive_entities)
-                    or is_phrase_not_entity(obj, self.reject_possessive_entities)):
+                    or is_phrase_not_entity(obj, self.reject_possessive_entities,
+                                            allow_bare_quantity=is_functional)):
                 continue
             if subject.lower() in dropped_names or obj.lower() in dropped_names:
                 continue

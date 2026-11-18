@@ -447,8 +447,9 @@ async def test_a_new_document_asserting_a_retired_relation_revives_it(rag_factor
 
 @pytest.mark.asyncio
 async def test_revival_preserves_supersession_and_provenance(rag_factory):
-    """Reviving replaces the payload, so anything written by another path has
-    to survive it -- a supersession pointer above all."""
+    """Reviving an active dormant relation replaces the payload while keeping
+    keys written by other paths; re-asserting a superseded relation opens a
+    fresh active belief epoch without disturbing the historical supersession."""
     rag = await rag_factory()
     store = rag.store
     _, verts = await _index(store, "first.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
@@ -456,16 +457,29 @@ async def test_revival_preserves_supersession_and_provenance(rag_factory):
 
     ref = store.client._get_table_ref("relations", store.realm)
     await store.client._execute(
-        f"UPDATE {ref} SET payload = payload || '{{\"superseded_by\": \"999\"}}'::jsonb "
+        f"UPDATE {ref} SET payload = payload || '{{\"audit_marker\": \"kept\"}}'::jsonb "
         f"WHERE realm = $1 AND id = $2", store.realm, int(edge.id))
 
     await store.delete_document_chunks("first.txt", space=SPACE)
     await _index(store, "second.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
 
     payload = await _relation_row(store, edge.id)
-    assert payload["superseded_by"] == "999", "replace must not drop other paths' writes"
+    assert payload["audit_marker"] == "kept", "replace must not drop other paths' writes"
     assert payload.get("t_created"), "transaction time must survive"
     assert payload.get("dormant_since") is None
+
+    # Once superseded, a later assertion opens a new active epoch rather than
+    # resurrecting the closed historical row.
+    await store.client._execute(
+        f"UPDATE {ref} SET payload = payload || '{{\"superseded_by\": \"999\"}}'::jsonb "
+        f"WHERE realm = $1 AND id = $2", store.realm, int(edge.id))
+    await _index(store, "third.txt", ["Zeus", "Hera"], [("Zeus", "married_to", "Hera")])
+
+    old_payload = await _relation_row(store, edge.id)
+    assert old_payload["superseded_by"] == "999"
+    current_edge = await store.find_relation(verts["Zeus"].id, "married_to", verts["Hera"].id, space=SPACE)
+    assert current_edge.id != edge.id
+    assert (await _relation_row(store, current_edge.id)).get("superseded_by") is None
 
 
 @pytest.mark.asyncio

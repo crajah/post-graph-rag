@@ -16,6 +16,7 @@ from post_graph import (
 
 from post_graph_rag.config import RAGConfig
 from post_graph_rag.errors import SchemaError
+from post_graph_rag.extractor import date_sort_key, normalise_predicate
 from post_graph_rag.models import DocumentMetadata, DocumentStats
 
 logger = logging.getLogger(__name__)
@@ -253,6 +254,7 @@ class RAGGraphStore:
 
         await self._verify_vector_columns()
         await self._ensure_entity_name_index()
+        await self._verify_embedding_model_fingerprint()
 
         if self.config.owner_role:
             # Last, so everything above is included. A batch writer that is the
@@ -346,6 +348,57 @@ class RAGGraphStore:
                 f"Failed to create entity name uniqueness index: {e}. Existing duplicate "
                 f"entity rows must be merged before entity resolution can be enforced."
             ) from e
+
+    async def _verify_embedding_model_fingerprint(self) -> None:
+        """Guard against opening an existing realm under a different embedding model.
+
+        `_verify_vector_columns` catches width mismatches, but two distinct
+        models sharing a width (for example, two 384-d encoders) still occupy
+        incompatible vector spaces. Recording the model fingerprint in
+        `realm_metadata` turns silent retrieval corruption into an immediate
+        SchemaError naming both models and the realm.
+        """
+        if not (self.config.enforce_embedding_model_match and self.config.embedding_model):
+            return
+        await self.client.create_vertex_table("realm_metadata", realm=self.realm)
+        existing = await self.client.find_vertices(
+            "realm_metadata",
+            realm=self.realm,
+            space="_system",
+            filters={"key": "embedding_fingerprint"},
+        )
+        fingerprint_payload = {
+            "key": "embedding_fingerprint",
+            "embedding_model": self.config.embedding_model,
+            "embedding_dim": self.config.embedding_dim,
+        }
+        if existing:
+            row = existing[0]
+            existing_model = (row.payload or {}).get("embedding_model")
+            if existing_model and existing_model != self.config.embedding_model:
+                raise SchemaError(
+                    f"Realm {self.realm!r} was initialized with embedding_model="
+                    f"{existing_model!r}, but RAGConfig.embedding_model is "
+                    f"{self.config.embedding_model!r}. Mixing vectors from different "
+                    f"embedding models corrupts similarity search even when "
+                    f"embedding_dim ({self.config.embedding_dim}) matches. Align "
+                    f"embedding_model with {existing_model!r}, use a separate realm, "
+                    f"or set enforce_embedding_model_match=False to override."
+                )
+            await self.client.upsert_vertex(
+                "realm_metadata",
+                realm=self.realm,
+                vertex_id=row.id,
+                space="_system",
+                payload=fingerprint_payload,
+            )
+            return
+        await self.client.upsert_vertex(
+            "realm_metadata",
+            realm=self.realm,
+            space="_system",
+            payload=fingerprint_payload,
+        )
 
 
     async def reassign_owned_to(self, role: str) -> None:
@@ -746,6 +799,10 @@ class RAGGraphStore:
             return None
         return await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(rows[0]["id"]))
 
+    async def find_entity(self, name: str, space: Optional[str] = None) -> Optional[Vertex]:
+        """Alias for :meth:`find_entity_by_name`."""
+        return await self.find_entity_by_name(name, space=space)
+
     async def upsert_entity(
         self,
         name: str,
@@ -838,17 +895,36 @@ class RAGGraphStore:
     # ------------------------------------------------------------------- edges
 
     async def find_relation(self, from_id: str, relation_type: str, to_id: str, space: Optional[str] = None) -> Optional[Edge]:
-        """Locate an existing edge for a (subject, predicate, object) triple."""
+        """Locate an existing edge for a (subject, predicate, object) triple.
+
+        When multiple belief epochs exist for the triple, prefers an active
+        (`superseded_by` absent) edge over a retracted historical one, newest
+        first within each group.
+        """
         target_space = space or self.space
-        table_ref = self.client._get_table_ref("relations", self.realm)
-        rows = await self.client._fetch(
-            f"SELECT id FROM {table_ref} WHERE realm = $1 AND space = $2 "
-            f"AND from_id = $3 AND to_id = $4 AND relation_type = $5 LIMIT 1",
-            self.realm, target_space, int(from_id), int(to_id), relation_type
+        neighbors = await self.client.get_neighbors(
+            realm=self.realm,
+            vertex_table="entities",
+            vertex_id=str(from_id),
+            edge_tables=["relations"],
+            direction="out",
         )
-        if not rows:
+        matches = [
+            edge
+            for _v, edge in neighbors
+            if (target_space == RESERVED_SPACE_ALL or (edge.space or "default") == target_space)
+            and str(edge.to_id) == str(to_id)
+            and edge.relation_type == relation_type
+        ]
+        if not matches:
             return None
-        return await self.client.get_edge("relations", realm=self.realm, edge_id=str(rows[0]["id"]))
+        matches.sort(
+            key=lambda e: (
+                0 if (e.payload or {}).get("superseded_by") is None else 1,
+                -int(e.id),
+            )
+        )
+        return matches[0]
 
     async def add_relation(
         self,
@@ -864,19 +940,36 @@ class RAGGraphStore:
         valid_to: Optional[str] = None,
         source_chunk: Optional[str] = None,
     ) -> Edge:
-        """Upsert a relationship edge between two entity vertices.
+        """Upsert an active same-polarity relation, or open a new belief epoch.
 
-        The same triple extracted from two chunks must not become two edges.
-        Re-observing a relation instead increments ``weight``, which the engine
-        already reads when ranking and rendering relations but which nothing
-        previously wrote.
-
-        ``embedding`` is only stored when ``RAGConfig.embed_relations`` was set
-        at schema creation time, since that is what gives the edge table a
-        vector column.
+        The same active triple extracted from two chunks must not become two
+        edges: re-observing it corroborates ``weight`` and ``sources`` while
+        preserving ``t_created``. Conversely, if every earlier row for the
+        triple was already superseded (an ``A -> B -> A`` revert) or carried the
+        opposite ``negated`` polarity, reusing that row would either keep the
+        reverted assertion retracted or silently erase negation. Those cases
+        open a fresh edge row so each belief epoch keeps its own transaction
+        interval.
         """
         target_space = space or self.space
-        existing = await self.find_relation(from_entity.id, relation_type, to_entity.id, space=target_space)
+        neighbors = await self.client.get_neighbors(
+            realm=self.realm,
+            vertex_table="entities",
+            vertex_id=str(from_entity.id),
+            edge_tables=["relations"],
+            direction="out",
+        )
+        active_matches = [
+            edge
+            for _v, edge in neighbors
+            if (target_space == RESERVED_SPACE_ALL or (edge.space or "default") == target_space)
+            and str(edge.to_id) == str(to_entity.id)
+            and edge.relation_type == relation_type
+            and (edge.payload or {}).get("superseded_by") is None
+            and bool((edge.payload or {}).get("negated", False)) == bool(negated)
+        ]
+        active_matches.sort(key=lambda e: int(e.id), reverse=True)
+        existing = active_matches[0] if active_matches else None
 
         if existing is not None:
             prev = existing.payload or {}
@@ -894,16 +987,14 @@ class RAGGraphStore:
                 sources = sorted(prior_sources)
                 weight = int(prev.get("weight", 1)) + 1
             # Start from what is stored so nothing written by another path --
-            # supersession pointers, audit stamps -- is lost, then overwrite
-            # only the fields this assertion actually determines. The write
-            # below replaces the payload rather than merging into it, which is
-            # what makes the revival a few lines down possible at all.
+            # audit stamps, metadata -- is lost, then overwrite only the fields
+            # this assertion actually determines.
             payload = dict(prev)
             payload.update({
                 "description": description or prev.get("description", ""),
                 "sources": sources,
                 "weight": weight,
-                "negated": bool(prev.get("negated", False)) and negated,
+                "negated": bool(negated),
                 "confidence": max(float(prev.get("confidence", 0.0)), float(confidence)),
                 # A stated period, once known, is kept; re-observing the relation
                 # without a period must not erase it.
@@ -1181,11 +1272,14 @@ class RAGGraphStore:
         Superseded edges are marked, never deleted — the history is the point.
         """
         predicate = (new_predicate or "").strip().lower()
-        conflicts = {
-            p for group in exclusive_groups
-            if predicate in {g.lower() for g in group}
-            for p in {g.lower() for g in group}
-        } - {predicate}
+        norm_pred = normalise_predicate(predicate)
+        conflicts: Set[str] = set()
+        for group in exclusive_groups:
+            lowered = {g.lower() for g in group if g}
+            normed = {normalise_predicate(g) for g in group if g}
+            if predicate in lowered or (norm_pred and norm_pred in normed):
+                conflicts |= lowered | normed
+        conflicts -= {predicate, norm_pred, ""}
         if not conflicts:
             return []
 
@@ -1194,7 +1288,8 @@ class RAGGraphStore:
         rows = await self.client._fetch(
             f"SELECT id, relation_type, payload FROM {table_ref} "
             f"WHERE realm = $1 AND space = $2 AND from_id = $3 AND to_id = $4 "
-            f"AND lower(relation_type) = ANY($5::text[]) AND id <> $6",
+            f"AND lower(relation_type) = ANY($5::text[]) AND id <> $6 "
+            f"AND (payload->>'superseded_by') IS NULL",
             self.realm, target_space, int(from_id), int(to_id),
             sorted(conflicts), int(new_edge_id),
         )
@@ -1202,7 +1297,7 @@ class RAGGraphStore:
         superseded = []
         for row in rows:
             payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
-            if payload.get("superseded_by") == str(new_edge_id):
+            if payload.get("superseded_by"):
                 continue
             payload["superseded_by"] = str(new_edge_id)
             # The moment this system stopped believing the fact, as distinct
@@ -1216,6 +1311,176 @@ class RAGGraphStore:
             )
             superseded.append(str(row["id"]))
         return superseded
+
+    async def supersede_opposite_polarity(
+        self,
+        from_id: str,
+        to_id: str,
+        predicate: str,
+        new_negated: bool,
+        new_edge_id: str,
+        space: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Close active edges between the same endpoints whose polarity flipped."""
+        target_space = space or self.space
+        norm_pred = normalise_predicate(predicate)
+        neighbors = await self.client.get_neighbors(
+            realm=self.realm,
+            vertex_table="entities",
+            vertex_id=str(from_id),
+            edge_tables=["relations"],
+            direction="out",
+        )
+        candidates: List[Tuple[Vertex, Edge]] = []
+        for obj_v, edge in neighbors:
+            if target_space and target_space != RESERVED_SPACE_ALL:
+                if (edge.space or "default") != target_space:
+                    continue
+            if str(edge.id) == str(new_edge_id) or str(edge.to_id) != str(to_id):
+                continue
+            if edge.relation_type != predicate and (
+                not norm_pred or normalise_predicate(edge.relation_type) != norm_pred
+            ):
+                continue
+            p = edge.payload or {}
+            if p.get("superseded_by") or p.get("dormant_since"):
+                continue
+            if bool(p.get("negated", False)) == bool(new_negated):
+                continue
+            candidates.append((obj_v, edge))
+
+        if not candidates:
+            return []
+
+        subj_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(from_id))
+        subj_name = (subj_v.payload or {}).get("name", str(from_id)) if subj_v else str(from_id)
+        closed = set(
+            await self.mark_superseded(
+                [str(e.id) for _, e in candidates], str(new_edge_id), space=target_space
+            )
+        )
+        return [
+            {
+                "id": str(e.id),
+                "subject": subj_name,
+                "predicate": e.relation_type,
+                "old_object": (obj_v.payload or {}).get("name", str(e.to_id)),
+                "old_negated": bool((e.payload or {}).get("negated", False)),
+                "closed_by_edge_id": str(new_edge_id),
+                "reason": "polarity_flip",
+            }
+            for obj_v, e in candidates
+            if str(e.id) in closed
+        ]
+
+    async def supersede_functional(
+        self,
+        from_id: str,
+        to_id: str,
+        predicate: str,
+        new_edge_id: str,
+        functional_predicates: Set[str],
+        space: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Close active positive edges on the same subject sharing a functional predicate."""
+        norm_pred = normalise_predicate(predicate)
+        norm_funcs = {normalise_predicate(p) for p in (functional_predicates or set()) if p}
+        if not norm_pred or norm_pred not in norm_funcs:
+            return []
+
+        target_space = space or self.space
+        neighbors = await self.client.get_neighbors(
+            realm=self.realm,
+            vertex_table="entities",
+            vertex_id=str(from_id),
+            edge_tables=["relations"],
+            direction="out",
+        )
+        candidates: List[Tuple[Vertex, Edge]] = []
+        for old_obj_v, edge in neighbors:
+            if target_space and target_space != RESERVED_SPACE_ALL:
+                if (edge.space or "default") != target_space:
+                    continue
+            if str(edge.id) == str(new_edge_id) or str(edge.to_id) == str(to_id):
+                continue
+            if normalise_predicate(edge.relation_type) != norm_pred:
+                continue
+            p = edge.payload or {}
+            if p.get("superseded_by") or p.get("dormant_since") or p.get("negated", False):
+                continue
+            candidates.append((old_obj_v, edge))
+
+        if not candidates:
+            return []
+
+        subj_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(from_id))
+        subj_name = (subj_v.payload or {}).get("name", str(from_id)) if subj_v else str(from_id)
+        closed = set(
+            await self.mark_superseded(
+                [str(e.id) for _, e in candidates], str(new_edge_id), space=target_space
+            )
+        )
+        return [
+            {
+                "id": str(e.id),
+                "subject": subj_name,
+                "predicate": e.relation_type,
+                "old_object": (old_obj_v.payload or {}).get("name", str(e.to_id)),
+                "closed_by_edge_id": str(new_edge_id),
+                "reason": "functional_predicate",
+            }
+            for old_obj_v, e in candidates
+            if str(e.id) in closed
+        ]
+
+    async def get_active_subject_relations(
+        self,
+        from_id: str,
+        space: Optional[str] = None,
+        exclude_edge_ids: Optional[Set[str]] = None,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Active non-dormant outgoing relations on a subject, newest first."""
+        if limit <= 0:
+            return []
+        target_space = space or self.space
+        subj_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(from_id))
+        if subj_v is None:
+            return []
+        subj_name = (subj_v.payload or {}).get("name", str(from_id))
+        excluded = {str(eid) for eid in (exclude_edge_ids or set())}
+
+        neighbors = await self.client.get_neighbors(
+            realm=self.realm,
+            vertex_table="entities",
+            vertex_id=str(from_id),
+            edge_tables=["relations"],
+            direction="out",
+        )
+        neighbors.sort(key=lambda pair: int(pair[1].id), reverse=True)
+
+        out: List[Dict[str, Any]] = []
+        for obj_v, edge in neighbors:
+            if target_space and target_space != RESERVED_SPACE_ALL:
+                if (edge.space or "default") != target_space:
+                    continue
+            if str(edge.id) in excluded:
+                continue
+            p = edge.payload or {}
+            if p.get("superseded_by") or p.get("dormant_since"):
+                continue
+            out.append({
+                "id": str(edge.id),
+                "subject": subj_name,
+                "predicate": edge.relation_type,
+                "object": (obj_v.payload or {}).get("name", str(edge.to_id)),
+                "negated": bool(p.get("negated", False)),
+                "valid_from": p.get("valid_from"),
+                "valid_to": p.get("valid_to"),
+            })
+            if len(out) >= limit:
+                break
+        return out
 
     async def find_contradiction_candidates(
         self,
@@ -1875,30 +2140,47 @@ class RAGGraphStore:
         to_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=edge.to_id)
         return from_v, to_v
 
-    async def get_neighbors(self, entity_id: str, space: Optional[str] = None,
-                            include_dormant: bool = False) -> List[Tuple[Edge, Vertex]]:
-        """Get 1-hop outward relationships and target entities, scoped by space.
+    async def get_neighbors(
+        self,
+        entity_id: str,
+        space: Optional[str] = None,
+        include_dormant: bool = False,
+        direction: str = "out",
+    ) -> List[Tuple[Edge, Vertex]]:
+        """Get 1-hop relationships and adjacent entities, scoped by space.
 
+        ``direction`` may be ``'out'`` (default), ``'in'``, or ``'both'``.
         Space scoping matters here: without it, traversal from a matched entity
         walks into other tenants' spaces even though the vector search that found
         the entity was correctly scoped.
         """
+        if direction not in ("out", "in", "both"):
+            raise ValueError(f"direction must be 'out', 'in', or 'both', not {direction!r}")
         vertex = await self.client.get_vertex("entities", realm=self.realm, vertex_id=entity_id)
         if not vertex:
             return []
-        steps = await vertex.outgoing("relations")
+        raw_neighbors = await self.client.get_neighbors(
+            realm=self.realm,
+            vertex_table="entities",
+            vertex_id=str(entity_id),
+            edge_tables=["relations"],
+            direction=direction,
+        )
         target_space = space or self.space
-        results = []
-        for step in steps:
-            if target_space and target_space != RESERVED_SPACE_ALL:
-                if step.edge.space != target_space or step.neighbor_vertex.space != target_space:
-                    continue
-            # Filtered here rather than in SQL because the traversal helper
-            # returns hydrated edges; the predicate is the same one the SQL
-            # paths apply, and the candidate set is one entity's degree.
-            if not include_dormant and (step.edge.payload or {}).get("dormant_since"):
+        results: List[Tuple[Edge, Vertex]] = []
+        seen_edge_ids: Set[str] = set()
+        for neighbor_vertex, edge in raw_neighbors:
+            if str(edge.id) in seen_edge_ids:
                 continue
-            results.append((step.edge, step.neighbor_vertex))
+            if target_space and target_space != RESERVED_SPACE_ALL:
+                if (edge.space or "default") != target_space or (
+                    neighbor_vertex.space or "default"
+                ) != target_space:
+                    continue
+            if not include_dormant and (edge.payload or {}).get("dormant_since"):
+                continue
+            seen_edge_ids.add(str(edge.id))
+            results.append((edge, neighbor_vertex))
         return results
 
     async def get_neighborhood(
@@ -1911,6 +2193,7 @@ class RAGGraphStore:
         relation_types: Optional[List[str]] = None,
         max_edges: int = 200,
         include_dormant: bool = False,
+        direction: str = "out",
     ) -> List[Tuple[Edge, Vertex, Vertex, int]]:
         """Relations reachable within ``max_hops`` of an entity, with endpoints.
 
@@ -1927,15 +2210,39 @@ class RAGGraphStore:
         reaches tens of thousands of edges, which is noise rather than context.
         ``max_edges`` caps that, preferring the closest hops.
         """
+        if direction not in ("out", "in", "both"):
+            raise ValueError(f"direction must be 'out', 'in', or 'both', not {direction!r}")
+
         if max_hops <= 1:
-            source = await self.client.get_vertex("entities", realm=self.realm, vertex_id=entity_id)
-            if source is None:
+            anchor = await self.client.get_vertex("entities", realm=self.realm, vertex_id=entity_id)
+            if anchor is None:
                 return []
-            return [
-                (edge, source, target, 1)
-                for edge, target in await self.get_neighbors(
-                    entity_id, space=space, include_dormant=include_dormant)
-            ]
+            out_1hop: List[Tuple[Edge, Vertex, Vertex, int]] = []
+            at_key = date_sort_key(as_of) if as_of else None
+            for edge, neighbor in await self.get_neighbors(
+                entity_id, space=space, include_dormant=include_dormant, direction=direction
+            ):
+                p = edge.payload or {}
+                if not include_superseded and p.get("superseded_by"):
+                    continue
+                if relation_types and edge.relation_type not in relation_types:
+                    continue
+                if at_key is not None:
+                    vf, vt = p.get("valid_from"), p.get("valid_to")
+                    if vf and date_sort_key(vf) > at_key:
+                        continue
+                    if vt and date_sort_key(vt) < at_key:
+                        continue
+                # Preserve true subject -> object orientation regardless of
+                # whether the walk reached the edge outward or inward.
+                if str(edge.from_id) == str(anchor.id):
+                    src_v, tgt_v = anchor, neighbor
+                else:
+                    src_v, tgt_v = neighbor, anchor
+                out_1hop.append((edge, src_v, tgt_v, 1))
+                if len(out_1hop) >= max_edges:
+                    break
+            return out_1hop
 
         target_space = space or self.space
         rows = await self.client.traverse(
@@ -1944,7 +2251,7 @@ class RAGGraphStore:
             start_id=str(entity_id),
             edge_tables=["relations"],
             max_depth=max_hops,
-            direction="out",
+            direction=direction,
             relation_types=relation_types,
             as_of=as_of,
             # Dormancy is filtered inside the walk for the same reason
@@ -2076,7 +2383,7 @@ class RAGGraphStore:
             )
         return target
 
-    async def documents_stats(self, doc_keys: List[str],
+    async def documents_stats(self, doc_keys: Optional[List[str]] = None,
                               space: Optional[str] = None) -> Dict[str, DocumentStats]:
         """Rollups for many documents in two round trips, whatever the count.
 
@@ -2088,12 +2395,25 @@ class RAGGraphStore:
 
         Keys that match nothing come back as zeroed stats with ``found`` false,
         so a caller can render a row for every key it asked about without
-        having to reconcile a shorter result against its input.
+        having to reconcile a shorter result against its input. When
+        ``doc_keys`` is omitted (``None``), discovers all distinct ``doc_key``
+        values currently stored in *space*.
         """
+        target_space = self._require_space(space)
+        if doc_keys is None:
+            doc_vertices = await self.client.find_vertices(
+                "documents", realm=self.realm, space=target_space
+            )
+            doc_keys = list(
+                dict.fromkeys(
+                    str((v.payload or {}).get("doc_key"))
+                    for v in doc_vertices
+                    if (v.payload or {}).get("doc_key")
+                )
+            )
         out: Dict[str, DocumentStats] = {k: DocumentStats(doc_key=k) for k in doc_keys}
         if not doc_keys:
             return out
-        target_space = self._require_space(space)
         docs_ref = self.client._get_table_ref("documents", self.realm)
         ments_ref = self.client._get_table_ref("doc_mentions", self.realm)
         ents_ref = self.client._get_table_ref("entities", self.realm)
