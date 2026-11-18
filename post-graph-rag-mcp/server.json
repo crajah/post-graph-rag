@@ -1,0 +1,78 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.crajah/post-graph-rag-mcp",
+  "title": "post-graph-rag-mcp",
+  "description": "Bi-temporal Graph RAG memory on PostgreSQL + pgvector that retires superseded facts.",
+  "version": "0.1.0",
+  "websiteUrl": "https://github.com/crajah/post-graph-rag",
+  "repository": {
+    "url": "https://github.com/crajah/post-graph-rag",
+    "source": "github",
+    "subfolder": "post-graph-rag-mcp"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "post-graph-rag-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "POSTGRES_URI",
+          "description": "PostgreSQL connection URI (pgvector required). Omit when using [embedded] on Python 3.12.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "RAG_REALM",
+          "description": "Tenant/project graph namespace. Auto-derived from git repository root when unset.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "RAG_SPACE",
+          "description": "Sub-grouping space within the realm.",
+          "isRequired": false,
+          "default": "default",
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "MCP_MEMORY_PRESET",
+          "description": "Supersession rule preset ('engineering' or 'general_memory').",
+          "isRequired": false,
+          "default": "engineering",
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "MCP_EMBEDDING_BACKEND",
+          "description": "Embedding backend ('auto', 'fastembed', or 'openai').",
+          "isRequired": false,
+          "default": "auto",
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "Optional API key for an OpenAI-compatible router (enables autonomous LLM extraction).",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "OPENAI_API_BASE",
+          "description": "Optional base URL for an OpenAI-compatible router (vLLM, LiteLLM, OpenRouter, Ollama).",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

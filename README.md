@@ -79,7 +79,27 @@ answer = await rag.query("Who is the CFO of Calder Industries?")
 # Priya Nair — the earlier fact is closed, not competing
 ```
 
-**[→ Seven runnable examples](examples/)** · [Full installation](#install) · [Configuration reference](#config)
+**[→ Seven runnable examples](examples/)** · [Neon & Supabase quickstart](examples/00_neon_supabase_quickstart.md) · [Full installation](#install) · [Configuration reference](#config)
+
+---
+
+## Use in Claude Code & Cursor in 20 Seconds (MCP)
+
+[`post-graph-rag-mcp`](post-graph-rag-mcp/) exposes the engine over the Model Context Protocol (`stdio` and Streamable HTTP) so coding agents retire superseded architecture decisions instead of retrieving old and new conventions together. On the interactive path, the host IDE model supplies triples and keywords while local ONNX embeddings (`fastembed`) run in-process — no separate LLM API key is needed.
+
+**Zero-config local** (bundles PostgreSQL 16.2 + `pgvector` via `pgserver`, which publishes wheels up to CPython 3.12):
+
+```bash
+claude mcp add post-graph-rag -- uvx --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
+```
+
+**Existing PostgreSQL, Docker, [Neon, or Supabase](examples/00_neon_supabase_quickstart.md)** (Python 3.11–3.14):
+
+```bash
+claude mcp add post-graph-rag -e POSTGRES_URI="postgresql://..." -- uvx --from "post-graph-rag-mcp[local-embed]" post-graph-rag-mcp
+```
+
+**[→ MCP server documentation, Cursor config & Docker Compose](post-graph-rag-mcp/README.md)**
 
 ---
 
@@ -109,6 +129,18 @@ Traditional Vector RAG systems suffer from **"chunk isolation"**—they retrieve
 2. **Knowledge Graph Triples**: Extracted Subject-Predicate-Object entities connected by graph edges.
 3. **Structured Document Metadata**: Rich metadata tracking (`source`, `category`, `collection`, `document`, `page`, `paragraph`, `space`).
 4. **Application-Level Space Sub-grouping (`space`)**: Scopes indexing and vector similarity search to application-specific environments (e.g. `production`, `sandbox`, `staging`, `user_workspace`) within `{realm}` tenant partitions.
+
+### Architectural comparison
+
+| Capability | `post-graph-rag` | Graphiti / Zep | Mem0 | LightRAG | MS GraphRAG |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Storage stack** | **PostgreSQL + `pgvector` only** | Neo4j / FalkorDB | Vector DB + Graph DB | Custom / partial PG | Parquet / Vector DB |
+| **Bi-temporal (`as_of` valid + `as_believed_at` audit)** | **Yes** | Yes | No | No | No |
+| **Supersession from document order (backfill-safe)** | **Yes** | Partial (LLM-dated) | Overwrites / flat | No | No |
+| **Controlled predicate vocabulary + negation flag** | **Yes** | No | No | No | No |
+| **Hierarchical community detection & summaries** | **Yes** | No | No | No | Yes |
+| **ACID transactions spanning graph & app tables** | **Yes** | No | No | No | No |
+| **License** | **Apache 2.0** | Apache 2.0 | Apache 2.0 (OSS subset) | MIT | MIT |
 
 ### Relationship quality
 
@@ -435,6 +467,7 @@ cd examples && python 01_quickstart.py
 
 | | shows |
 | :--- | :--- |
+| [`00_neon_supabase_quickstart.md`](examples/00_neon_supabase_quickstart.md) | Free-tier Neon & Supabase setup in 60 seconds (`post-graph-rag` + `post-graph-rag-mcp`) |
 | [`01_quickstart.py`](examples/01_quickstart.py) | Three documents, one question that needs all three |
 | [`02_supersession.py`](examples/02_supersession.py) | A later filing closes an earlier fact; history stays queryable |
 | [`03_bitemporal_audit.py`](examples/03_bitemporal_audit.py) | Reproduce what the system believed before a restatement |

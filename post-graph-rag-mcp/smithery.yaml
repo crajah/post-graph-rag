@@ -1,0 +1,60 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      postgresUri:
+        type: string
+        description: "PostgreSQL connection URI with pgvector (e.g. postgresql://localhost:5432/postgres, Neon, or Supabase). Leave empty for zero-config embedded PostgreSQL on Python 3.12."
+      realm:
+        type: string
+        description: "Project or tenant graph namespace. Defaults to the current git repository name."
+      space:
+        type: string
+        default: "default"
+        description: "Sub-grouping space inside the realm (e.g. default, production, sandbox)."
+      preset:
+        type: string
+        enum: ["engineering", "general_memory"]
+        default: "engineering"
+        description: "Deterministic functional and exclusive predicate ruleset."
+      embeddingBackend:
+        type: string
+        enum: ["auto", "fastembed", "openai"]
+        default: "auto"
+        description: "Vector embedding backend ('fastembed' runs BAAI/bge-small-en-v1.5 locally with no API key)."
+      openaiApiKey:
+        type: string
+        description: "Optional API key for autonomous multi-chunk LLM extraction and answer synthesis."
+      openaiApiBase:
+        type: string
+        description: "Optional OpenAI-compatible router base URL (LiteLLM, OpenRouter, vLLM, Ollama)."
+    required: []
+  commandFunction: |-
+    (config) => {
+      const env = {};
+      if (config.postgresUri) env.POSTGRES_URI = config.postgresUri;
+      if (config.realm) env.RAG_REALM = config.realm;
+      if (config.space) env.RAG_SPACE = config.space;
+      if (config.preset) env.MCP_MEMORY_PRESET = config.preset;
+      if (config.embeddingBackend) env.MCP_EMBEDDING_BACKEND = config.embeddingBackend;
+      if (config.openaiApiKey) env.OPENAI_API_KEY = config.openaiApiKey;
+      if (config.openaiApiBase) env.OPENAI_API_BASE = config.openaiApiBase;
+
+      const args = config.postgresUri
+        ? ["--from", "post-graph-rag-mcp[local-embed]", "post-graph-rag-mcp"]
+        : ["--python", "3.12", "--from", "post-graph-rag-mcp[embedded,local-embed]", "post-graph-rag-mcp"];
+
+      return {
+        command: "uvx",
+        args,
+        env
+      };
+    }
+  exampleConfig:
+    postgresUri: "postgresql://postgres:postgres@localhost:5432/postgres"
+    realm: "my_repo"
+    space: "default"
+    preset: "engineering"
+    embeddingBackend: "fastembed"

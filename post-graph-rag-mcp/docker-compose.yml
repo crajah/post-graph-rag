@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-post_graph_rag}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-post_graph_rag}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  post-graph-rag-mcp:
+    build:
+      context: ..
+      dockerfile: post-graph-rag-mcp/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${MCP_PORT:-8080}:8080"
+    environment:
+      POSTGRES_URI: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-post_graph_rag}
+      RAG_REALM: ${RAG_REALM:-team_memory}
+      RAG_SPACE: ${RAG_SPACE:-default}
+      MCP_MEMORY_PRESET: ${MCP_MEMORY_PRESET:-engineering}
+      MCP_EMBEDDING_BACKEND: ${MCP_EMBEDDING_BACKEND:-auto}
+      MCP_TRANSPORT: streamable-http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8080"
+      MCP_ALLOWED_ROOTS: /data/workspace
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
+    volumes:
+      - fastembed_cache:/home/mcpuser/.cache/fastembed
+      - ${MCP_WORKSPACE_DIR:-..}:/data/workspace:ro
+
+volumes:
+  pgdata:
+  fastembed_cache:
