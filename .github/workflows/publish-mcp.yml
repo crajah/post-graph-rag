@@ -3,12 +3,6 @@ name: MCP CI & Publish
 on:
   push:
     branches: [main]
-    paths:
-      - "post-graph-rag-mcp/**"
-      - "post_graph_rag/**"
-      - "pyproject.toml"
-      - "glama.json"
-      - ".github/workflows/publish-mcp.yml"
     tags:
       - "mcp-v*"
   pull_request:
