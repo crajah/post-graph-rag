@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "post-graph-rag-mcp"
+version = "0.1.0"
+description = "Bi-temporal knowledge graph memory MCP server powered by post-graph-rag and PostgreSQL + pgvector."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Chandan Rajah", email = "chandan.rajah@gmail.com" }
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "graph-rag",
+    "memory",
+    "knowledge-graph",
+    "post-graph-rag",
+    "postgresql",
+    "pgvector",
+    "bitemporal",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "post-graph-rag>=1.20.0",
+    "mcp>=1.9.0,<2.0.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+local-embed = ["fastembed>=0.4.0"]
+embedded = ["pgserver>=0.1.4; python_version < '3.13'"]
+test = ["pytest>=8.0", "pytest-asyncio>=0.24", "httpx>=0.27"]
+
+[project.scripts]
+post-graph-rag-mcp = "post_graph_rag_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/crajah/post-graph-rag"
+Repository = "https://github.com/crajah/post-graph-rag"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/post_graph_rag_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["F", "B", "E9", "I"]
