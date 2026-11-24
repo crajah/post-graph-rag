@@ -21,7 +21,7 @@ createdb mydb && psql -d mydb -c "CREATE EXTENSION vector;"
 
 Then point it at any OpenAI-compatible endpoint and run [`examples/02_supersession.py`](https://github.com/crajah/post-graph-rag/tree/main/examples): three filings arrive in order, each naming a different CFO, and you get one current answer with the other two returned as prior holders rather than as competing present-tense facts. It costs a fraction of a cent and takes about a minute.
 
-**[Read the code](https://github.com/crajah/post-graph-rag)** · **[Runnable examples](https://github.com/crajah/post-graph-rag/tree/main/examples)** · **[MCP server (`post-graph-rag-mcp`)](https://github.com/crajah/post-graph-rag/tree/main/post-graph-rag-mcp)** · **[The paper](https://arxiv.org/abs/2608.24921)** · **[post-graph, the layer underneath](https://github.com/crajah/post-graph)** · Apache 2.0
+**[Read the code](https://github.com/crajah/post-graph-rag)** · **[Runnable examples](https://github.com/crajah/post-graph-rag/tree/main/examples)** · **[Claude / Gemini / Cursor MCP Guide](mcp.html)** · **[The paper](https://arxiv.org/abs/2608.24921)** · **[post-graph, the layer underneath](https://github.com/crajah/post-graph)** · Apache 2.0
 
 ---
 
@@ -133,13 +133,19 @@ answer = await rag.query("What changed since last quarter?")
 
 `createdb`, `CREATE EXTENSION vector`, `pip install post-graph-rag`. That is the whole dependency list — plus any OpenAI-compatible endpoint, including a local one. Don't run PostgreSQL locally? See the [60-second Neon & Supabase quickstart](https://github.com/crajah/post-graph-rag/blob/main/examples/00_neon_supabase_quickstart.md).
 
-### Use in Claude Code, Cursor & MCP (`post-graph-rag-mcp`)
+### Use in Claude, Gemini CLI, Cursor & MCP (`post-graph-rag-mcp`)
 
-[`post-graph-rag-mcp`](https://github.com/crajah/post-graph-rag/tree/main/post-graph-rag-mcp) packages the engine as a Model Context Protocol server (`stdio` and Streamable HTTP) with 7 tools (`remember`, `recall`, `recall_as_of`, `trace_history`, `ingest_documents`, `changes_since`, `configure_memory_rules`), local ONNX embeddings via `fastembed`, and an optional embedded PostgreSQL 16 + `pgvector` bundle (`[embedded,local-embed]` on Python 3.12) — zero external services and zero sidecar LLM API keys required on the interactive IDE path:
+[`post-graph-rag-mcp`](mcp.html) packages the engine as a Model Context Protocol server (`stdio` and Streamable HTTP) with local ONNX embeddings (`fastembed`) and an optional embedded PostgreSQL 16 + `pgvector` bundle (`[embedded,local-embed]` on Python 3.12) — zero external services and zero sidecar LLM API keys required on the interactive path:
 
 ```bash
+# Claude Code (zero-config embedded Postgres + local embeddings)
 claude mcp add post-graph-rag -- uvx --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
+
+# Gemini CLI (zero-config embedded Postgres + local embeddings)
+gemini mcp add post-graph-rag uvx -- --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
 ```
+
+For **Claude Desktop**, **Cursor**, **Windsurf**, **VS Code** (`.vscode/mcp.json`), **Codex CLI**, external PostgreSQL / Neon / Supabase, shared Docker Compose HTTP deployment, and a full session walkthrough of all **7 MCP tools** (`remember`, `recall`, `recall_as_of`, `trace_history`, `ingest_documents`, `changes_since`, `configure_memory_rules`), **3 resources**, and **3 prompts**, see the **[MCP & AI Client Guide](mcp.html)**.
 
 ---
 

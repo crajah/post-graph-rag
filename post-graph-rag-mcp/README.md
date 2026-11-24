@@ -28,12 +28,44 @@ Bundles a private PostgreSQL 16.2 + `pgvector` 0.6.2 instance (`pgserver` in `~/
 claude mcp add post-graph-rag -- uvx --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
 ```
 
-**Cursor / Windsurf / Claude Desktop (`.cursor/mcp.json` or `claude_desktop_config.json`):**
+**Gemini CLI:**
+
+```bash
+gemini mcp add post-graph-rag uvx -- --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
+```
+
+**Codex CLI:**
+
+```bash
+codex mcp add post-graph-rag -- uvx --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
+```
+
+**Cursor / Windsurf / Claude Desktop / Gemini CLI `settings.json`** (`.cursor/mcp.json`, `~/.codeium/windsurf/mcp_config.json`, `~/Library/Application Support/Claude/claude_desktop_config.json`, or `%APPDATA%\Claude\claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "post-graph-rag": {
+      "command": "uvx",
+      "args": [
+        "--python",
+        "3.12",
+        "--from",
+        "post-graph-rag-mcp[embedded,local-embed]",
+        "post-graph-rag-mcp"
+      ]
+    }
+  }
+}
+```
+
+**VS Code (`.vscode/mcp.json`):**
+
+```json
+{
+  "servers": {
+    "post-graph-rag": {
+      "type": "stdio",
       "command": "uvx",
       "args": [
         "--python",
@@ -59,7 +91,14 @@ claude mcp add post-graph-rag \
   -- uvx --from "post-graph-rag-mcp[local-embed]" post-graph-rag-mcp
 ```
 
-**Cursor / Windsurf / Claude Desktop:**
+**Gemini CLI:**
+
+```bash
+gemini mcp add -e POSTGRES_URI="postgresql://localhost:5432/postgres" \
+  post-graph-rag uvx -- --from "post-graph-rag-mcp[local-embed]" post-graph-rag-mcp
+```
+
+**Cursor / Windsurf / Claude Desktop / Gemini CLI `settings.json`:**
 
 ```json
 {
@@ -89,7 +128,25 @@ cd post-graph-rag/post-graph-rag-mcp
 docker compose up -d --build
 ```
 
-Connect MCP clients to `http://localhost:8080/mcp`. Set `OPENAI_API_KEY` (and optional `OPENAI_API_BASE` for LiteLLM, OpenRouter, vLLM, or Ollama) in the environment to enable autonomous multi-chunk graph extraction on background `ingest_documents` runs.
+Connect MCP clients to `http://localhost:8080/mcp`:
+- **Claude Code:** `claude mcp add --transport http post-graph-rag http://localhost:8080/mcp`
+- **Gemini CLI:** `gemini mcp add --transport http post-graph-rag http://localhost:8080/mcp`
+- **VS Code:** `{"servers": {"post-graph-rag": {"type": "http", "url": "http://localhost:8080/mcp"}}}`
+
+Set `OPENAI_API_KEY` (and optional `OPENAI_API_BASE` for LiteLLM, OpenRouter, vLLM, or Ollama) in the environment to enable autonomous multi-chunk graph extraction on background `ingest_documents` runs.
+
+---
+
+## Using the MCP (Real Session Walkthrough)
+
+Once connected, talk to your assistant naturally — it calls the right MCP tool automatically (see the [full MCP & AI Client Guide](https://crajah.github.io/post-graph-rag/mcp.html) for detailed examples):
+
+1. **Store a decision (`remember`):** *"Remember that `AuthService` uses `Clerk` and is deployed on `Fly.io`, effective 2026-01-15."*
+2. **Supersede it later (`remember`):** *"Remember that we migrated `AuthService` from Clerk to `BetterAuth` on 2026-06-01."* Because `uses_auth` is a functional predicate, the prior `Clerk` edge is closed automatically (`superseded_by` + `t_expired`).
+3. **Query current truth (`recall`):** *"What auth provider does `AuthService` use?"* → returns `BetterAuth` only; `Clerk` is excluded from current retrieval.
+4. **Time-travel & audit (`recall_as_of`):** *"What auth provider did `AuthService` use in March 2026?"* (`as_of="2026-03-15"`) or *"What did we believe on 2026-05-01?"* (`as_believed_at="2026-05-01T00:00:00Z"`).
+5. **Trace full lineage (`trace_history`):** *"Trace the history of `AuthService`, and show everywhere `Clerk` was used."* Walks both outbound and inbound edges (`direction="both"`).
+6. **Sync ADRs / docs (`ingest_documents`):** *"Ingest `./docs/adr` in filename order."* Skips unchanged files via content hash so re-running is `O(1)`.
 
 ---
 

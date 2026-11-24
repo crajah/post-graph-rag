@@ -83,23 +83,68 @@ answer = await rag.query("Who is the CFO of Calder Industries?")
 
 ---
 
-## Use in Claude Code & Cursor in 20 Seconds (MCP)
+## Use in Claude, Gemini CLI, Cursor & MCP in 20 Seconds
 
-[`post-graph-rag-mcp`](post-graph-rag-mcp/) exposes the engine over the Model Context Protocol (`stdio` and Streamable HTTP) so coding agents retire superseded architecture decisions instead of retrieving old and new conventions together. On the interactive path, the host IDE model supplies triples and keywords while local ONNX embeddings (`fastembed`) run in-process — no separate LLM API key is needed.
+[`post-graph-rag-mcp`](post-graph-rag-mcp/) exposes the engine over the Model Context Protocol (`stdio` and Streamable HTTP) so coding agents retire superseded architecture decisions instead of retrieving old and new conventions together. On the interactive path, your assistant supplies triples and keywords while local ONNX embeddings (`fastembed`) run in-process — **zero sidecar LLM API keys required**.
 
-**Zero-config local** (bundles PostgreSQL 16.2 + `pgvector` via `pgserver`, which publishes wheels up to CPython 3.12):
+### Add to your AI client (zero-config local Postgres)
+
+Bundles PostgreSQL 16.2 + `pgvector` via `pgserver` (publishes wheels up to CPython 3.12, hence `--python 3.12`):
+
+**Claude Code:**
 
 ```bash
 claude mcp add post-graph-rag -- uvx --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
 ```
 
-**Existing PostgreSQL, Docker, [Neon, or Supabase](examples/00_neon_supabase_quickstart.md)** (Python 3.11–3.14):
+**Gemini CLI:**
 
 ```bash
-claude mcp add post-graph-rag -e POSTGRES_URI="postgresql://..." -- uvx --from "post-graph-rag-mcp[local-embed]" post-graph-rag-mcp
+gemini mcp add post-graph-rag uvx -- --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
 ```
 
-**[→ MCP server documentation, Cursor config & Docker Compose](post-graph-rag-mcp/README.md)**
+**Claude Desktop / Cursor / Windsurf / Gemini CLI `settings.json`:**
+
+```json
+{
+  "mcpServers": {
+    "post-graph-rag": {
+      "command": "uvx",
+      "args": ["--python", "3.12", "--from", "post-graph-rag-mcp[embedded,local-embed]", "post-graph-rag-mcp"]
+    }
+  }
+}
+```
+
+**VS Code (`.vscode/mcp.json`):** use `"servers"` with `"type": "stdio"` (see [full client configs](docs/mcp.md)).
+
+### Already have PostgreSQL, Docker, [Neon, or Supabase](examples/00_neon_supabase_quickstart.md)? (Python 3.11–3.14)
+
+Drop `--python 3.12` and pass `POSTGRES_URI`:
+
+```bash
+# Claude Code
+claude mcp add post-graph-rag -e POSTGRES_URI="postgresql://..." -- uvx --from "post-graph-rag-mcp[local-embed]" post-graph-rag-mcp
+
+# Gemini CLI
+gemini mcp add -e POSTGRES_URI="postgresql://..." post-graph-rag uvx -- --from "post-graph-rag-mcp[local-embed]" post-graph-rag-mcp
+```
+
+### Using the MCP once connected
+
+Talk to your assistant in plain English — it calls the 7 built-in MCP tools automatically:
+
+| What you ask | Tool called | What happens |
+| :--- | :--- | :--- |
+| *"Remember that `AuthService` uses `Clerk`."* | `remember` | Stores the passage + `(AuthService) --[uses_auth]--> (Clerk)`. |
+| *"Remember we migrated `AuthService` to `BetterAuth`."* | `remember` | Closes the old `Clerk` edge automatically (`functional_predicates`). |
+| *"What auth provider does `AuthService` use?"* | `recall` | Hybrid RRF retrieval returns `BetterAuth` only (superseded facts excluded). |
+| *"What did we use in March? / What did we believe on May 1?"* | `recall_as_of` | Bi-temporal query by valid time (`as_of`) or belief time (`as_believed_at`). |
+| *"Show `AuthService`'s auth history, and everywhere `Clerk` was used."* | `trace_history` | Bidirectional (`direction="both"`) chronological lineage. |
+| *"Sync `./docs/adr` in filename order."* | `ingest_documents` | Idempotent directory sync skipping unchanged files via content hash. |
+| *"What changed since yesterday?" / *"Add `uses_cache` as functional."* | `changes_since` / `configure_memory_rules` | Database-clock delta feed & live rule/coverage inspection. |
+
+**[→ Full MCP & AI Client Guide (Claude, Gemini CLI, Cursor, Windsurf, VS Code, Codex, Docker)](docs/mcp.md)** · **[MCP Package README](post-graph-rag-mcp/README.md)**
 
 ---
 
