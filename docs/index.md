@@ -14,14 +14,26 @@ description: "Every production knowledge graph only grows. post-graph-rag closes
 
 ### Start here
 
+**In Claude Code, Gemini CLI, Cursor, or VS Code (MCP — 20 seconds, zero API keys):**
+
+```bash
+# Claude Code (bundles embedded PostgreSQL 16 + pgvector + local ONNX embeddings)
+claude mcp add post-graph-rag -- uvx --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
+
+# Gemini CLI
+gemini mcp add post-graph-rag uvx -- --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
+```
+
+**As a Python library (`post-graph-rag` v1.20.0):**
+
 ```bash
 pip install post-graph-rag
 createdb mydb && psql -d mydb -c "CREATE EXTENSION vector;"
 ```
 
-Then point it at any OpenAI-compatible endpoint and run [`examples/02_supersession.py`](https://github.com/crajah/post-graph-rag/tree/main/examples): three filings arrive in order, each naming a different CFO, and you get one current answer with the other two returned as prior holders rather than as competing present-tense facts. It costs a fraction of a cent and takes about a minute.
+No local Postgres? Use free-tier Neon or Supabase in 60 seconds via the [cloud quickstart](https://github.com/crajah/post-graph-rag/blob/main/examples/00_neon_supabase_quickstart.md). Then point it at any OpenAI-compatible endpoint and run [`examples/02_supersession.py`](https://github.com/crajah/post-graph-rag/tree/main/examples): three filings arrive in order, each naming a different CFO, and you get one current answer with the other two returned as prior holders rather than as competing present-tense facts. It costs a fraction of a cent and takes about a minute.
 
-**[Read the code](https://github.com/crajah/post-graph-rag)** · **[Runnable examples](https://github.com/crajah/post-graph-rag/tree/main/examples)** · **[Claude / Gemini / Cursor MCP Guide](mcp.html)** · **[The paper](https://arxiv.org/abs/2608.24921)** · **[post-graph, the layer underneath](https://github.com/crajah/post-graph)** · Apache 2.0
+**[GitHub](https://github.com/crajah/post-graph-rag)** · **[Claude / Gemini / Cursor MCP Guide](mcp.html)** · **[Runnable examples](https://github.com/crajah/post-graph-rag/tree/main/examples)** · **[The paper](https://arxiv.org/abs/2608.24921)** · **[post-graph, the layer underneath](https://github.com/crajah/post-graph)** · Apache 2.0
 
 ---
 
@@ -45,14 +57,15 @@ What sits on top of that substrate is aimed at the two problems above — a temp
 
 To be precise about what is novel here, since the field moves quickly:
 
-| | GraphRAG | LightRAG 1.5.6 | Graphiti / Zep | post-graph-rag |
-| :--- | :---: | :---: | :---: | :---: |
-| Community detection + summaries | ✅ | ❌ | ❌ | ✅ |
-| Bi-temporal model (validity **and** belief time) | ❌ | ❌ | ✅ | ✅ |
-| Supersession inferred from document order | ❌ | ❌ | ❌ | ✅ |
-| Controlled predicate vocabulary | ❌ | ❌ | ❌ | ✅ |
-| Runs on PostgreSQL you already operate | ❌ | partial | ❌ | ✅ |
-| Transaction spanning graph **and** app tables | ❌ | ❌ | ❌ | ✅ |
+| | GraphRAG | LightRAG 1.5.6 | Graphiti / Zep | Mem0 | post-graph-rag |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Hierarchical community detection + summaries | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Bi-temporal model (validity **and** belief time) | ❌ | ❌ | ✅ | ❌ | ✅ |
+| Supersession from document order + functional predicates | ❌ | ❌ | partial (LLM-dated) | overwrites | ✅ |
+| Controlled predicate vocabulary + negation flag | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Runs on PostgreSQL + `pgvector` only | ❌ | partial | ❌ | ❌ | ✅ |
+| Transaction spanning graph **and** app tables | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Zero-key MCP server (local Postgres + ONNX) | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 Two of those rows are the reason this library exists.
 
@@ -199,7 +212,7 @@ print(res["answer"])                    # synthesised, with inline citations
 print(res["retrieved_graph_triples"])   # the edges that supported it
 ```
 
-`index_text` chunks with overlap, extracts entities and relations, embeds everything, and writes vertices and edges. `query` runs vector search over both documents and entities, traverses one hop from whatever it matched, and synthesises an answer. The rest of this article is about why each of those steps is harder than it looks.
+`index_text` chunks with overlap, extracts entities and relations, embeds everything, applies supersession rules, and writes vertices and edges. `query` fuses three retrieval channels via Reciprocal Rank Fusion (RRF) — entity-seeded multi-hop traversal (default `max_hops=2`), direct relation-embedding search, and PostgreSQL `tsvector` full-text search — combines them with supporting chunks, renders each relation's validity interval, and synthesises an answer. The rest of this article is about why each of those steps is harder than it looks.
 
 ---
 
@@ -523,7 +536,7 @@ Contradiction detection changes what is written rather than what is read, so it 
 
 Measured the obvious way, with a fresh index per variant, node-distance reranking scored −5. The same code scores +10 once every variant reads the same graph. The repeats explain it: they agreed in 80 of 80 cells, so with the graph held fixed the system is deterministic, and all the movement lives in extraction. A run that re-indexes per arm is measuring the extractor rather than the feature.
 
-The same baseline has scored 75%, 70% and 60% on identical code and identical instances, purely from re-indexing. At 20 instances, effects of this size are promising rather than established — the sign test on node distance gives p = 0.31, and separating them cleanly needs 100–200 instances. All three point the same way, and each addresses a specific gap: MMR because RRF fuses three channels that correlate and a restatement costs a slot at top_k of eight; node distance because the relation-embedding and lexical channels report `hops=1` for everything, never having walked; contradiction detection because `exclusive_predicate_groups` only fires on predicate pairs declared in advance between the same two entities, and so cannot see "lives in Paris" becoming "lives in Berlin".
+The same baseline has scored 75%, 70% and 60% on identical code and identical instances, purely from re-indexing. At 20 instances, effects of this size are promising rather than established — the sign test on node distance gives p = 0.31, and separating them cleanly needs 100–200 instances. All three point the same way, and each addresses a specific gap: MMR because RRF fuses three channels that correlate and a restatement costs a slot at top_k of eight; node distance because the relation-embedding and lexical channels report `hops=1` for everything, never having walked; and optional LLM contradiction detection for open-ended semantic conflicts outside declarative rules (note that single-valued subject updates such as "lives in Paris" becoming "lives in Berlin" are now handled deterministically with zero LLM calls via `functional_predicates` as of `1.20.0`).
 
 ---
 
@@ -674,11 +687,7 @@ The shape is as useful as the total. Incorrect elements sit at 0.14, refusals at
 
 Getting here took one more correction, and it was ours rather than the metric's. An earlier version of these numbers showed refusals at 0.17, which read as a retrieval-coverage limit. It was not. One of the six companies had never been indexed into the realm — its transcripts were in the corpus, the indexing had failed in an earlier session, and every run since had reused that realm and asked ten questions of an empty database. The system declined all ten, correctly. The harness now counts documents per company before asking anything and refuses to run against a realm that is missing one.
 
-**Cross-company, previously the unexplained category, is resolved.** It read 0.100 and had survived three falsified hypotheses. It now reads 0.500 strict and 0.675 element-wise — and none of that came from the retrieval or synthesis code. About half was context assembly; the rest was scoring, since three of its ten questions have golds naming a company rather than a figure. A fourth idea — scatter-gather retrieval, querying each company separately and merging — was built and measured, and made it *worse*. It is reported here as falsified rather than quietly dropped.
-
-It worked mechanically and changed nothing. Closed windows went from **27 of 3,061 relations (1%) to 1,843 of 3,453 (53%)**, on a denser graph — and across four answering models the rebuilt graph scored 0.353 / 0.309 / 0.324 / 0.206 against 0.368 / 0.382 / 0.338 / 0.206. Cross-company stayed in the same 0.000–0.100 band. The two graphs are separate indexes, so those deltas sit inside the re-indexing noise either way.
-
-The prompt change is kept, because a graph that models quarters correctly is right whether or not it scores better on one benchmark. Cross-company now has **three** hypotheses ruled out — retrieval coverage, refusal wording, and validity windows — and the last is the most informative of the three: a mechanism we could name precisely, a change we verified had landed in the graph, and no movement in the score.
+**Cross-company, previously the unexplained category, is resolved.** It had read 0.100 and survived three falsified hypotheses — retrieval coverage, refusal wording, and tighter validity windows. (On the validity-window test, closing quarterly windows raised closed intervals from **27 of 3,061 relations (1%) to 1,843 of 3,453 (53%)** on a denser graph, yet left the pre-fix cross-company score in the same 0.000–0.100 band; the prompt improvement was kept because modelling quarters accurately is right on its own merits.) A fourth idea — scatter-gather retrieval, querying each company separately and merging — was also built, measured, and made it *worse*, so it is reported here as falsified rather than quietly dropped. Once context assembly and company-name gold scoring were fixed, cross-company jumped to **0.500 strict and 0.675 element-wise**.
 
 **The contrast with LongMemEval is the finding worth carrying away.** The same idea — make temporal structure visible — moved one benchmark 14.5 points and the other by zero. Rendering dates that already existed was transformative; adding dates that did not exist bought nothing. On a corpus where every transcript already states its own quarter in the indexed text, the model was never short of period information.
 
@@ -777,6 +786,20 @@ Together these compose into exactly the loop an autonomous explorer runs —
 pick the least-covered region of the tree, investigate, poll for change —
 with the engine supplying structure, coverage and change, and nothing else.
 
+---
+
+## Production architecture (`1.11` – `1.20`)
+
+Everything above covers the core graph, temporal model, and retrieval evaluations. Between `1.11.0` and `1.20.0`, the library hardened the operational surface required to run in real multi-tenant applications and AI coding assistants:
+
+- **Hybrid deterministic + LLM extraction (`1.12.0`, `1.20.0`):** Pass `extraction_fn=` (`replace` or `merge` mode) to inject exact structure from an AST, LSP index, or build graph alongside LLM-extracted prose, or pass a pre-built `ExtractionResult` directly to `index_document(..., extraction=...)` for zero-LLM-key ingestion.
+- **Per-role model routing (`1.13.0`):** Configure `extraction_model`, `synthesis_model`, `auxiliary_model`, and `community_model` independently so you spend on extraction quality while keeping per-query keyword/synthesis calls fast and cheap.
+- **Reversible archiving & per-document admin views (`1.11.1`, `1.13.0`):** `apply_retention(threshold=0.1, dry_run=True)` and `restore_archived()` demote low-value entities without deleting history; `document_stats()`, `documents_stats()`, `document_graph()`, and `sweep_orphaned_relations()` expose per-document provenance in constant SQL round trips.
+- **Multi-tenant PostgreSQL & RLS hardening (`1.16.0` – `1.19.0`):** Bring your own `asyncpg` connection, pool, or duck-typed `acquire()` wrapper (`connection=`) for per-tenant `SET ROLE` behind PgBouncer (`statement_cache_size=0`); hand back objects provisioned by batch writers (`owner_role` / `reassign_owned_to`); run **zero DDL on the query path** so non-owner roles under forced row-level security can retrieve cleanly; and remove shadow `_audit` copies alongside live deletes with `delete_document_chunks(..., purge_audit=True)`.
+- **Belief epochs, functional predicates, bidirectional walks & MCP (`1.20.0`):** `functional_predicates` (`RAG_FUNCTIONAL_PREDICATES`), polarity-flip supersession, multi-epoch `A → B → A` reverts, `retract_relations()`, `active_relations_for_entities()`, `QueryParam.direction="both"`, embedding model fingerprinting in `realm_metadata` (`enforce_embedding_model_match`), and the **[`post-graph-rag-mcp`](mcp.html)** server for Claude Code, Claude Desktop, Gemini CLI, Cursor, Windsurf, VS Code, and Codex CLI.
+
+---
+
 ## Limitations
 
 **Community hierarchy quality is unevaluated.** Multi-level communities exist as of 1.10.0 (opt-in), resolving the long-standing single-level limitation structurally — but whether hierarchical reports *answer better* than the flat layer has not yet been measured, which is why `community_levels` still defaults to 1. The paired evaluation gate is on the roadmap.
@@ -823,7 +846,7 @@ That reports supersessions, validity intervals, dormant entities and as-of retri
 
 The architecture and evaluation methodology are written up at [arXiv:2608.24921](https://arxiv.org/abs/2608.24921). That version covers the design, the extraction-time gates, the temporal model and the LightRAG comparison; a revision adding the LongMemEval and ECT-QA evaluations on this page is in preparation.
 
-**GitHub:** https://github.com/crajah/post-graph-rag · **PyPI:** `pip install post-graph-rag` · **MCP Server:** `pip install post-graph-rag-mcp`
+**[GitHub](https://github.com/crajah/post-graph-rag)** · **[PyPI (`post-graph-rag`)](https://pypi.org/project/post-graph-rag/)** · **[PyPI (`post-graph-rag-mcp`)](https://pypi.org/project/post-graph-rag-mcp/)** · **[Claude / Gemini / Cursor MCP Guide](mcp.html)**
 
 Apache 2.0 licensed, built on PostgreSQL and pgvector, with multi-tenant realms, audit tables and append-only history — because a knowledge graph you cannot isolate, roll back or explain is not one you can put into production.
 

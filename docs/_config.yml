@@ -1,4 +1,4 @@
 theme: jekyll-theme-primer
 title: post-graph-rag
-description: Graph RAG on PostgreSQL — temporal supersession, community summarisation, queryable relation types
+description: Bi-temporal Graph RAG & MCP memory server on PostgreSQL + pgvector — deterministic supersession, community summarisation, queryable predicates
 show_downloads: false
