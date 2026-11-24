@@ -33,9 +33,10 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[test]"
 
 export POSTGRES_TEST_URI=postgresql://localhost:5432/post_graph_test
-pytest -q                  # ~620 tests, around three minutes
-pytest tests/test_engine.py -q          # one file
-pytest -q -k supersession               # one behaviour
+pytest -q                              # ~640 core tests, around three minutes
+pytest tests/test_engine.py -q         # one file
+pytest -q -k supersession              # one behaviour
+pytest post-graph-rag-mcp/tests -q     # MCP server integration & protocol suite
 ```
 
 The suite must be green before you open a pull request. CI runs the same

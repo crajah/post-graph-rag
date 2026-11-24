@@ -8,7 +8,7 @@
 
 **Bi-temporal Graph RAG memory for Claude Code, Cursor, Windsurf, and MCP clients — on PostgreSQL + `pgvector`.**
 
-Standard agent memory stores only accumulate: migrate from Clerk to BetterAuth or appoint a new CFO, and cosine search keeps serving the retired decision alongside the current one. `post-graph-rag-mcp` wraps [`post-graph-rag`](https://github.com/crajah/post-graph-rag) (`94.0%` on [LongMemEval](https://arxiv.org/abs/2410.10813), `0.807` on [ECT-QA](https://arxiv.org/abs/2510.13590); paper: [arXiv:2608.24921](https://arxiv.org/abs/2608.24921)) as a Model Context Protocol server (`stdio` and Streamable HTTP) where **later assertions deterministically close superseded ones** while keeping both **valid time** (`as_of`) and **belief time** (`as_believed_at`) queryable for audit.
+Standard agent memory stores only accumulate: migrate from Clerk to BetterAuth or appoint a new CFO, and cosine search keeps serving the retired decision alongside the current one. `post-graph-rag-mcp` wraps [`post-graph-rag`](https://github.com/crajah/post-graph-rag) (`94.0%` on [LongMemEval](https://arxiv.org/abs/2410.10813), `0.807` on [ECT-QA](https://arxiv.org/abs/2510.13590) — see the [core README](https://github.com/crajah/post-graph-rag#benchmarks) for benchmark qualifications; paper: [arXiv:2608.24921](https://arxiv.org/abs/2608.24921)) as a Model Context Protocol server (`stdio` and Streamable HTTP) where **later assertions deterministically close superseded ones** while keeping both **valid time** (`as_of`) and **belief time** (`as_believed_at`) queryable for audit.
 
 No Neo4j. No separate vector database. No sidecar LLM API key required on the interactive IDE path.
 

@@ -1,8 +1,8 @@
 # Examples
 
-Seven runnable scripts, each demonstrating one capability. They share
-configuration through `_shared.py`, so point them at your router and database
-once:
+Seven runnable Python scripts plus a 60-second cloud PostgreSQL guide, each
+demonstrating one capability. The scripts share configuration through
+`_shared.py`, so point them at your router and database once:
 
 ```bash
 export OPENAI_API_KEY=...
@@ -18,6 +18,7 @@ any order. Postgres needs the `vector` extension (`CREATE EXTENSION vector`).
 
 | | what it shows | why it matters |
 | :--- | :--- | :--- |
+| [`00_neon_supabase_quickstart.md`](00_neon_supabase_quickstart.md) | Free-tier Neon & Supabase setup in 60 seconds | Run `post-graph-rag` or `post-graph-rag-mcp` without installing PostgreSQL locally |
 | [`01_quickstart.py`](01_quickstart.py) | Three documents, one question needing all three | The answer requires joining facts across documents — the graph walks relations a top-k chunk search would never assemble |
 | [`02_supersession.py`](02_supersession.py) | Three filings, three CFOs, one current answer | A later document **closes** an earlier fact. History is kept and queryable, not overwritten |
 | [`03_bitemporal_audit.py`](03_bitemporal_audit.py) | `as_believed_at` reproduces a past answer | "What did our systems report in March, before the restatement?" — the question auditors actually ask |

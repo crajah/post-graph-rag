@@ -3,6 +3,125 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.20.0
+
+### Added
+
+- **Functional predicates (`RAGConfig.functional_predicates`, `RAG_FUNCTIONAL_PREDICATES`)**:
+  single-valued predicates per subject (e.g. `uses_auth`, `cfo_of`, `lives_in`).
+  When a new positive assertion lands with a different object, active positive
+  edges sharing `(subject, predicate)` are closed automatically via
+  `RAGGraphStore.supersede_functional()`. Objects of functional predicates also
+  bypass bare-quantity rejection so scalar values such as ports or versions
+  survive extraction validation.
+- **Polarity-flip supersession & multi-epoch belief histories**:
+  `RAGGraphStore.supersede_opposite_polarity()` closes an active edge when the
+  opposite polarity (`negated=False` vs `negated=True`) is asserted on the same
+  triple. `add_relation()` now deduplicates only against *active* same-polarity
+  edges, so reverting a prior decision (`A -> B -> A`) opens a new belief epoch
+  rather than mutating the closed edge — keeping historical `as_believed_at`
+  queries exact.
+- **Caller-supplied extraction (`GraphRAG.index_document(..., extraction=...)`)**:
+  accepts a pre-built `ExtractionResult` directly so host-agent or structured
+  callers can index passages and triples without invoking an extraction LLM.
+- **Explicit retraction and active-edge inspection**:
+  `GraphRAG.retract_relations()`, `GraphRAG.active_relations_for_entities()`,
+  `GraphRAG.set_functional_predicates()`, and `RAGGraphStore.get_active_subject_relations()`.
+- **Bidirectional graph traversal (`QueryParam.direction`)**:
+  supports `"out"` (default), `"in"`, and `"both"` across `get_neighbors()`,
+  `get_neighborhood()`, and `query()` / `query_data()`, enabling reverse
+  lookups (*"where was Clerk used?"*).
+- **Embedding model fingerprinting (`RAGConfig.enforce_embedding_model_match`,
+  `RAG_ENFORCE_EMBEDDING_MODEL`, default on)**: records `(embedding_model,
+  embedding_dim)` in `realm_metadata` during `initialize_schema()` and raises
+  `SchemaError` if a realm is reopened under a different embedding model of the
+  same width.
+- **`post-graph-rag-mcp 0.1.0`**: Model Context Protocol server (`stdio` and
+  Streamable HTTP) in `post-graph-rag-mcp/` exposing 7 tools, 3 resources, and
+  3 prompts with local ONNX embeddings (`fastembed`) and optional embedded
+  PostgreSQL 16 + `pgvector`.
+
+### Fixed
+
+- **Graph-level `as_believed_at` and interval-bounded `as_of` recall**:
+  `as_believed_at` now includes edges that were active at `T` even if closed
+  later, and `as_of` respects valid-time intervals cleanly across retrieval
+  channels.
+- **`supersede_conflicting` idempotency guard**: skips already-closed edges
+  (`superseded_by IS NULL`) so historical epochs are never overwritten.
+- **Multi-epoch deduplication**: `_dedupe_triples` and `_merge_by_rrf` key by
+  `edge_id` so distinct belief epochs of the same `(subject, predicate, object)`
+  do not collapse during history queries.
+
+## 1.19.2
+
+### Fixed
+
+- Corrected README metadata on PyPI, including the Graphiti comparison table
+  entry and stale release details.
+
+## 1.19.1
+
+### Changed
+
+- Updated CI matrix and version classifiers to test Python 3.11 and 3.13
+  against PostgreSQL 16 and 18 with `pgvector`.
+
+## 1.19.0
+
+### Added
+
+- `RAGGraphStore.delete_document_chunks(..., purge_audit=True)` removes the
+  shadow `_audit` rows for deleted `documents` and `doc_mentions` after the
+  live deletes complete, returning `audit_rows_purged` in the receipt.
+
+## 1.18.0
+
+### Added
+
+- `RAGConfig.statement_cache_size` (`RAG_STATEMENT_CACHE_SIZE`) and
+  `RAGConfig.server_settings` forwarded to `asyncpg.create_pool`, enabling
+  safe operation behind PgBouncer in transaction or statement pooling mode.
+- `RAGConfig.owner_role` (`RAG_OWNER_ROLE`) and
+  `RAGGraphStore.reassign_owned_to(role)` so a subordinate batch writer that
+  provisions a realm hands object ownership back to the owning role.
+
+## 1.17.1
+
+### Changed
+
+- Packaging bump requiring `post-graph >= 1.11.0`.
+
+## 1.17.0
+
+### Fixed
+
+- **No DDL on the query path**: `initialize_schema()` creates every index and
+  optional telemetry table upfront so a non-owner role with forced row-level
+  security can retrieve without hitting PostgreSQL's `CREATE INDEX` ownership
+  check.
+- **Duck-typed pool wrappers**: `GraphRAG(..., connection=...)` now accepts any
+  pool wrapper exposing `acquire()` rather than requiring an `asyncpg.Pool`
+  subclass.
+
+## 1.16.0
+
+### Added
+
+- **Bring your own connection (`GraphRAG(..., connection=...)`)**: pass an
+  existing `asyncpg.Connection`, `asyncpg.Pool`, or pool wrapper to share pools
+  or assume per-tenant roles (`SET ROLE`) without the library taking ownership
+  of connection lifecycle.
+
+## 1.15.3
+
+### Fixed
+
+- ECT-QA period parsing now normalises months, half-years, and fiscal
+  years/quarters consistently.
+- Made answer truncation limit configurable in the evaluation harness and
+  bumped minimum `post-graph` dependency to `1.10.1`.
+
 ## 1.15.2
 
 ### Fixed

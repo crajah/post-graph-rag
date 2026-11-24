@@ -6,12 +6,12 @@ post-graph-rag stays an engine — no agent loops enter the library — but each
 feature below turns something an exploration consumer would otherwise build
 badly on top of us into one engine call.
 
-**Status: §1–§3 shipped in 1.10.0; §4 is open (task #135)** (tasks #132–#134), with the noted
+**Status: §1–§3 shipped in 1.10.0; §4 (`apply_retention` / `restore_archived`) shipped in 1.11.1** (tasks #132–#135), with the noted
 deviations closed properly: the level predicate is expression-indexed on all
 realms, level filtering runs inside the vector search (post-graph 1.4.0
 predicate pushdown), and the telemetry table lazy-creates on first write.
-Still open from §3: the paired evaluation gate before `community_levels`
-changes its default.
+Still open: the paired evaluation gates before `community_levels` changes its
+default (§3) and before retention thresholds are documented as safe defaults (§4).
 
 Build order was §1 → §2 → §3 as planned.
 

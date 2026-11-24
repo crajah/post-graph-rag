@@ -21,7 +21,7 @@ createdb mydb && psql -d mydb -c "CREATE EXTENSION vector;"
 
 Then point it at any OpenAI-compatible endpoint and run [`examples/02_supersession.py`](https://github.com/crajah/post-graph-rag/tree/main/examples): three filings arrive in order, each naming a different CFO, and you get one current answer with the other two returned as prior holders rather than as competing present-tense facts. It costs a fraction of a cent and takes about a minute.
 
-**[Read the code](https://github.com/crajah/post-graph-rag)** · **[Seven examples](https://github.com/crajah/post-graph-rag/tree/main/examples)** · **[The paper](https://arxiv.org/abs/2608.24921)** · **[post-graph, the layer underneath](https://github.com/crajah/post-graph)** · Apache 2.0
+**[Read the code](https://github.com/crajah/post-graph-rag)** · **[Runnable examples](https://github.com/crajah/post-graph-rag/tree/main/examples)** · **[MCP server (`post-graph-rag-mcp`)](https://github.com/crajah/post-graph-rag/tree/main/post-graph-rag-mcp)** · **[The paper](https://arxiv.org/abs/2608.24921)** · **[post-graph, the layer underneath](https://github.com/crajah/post-graph)** · Apache 2.0
 
 ---
 
@@ -29,7 +29,7 @@ Almost every Graph RAG system treats extracted relations as **timeless assertion
 
 Consider a corpus where one document says two people are allies and a later document says they became rivals. Both edges land in the graph. Neither carries a period, an ordering, or any notion that the second contradicts the first. Retrieval hands the model both as co-equal current facts, and it reports — correctly, given what it was given — that they are allies *and* rivals.
 
-This is not an edge case. It is the normal condition of any corpus that spans time: employment histories, org charts, contracts, case law, news archives, research literature. Facts expire. Graphs built from them usually cannot express that.
+This is not an edge case. It is the normal condition of any corpus that spans time: employment histories, org charts, contracts, case law, news archives, research literature. Later documents supersede or retire earlier claims. Graphs built from them usually cannot express that.
 
 `post-graph-rag` closes the earlier assertion instead of storing both. Indexing a trilogy of novels in publication order, it closed **13 relationships** that later books contradicted — resolving from document order alone, without the extractor supplying a single date. Run over the same corpus, LightRAG produced 1,447 relations in which those same contradictions all coexist as equally current facts, because it has no mechanism to express that one supersedes another.
 
@@ -47,7 +47,7 @@ To be precise about what is novel here, since the field moves quickly:
 
 | | GraphRAG | LightRAG 1.5.6 | Graphiti / Zep | post-graph-rag |
 | :--- | :---: | :---: | :---: | :---: |
-| Community detection + summaries | ✅ | ❌ | ✅ | ✅ |
+| Community detection + summaries | ✅ | ❌ | ❌ | ✅ |
 | Bi-temporal model (validity **and** belief time) | ❌ | ❌ | ✅ | ✅ |
 | Supersession inferred from document order | ❌ | ❌ | ❌ | ✅ |
 | Controlled predicate vocabulary | ❌ | ❌ | ❌ | ✅ |
@@ -81,7 +81,7 @@ This article walks through those mechanisms, along with entity resolution and co
 
 `gemini-3.6-flash` is a small, cheap, fast model — the gpt-4o-mini tier. It beats Zep's **gpt-4o** configuration on **every one of the six categories** and by **22.8 points overall**, and the full-context gpt-4o baseline by 33.8.
 
-The margin is widest exactly where a temporal knowledge graph is supposed to earn its keep. **Temporal-reasoning: 96.2% against 62.4%.** **Multi-session: 90.2% against 57.9%** — questions whose answer is scattered across separate conversations, the category Graphiti scores lowest on. **Knowledge-update: 94.9% against 83.3%** — telling a fact that changed from the fact it replaced.
+The margin is widest exactly where a bi-temporal graph with supersession is supposed to earn its keep. **Temporal-reasoning: 96.2% against 62.4%.** **Multi-session: 90.2% against 57.9%** — questions whose answer is scattered across separate conversations, the category Graphiti scores lowest on. **Knowledge-update: 94.9% against 83.3%** — telling a fact that changed from the fact it replaced.
 
 All of it on a laptop against local PostgreSQL. No separate memory service, no graph engine to operate.
 
@@ -92,6 +92,19 @@ The same benchmark was also run twice through the harness behind this project's 
 **Three qualifications, stated because you would find them anyway.** Zep judge with GPT-4o where this uses a three-model majority panel. The model comparison is uncontrolled in a direction that cannot be signed: their gpt-4o was the frontier tier of its generation, the flash models are the cheap tier of theirs, and roughly two years separate the two — a newer small model beating an older frontier one is routine, so no claim is made about which side the model gap favours. And one question of 500 is excluded, a session neither extraction prompt could turn into triples; the harness refuses to call a run reportable while that count is nonzero.
 
 Everything needed to reproduce this ships in the repo: the harness, the frozen configuration, the judge panel, and every failing case.
+
+### ECT-QA: earnings calls across sixteen quarters
+
+Chat memory is the forgiving register. [ECT-QA](https://arxiv.org/abs/2510.13590) is the adversarial one — earnings call transcripts where the same financial metrics are restated every quarter and only the period separates them. Scored element-wise under the protocol ECT-QA's authors use (full breakdown and ablations [below](#earnings-calls-the-adversarial-benchmark-and-how-to-score-it)):
+
+| ECT-QA, element-wise | Correct | Refusal | Incorrect |
+| :--- | ---: | ---: | ---: |
+| **post-graph-rag** · `gemini-3.6-flash` | **0.807** | 0.049 | 0.144 |
+| TG-RAG *(published)* | 0.599 | — | — |
+| LightRAG *(published)* | 0.406 | — | — |
+| GraphRAG *(published)* | 0.405 | — | — |
+
+A second judge from a different model family scores the same answers at **0.805**. *Same qualifications as LongMemEval apply, plus two specific to this comparison: their judge model is not available on our router, and their verbatim rubric is truncated in the public HTML so ours reproduces their described categories rather than their text; their figures are on their corpus slice while ours is 78 questions over 6 companies.*
 
 ---
 ## What you can build with it
@@ -107,7 +120,7 @@ The temporal model is not a feature looking for a use case. These are the shapes
 **Anywhere the graph must live beside your data.** One PostgreSQL instance means a transaction can span your graph and your application tables — something no external graph engine can offer, at any price.
 
 ```python
-from post_graph_rag import GraphRAG, RAGConfig
+from post_graph_rag import GraphRAG, RAGConfig, DocumentMetadata
 
 rag = GraphRAG(RAGConfig(realm="my_app", schema_per_realm=True))
 await rag.initialize()
@@ -118,7 +131,15 @@ await rag.index_document(text, metadata=DocumentMetadata(
 answer = await rag.query("What changed since last quarter?")
 ```
 
-`createdb`, `CREATE EXTENSION vector`, `pip install post-graph-rag`. That is the whole dependency list — plus any OpenAI-compatible endpoint, including a local one.
+`createdb`, `CREATE EXTENSION vector`, `pip install post-graph-rag`. That is the whole dependency list — plus any OpenAI-compatible endpoint, including a local one. Don't run PostgreSQL locally? See the [60-second Neon & Supabase quickstart](https://github.com/crajah/post-graph-rag/blob/main/examples/00_neon_supabase_quickstart.md).
+
+### Use in Claude Code, Cursor & MCP (`post-graph-rag-mcp`)
+
+[`post-graph-rag-mcp`](https://github.com/crajah/post-graph-rag/tree/main/post-graph-rag-mcp) packages the engine as a Model Context Protocol server (`stdio` and Streamable HTTP) with 7 tools (`remember`, `recall`, `recall_as_of`, `trace_history`, `ingest_documents`, `changes_since`, `configure_memory_rules`), local ONNX embeddings via `fastembed`, and an optional embedded PostgreSQL 16 + `pgvector` bundle (`[embedded,local-embed]` on Python 3.12) — zero external services and zero sidecar LLM API keys required on the interactive IDE path:
+
+```bash
+claude mcp add post-graph-rag -- uvx --python 3.12 --from "post-graph-rag-mcp[embedded,local-embed]" post-graph-rag-mcp
+```
 
 ---
 
@@ -291,17 +312,26 @@ Result: **12.7 minutes → 3.7 minutes** on the same corpus, producing an equiva
 
 ## Temporal evolution
 
-Corpora change. Documents get revised. Facts expire. Two characters are allies in one book and enemies in the next.
+Corpora change. Documents get revised. Later documents supersede earlier claims. Two characters are allies in one book and enemies in the next.
 
-**Re-indexing.** Documents carry a stable key (source, falling back to title) and each chunk a content hash. Re-indexing skips unchanged content, replaces changed content, and deletes removed documents — rather than appending a second copy, which previously duplicated chunks and inflated relation weight.
+**Re-indexing.** Documents carry a stable key (combining `source` and `document`) and each chunk a content hash. Re-indexing skips unchanged content, replaces changed content, and deletes removed documents — rather than appending a second copy, which previously duplicated chunks and inflated relation weight.
 
 **Dormancy.** Entities orphaned by a deleted document are marked `dormant_since` rather than deleted, excluded from retrieval and community rebuilds, and revived if a later document mentions them. Deleting them would discard exactly the history the audit trail exists to preserve.
 
-**Supersession.** Declaring mutually exclusive predicate groups lets a later assertion close an earlier one:
+**Supersession.** Three deterministic write-time mechanisms close earlier edges from document order alone, without asking the extractor for dates:
 
 ```python
-RAGConfig(exclusive_predicate_groups=[{"friend_of", "enemy_of", "rival_of"}])
+RAGConfig(
+    # Mutually exclusive predicates between the same (subject, object) pair
+    exclusive_predicate_groups=[{"friend_of", "enemy_of", "rival_of"}],
+    # Single-valued predicates per subject: a new object closes the prior one (1.20.0)
+    functional_predicates={"uses_auth", "cfo_of", "lives_in"},
+)
 ```
+
+- **Exclusive predicate groups** close an earlier edge between the same `(subject, object)` pair when a conflicting predicate arrives (`friend_of` → `enemy_of`).
+- **Functional predicates** (`1.20.0`) close any active positive edge sharing `(subject, predicate)` when a new object arrives (`AuthService uses_auth Clerk` → `AuthService uses_auth BetterAuth`), without needing to enumerate pairwise opposites.
+- **Polarity flips & belief epochs** (`1.20.0`): flipping a relation's polarity (`negated=False` → `negated=True`) closes the prior edge, and reverting a prior choice (`Clerk → BetterAuth → Clerk`) creates a fresh belief epoch rather than mutating the closed edge — keeping historical `as_believed_at` audit queries exact.
 
 The superseded edge is hidden from retrieval by default and recoverable with `include_superseded=True`. The design choice that matters: **this resolves from document order, not from extracted dates.** Asking a model to reliably state when a relationship began is asking for precisely the thing models do least reliably — see the next section.
 
@@ -309,10 +339,12 @@ Tested on a genuinely temporal corpus: the d'Artagnan trilogy, three novels foll
 
 Two findings worth carrying over to your own corpus. First, this worked with **no dates whatsoever** from the extractor on those pairs; publication order alone was sufficient — which is precisely why the design does not depend on models extracting dates. Second, density matters more than volume: an earlier run over the same novels sampled at roughly 5% fired zero times, because no entity pair was described twice. Supersession has nothing to act on until a relationship is mentioned more than once.
 
-**Validity intervals**, where the text actually states them:
+**Bi-temporal queries and bidirectional walks:**
 
 ```python
-QueryParam(as_of="1825")
+QueryParam(as_of="1825")                                # valid time: what held in 1825
+QueryParam(as_believed_at="2026-03-01T00:00:00+00:00")  # belief time: what the graph knew then
+QueryParam(direction="both")                            # walk inbound and outbound edges (1.20.0)
 ```
 
 The critical semantic: a relation with **no** stated period matches every `as_of` date. Silence about when a fact held means it held throughout — so a corpus that never mentions dates is entirely unaffected by as-of filtering. On a 701-relation corpus, 685 relations carried no stated period and `as_of` filtering correctly left them all in place.
@@ -751,7 +783,7 @@ with the engine supplying structure, coverage and change, and nothing else.
 
 **The retrieval quota is a knob, not a solved value.** Adding the relation-similarity channel is unambiguous — the on-topic share rises sharply on both models tested. How much of the context budget it should claim is not: on two graphs built from the same corpus by different extraction models, the blind comparison pointed in opposite directions overall, and only agreed once split by question shape. Two models and ten questions is a small basis for a default. The harness ships so the value can be measured per corpus rather than inherited.
 
-**Supersession needs corpus density to fire.** It resolves only when the same ordered entity pair is characterised twice with conflicting predicates. On a sparse 5% sample of each novel that never happened and the mechanism sat idle; at full density it fired 13 times. A corpus that mentions each relationship exactly once has nothing to supersede — though it also has no contradiction to get wrong.
+**Supersession needs corpus density to fire.** `exclusive_predicate_groups` fires when the same ordered entity pair is characterised twice with conflicting predicates; `functional_predicates` (1.20.0) fires when the same `(subject, predicate)` receives a new object. On a sparse 5% sample of each novel, pairs never recurred and the mechanism sat idle; at full density it fired 13 times. A corpus that mentions each relationship exactly once has nothing to supersede — though it also has no contradiction to get wrong.
 
 **Indexing is slower than LightRAG's, and deliberately so.** Graph writes are serialised because entity resolution is a read-modify-write against a uniqueness index, and concurrent writers split the entities that resolution exists to merge. That serialisation is what makes `Babbage` and `Charles Babbage` reliably converge — the density advantage in every table above depends on it. The gap is register-dependent, narrowing from 2× on short encyclopedic documents to 1.37× on long prose, and parallelising across documents would close much of the remainder without touching the write path.
 
@@ -785,8 +817,8 @@ That reports supersessions, validity intervals, dormant entities and as-of retri
 
 The architecture and evaluation methodology are written up at [arXiv:2608.24921](https://arxiv.org/abs/2608.24921). That version covers the design, the extraction-time gates, the temporal model and the LightRAG comparison; a revision adding the LongMemEval and ECT-QA evaluations on this page is in preparation.
 
-**GitHub:** https://github.com/crajah/post-graph-rag · **PyPI:** `pip install post-graph-rag`
+**GitHub:** https://github.com/crajah/post-graph-rag · **PyPI:** `pip install post-graph-rag` · **MCP Server:** `pip install post-graph-rag-mcp`
 
 Apache 2.0 licensed, built on PostgreSQL and pgvector, with multi-tenant realms, audit tables and append-only history — because a knowledge graph you cannot isolate, roll back or explain is not one you can put into production.
 
-If there is one idea worth taking away independent of this library: **a graph whose edges are free text and whose facts never expire is a graph you can read but not query.** Both are fixable, and neither fix requires the model to do anything it is unreliable at.
+If there is one idea worth taking away independent of this library: **a graph whose edges are free text and whose superseded facts stay active forever is a graph you can read but not query.** Both are fixable, and neither fix requires the model to do anything it is unreliable at.

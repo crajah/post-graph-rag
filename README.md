@@ -79,7 +79,7 @@ answer = await rag.query("Who is the CFO of Calder Industries?")
 # Priya Nair — the earlier fact is closed, not competing
 ```
 
-**[→ Seven runnable examples](examples/)** · [Neon & Supabase quickstart](examples/00_neon_supabase_quickstart.md) · [Full installation](#install) · [Configuration reference](#config)
+**[→ Runnable examples](examples/)** · [Neon & Supabase quickstart](examples/00_neon_supabase_quickstart.md) · [Full installation](#install) · [Configuration reference](#config)
 
 ---
 
@@ -380,6 +380,27 @@ rag = GraphRAG(config, community_detector=my_detector)   # (nodes, edges) -> {no
 The same triple extracted from several chunks is one edge whose `weight`
 increments, not several edges. Weight then breaks ties when ranking relations.
 
+### Supersession, belief epochs, and bi-temporal recall (1.20.0)
+
+Later documents close superseded facts deterministically without requiring the
+extractor to invent dates:
+
+- **Exclusive predicate groups** (`exclusive_predicate_groups`): when a new
+  predicate arrives between the same `(subject, object)` pair in a declared
+  group (e.g. `{"ally_of", "rival_of"}`), active conflicting edges are closed.
+- **Functional predicates** (`functional_predicates`): single-valued predicates
+  per subject (e.g. `uses_auth`, `cfo_of`, `lives_in`). Asserting a new object
+  closes any active positive edge sharing `(subject, predicate)` with a
+  different object.
+- **Polarity flips & multi-epoch reverts**: flipping `negated=False` to
+  `negated=True` closes the prior edge; reverting a decision (`Clerk →
+  BetterAuth → Clerk`) opens a fresh belief epoch instead of mutating the
+  retired edge, keeping historical `as_believed_at` audit queries exact.
+- **Bi-temporal & bidirectional retrieval**: `QueryParam` supports `as_of`
+  (valid time), `as_believed_at` (belief time), `include_superseded`, and
+  `direction="out" | "in" | "both"` so reverse lookups (*"where was Clerk
+  used?"*) traverse inbound edges as cleanly as outbound ones.
+
 ---
 
 ## 🧭 Exploration Support (1.10.0)
@@ -458,7 +479,7 @@ Three things in that diagram are the whole argument: **supersession** at write t
 
 ## 🧪 Runnable Examples
 
-Seven scripts in [`examples/`](examples/), each one capability, all runnable:
+Seven Python scripts plus a 60-second cloud database guide in [`examples/`](examples/), each focused on one capability:
 
 ```bash
 export OPENAI_API_KEY=...  OPENAI_API_BASE=...  POSTGRES_URI=...
@@ -518,6 +539,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ```python
 import asyncio
+import os
 from post_graph_rag import GraphRAG, RAGConfig, DocumentMetadata
 
 async def main():
@@ -642,9 +664,23 @@ realms indexed on the old scheme.
 | `realm` | `RAG_REALM` | `default` | Multi-tenant graph namespace |
 | `space` | `RAG_SPACE` | `default` | Sub-grouping within a realm (`production`, `sandbox`, …) |
 | `schema_per_realm` | `RAG_SCHEMA_PER_REALM` | `0` | Give each realm its own PostgreSQL schema. Recommended — see below |
+| `statement_cache_size` | `RAG_STATEMENT_CACHE_SIZE` | `None` | Forwarded to `asyncpg`; set `0` behind PgBouncer / Neon `-pooler` / Supabase transaction pooler |
+| `owner_role` | `RAG_OWNER_ROLE` | `None` | Role that `initialize_schema()` hands database objects over to via `REASSIGN OWNED` |
 | `embed_relations` | `RAG_EMBED_RELATIONS` | `1` | Embed relation edges so retrieval can find them by similarity as well as by traversal. Costs one embedding call per distinct triple at index time |
-| `relation_seed_quota` | `RAG_RELATION_SEED_QUOTA` | `0.5` | Share of relation slots reserved for the similarity channel. `0` disables it |
+| `merge_strategy` | `RAG_MERGE_STRATEGY` | `rrf` | Channel fusion strategy: `rrf` (Reciprocal Rank Fusion across traversal, relation-embedding, and lexical channels) or `quota` |
+| `lexical_search` | `RAG_LEXICAL_SEARCH` | `1` | Enable PostgreSQL `tsvector` GIN full-text search as the third retrieval channel |
+| `max_hops` | `RAG_MAX_HOPS` | `2` | Graph traversal depth from matched entities |
+| `relation_seed_quota` | `RAG_RELATION_SEED_QUOTA` | `0.5` | Share of relation slots reserved for the similarity channel when `merge_strategy="quota"`. `0` disables it |
+| `mmr_enabled` / `node_distance_rerank` | `RAG_MMR` / `RAG_NODE_DISTANCE_RERANK` | `0` / `0` | Optional post-fusion MMR diversification and graph-distance reranking |
 | `allow_embedding_fallback` | `RAG_ALLOW_EMBEDDING_FALLBACK` | `0` | Use local/deterministic vectors when the embedding API fails |
+| `enforce_embedding_model_match` | `RAG_ENFORCE_EMBEDDING_MODEL` | `1` | Record `(embedding_model, embedding_dim)` in `realm_metadata` and raise `SchemaError` if a realm is reopened under a different model of the same width |
+| `exclusive_predicate_groups` | — | `[]` | Mutually exclusive predicate sets per `(subject, object)` pair (e.g. `[{"ally_of", "rival_of"}]`) |
+| `functional_predicates` | `RAG_FUNCTIONAL_PREDICATES` | `set()` | Single-valued predicates per subject (e.g. `uses_auth`, `cfo_of`); a new object supersedes prior active edges |
+| `contradiction_detection` | `RAG_CONTRADICTION_DETECTION` | `0` | Optional LLM check for residual contradictions not covered by declarative rules |
+| `include_superseded` | `RAG_INCLUDE_SUPERSEDED` | `0` | Include superseded edges in default retrieval (off by default) |
+| `extract_validity` | `RAG_EXTRACT_VALIDITY` | `1` | Extract `valid_from` / `valid_to` intervals when stated in text |
+| `record_retrieval_events` | `RAG_RECORD_RETRIEVAL_EVENTS` | `0` | Opt-in hash-only retrieval telemetry for `coverage()`, `dark_entities()`, and `apply_retention()` |
+| `community_levels` | `RAG_COMMUNITY_LEVELS` | `1` | Levels in the recursive Leiden community hierarchy (`> 1` builds a nested topic tree) |
 | `fallback_models` | `RAG_FALLBACK_MODELS` | — | Comma-separated models to fail over to when the primary is rate-limited or out of credits |
 | `max_retries` | `RAG_MAX_RETRIES` | `5` | Attempts per model before moving to the next |
 | `gleaning_passes` | `RAG_GLEANING_PASSES` | `1` | Extra "what did you miss?" extraction passes. `0` halves LLM cost at the price of recall |
@@ -760,11 +796,17 @@ an embedding failure raises `EmbeddingError`.
 ### `GraphRAG`
 The main orchestrator class for indexing and querying.
 
-- `await initialize()`: Connects to PostgreSQL and creates the graph tables (`documents`, `entities`, `relations`, `doc_mentions`). Raises `SchemaError` if pgvector is unavailable or an existing table's embedding width disagrees with `embedding_dim`.
-- `await index_document(text, metadata=None, space=None) -> Dict[str, Any]`: Embeds the chunk, extracts entities/triples via the LLM, resolves entities by name, and writes vertices, `relations` and `doc_mentions` edges. Raises rather than writing placeholder structure if extraction fails. Returns counts plus `document_id` and `metadata`.
+- `await initialize()`: Connects to PostgreSQL and creates the graph tables (`documents`, `entities`, `relations`, `doc_mentions`, `communities`, `community_members`, `community_children`, `realm_metadata`). Raises `SchemaError` if pgvector is unavailable, an existing table's embedding width disagrees with `embedding_dim`, or (when `enforce_embedding_model_match=True`) the realm was indexed with a different embedding model.
+- `await index_document(text, metadata=None, space=None, context=None, extraction=None) -> Dict[str, Any]`: Embeds the chunk, extracts entities/triples via the LLM (or accepts a caller-supplied `ExtractionResult` via `extraction=` with zero LLM calls), resolves entities by name, applies supersession rules, and writes vertices, `relations` and `doc_mentions` edges. Raises rather than writing placeholder structure if extraction fails. Returns counts plus `document_id` and `metadata`.
+- `await index_text(text, metadata=None, space=None, context=None) -> List[Dict[str, Any]]`: Chunks a document with overlap, threads `DocumentContext` across batches, and indexes each chunk.
 - `await query(question, param=None, top_k=None)`: Retrieves and synthesizes an answer. Returns `question`, `answer`, `mode`, `keywords`, `retrieved_documents`, `retrieved_entities`, `retrieved_graph_triples`, `references`. With `QueryParam(stream=True)` returns an async iterator of content chunks instead.
 - `await query_data(question, param=None) -> Dict[str, Any]`: Structured retrieval with no synthesis — returns `entities`, `relationships`, `chunks`, `references`.
-- `await close()`: Closes database connection pools.
+- `await retract_relations(edge_ids, superseded_by_edge_id, space=None) -> List[str]`: Explicitly closes existing relation edges (`superseded_by` + `t_expired`) for host-assisted or application-level retraction.
+- `await active_relations_for_entities(entity_names, space=None, exclude_edge_ids=None, limit_per_entity=5)`: Returns active outgoing relations for the named subjects so callers can inspect live assertions before superseding them.
+- `set_functional_predicates(preds: Set[str])`: Updates the active set of functional predicates at runtime.
+- `await watermark(space=None)`: Returns the current database-clock watermark for `changes_since()`.
+- `await apply_retention(threshold=0.1, dry_run=True, space=None)` / `await restore_archived(entity_ids, space=None)`: Importance-scored reversible archiving of low-value entities (requires `record_retrieval_events=True`).
+- `await close()`: Closes database connection pools opened by the engine (caller-supplied connections are left open).
 
 #### Per-document views (1.13.0)
 
@@ -787,6 +829,13 @@ These refuse `space="__all__"`: they resolve a caller-supplied document key, and
 - `mode`: one of `mix`, `local`, `global`, `hybrid`, `naive`, `bypass`. An unknown mode raises `ValueError`.
 - `top_k`, `max_total_tokens`, `max_entity_tokens`, `max_relation_tokens`, `response_type`
   - The three token budgets default to `None` — **unlimited** — as of 1.11.1: everything retrieved reaches the model. Set an integer to cap context for cost or for a model with a small window.
+- `as_of`: valid-time filter (`YYYY`, `YYYY-MM`, or `YYYY-MM-DD`) — returns relations whose stated validity covers that date (undated relations always qualify).
+- `as_believed_at`: belief-time ISO-8601 timestamp — reconstructs what the graph knew at that moment (`t_created <= T` and `t_expired IS NULL OR t_expired > T`).
+- `include_superseded`: override `RAGConfig.include_superseded` per query (e.g. `True` for lineage/history inspection).
+- `max_hops`: override `RAGConfig.max_hops` per query.
+- `direction`: graph walk direction — `"out"` (default), `"in"`, or `"both"` (added in 1.20.0).
+- `community_level`: restrict `global` community search to one level of the topic tree.
+- `subqueries`: optional list of sub-questions to retrieve and fuse alongside the main question.
 - `stream`: return an async iterator of tokens instead of a dict.
 - `only_need_context`: return retrieval output without calling the LLM.
 - `space`: restrict retrieval to one space; `__all__` queries across all spaces.
@@ -826,9 +875,10 @@ Database layer wrapping [`post-graph`](https://github.com/crajah/post-graph).
 - `add_doc_mention(doc_vertex, entity_vertex, space=None)`: Links a chunk to an entity it mentions.
 - `search_similar_entities(query_vec, top_k, space=None)` / `search_similar_documents(...)`: pgvector HNSW similarity search.
 - `search_similar_relations(query_vec, top_k, space=None)`: Semantic search over relation edges. Returns `[]` unless `embed_relations` is enabled.
-- `get_neighbors(entity_id, space=None, include_dormant=False)`: 1-hop outgoing relations, scoped to `space`.
+- `get_neighbors(entity_id, space=None, include_dormant=False, direction="out")`: 1-hop relations (`"out"`, `"in"`, or `"both"`), scoped to `space`.
 - `get_all_relations(limit, space=None, include_dormant=False)`: Relations with their endpoint vertices.
-- `get_neighborhood(entity_id, max_hops=1, ...)` / `get_relations_by_ids(...)` / `search_relations_text(...)`: the other relation read paths. All take `include_dormant=False`, filtered in SQL, so a retired relation cannot reach an answer through any of them.
+- `get_neighborhood(entity_id, max_hops=1, ..., direction="out")` / `get_relations_by_ids(...)` / `search_relations_text(...)`: the other relation read paths. All take `include_dormant=False`, filtered in SQL, so a retired relation cannot reach an answer through any of them.
+- `supersede_conflicting(...)` / `supersede_functional(...)` / `supersede_opposite_polarity(...)` / `mark_superseded(...)` / `get_active_subject_relations(...)`: write-time supersession and active-edge inspection primitives.
 - `document_stats(...)` / `documents_stats(...)` / `document_graph(...)` / `sweep_orphaned_relations(space=None)`: as described under `GraphRAG` above.
 
 ---
@@ -839,10 +889,13 @@ Database layer wrapping [`post-graph`](https://github.com/crajah/post-graph).
 
 | Table Name | Type | Key Columns | Description |
 | :--- | :--- | :--- | :--- |
-| `{realm}_documents` | Vertex Table | `id`, `payload`, `embedding` (`vector`) | Stores raw text chunks and `DocumentMetadata` payloads |
-| `{realm}_entities` | Vertex Table | `id`, `payload`, `embedding` (`vector`) | Canonical entity nodes (`name`, `type`, `description`) |
-| `{realm}_relations` | Edge Table | `from_id`, `to_id`, `relation_type`, `payload` | Directed edges representing entity-to-entity triples |
-| `{realm}_doc_mentions` | Edge Table | `from_id`, `to_id`, `relation_type` | Directed edges connecting document chunks to mentioned entities |
+| `documents` | Vertex Table | `id`, `payload`, `embedding` (`vector`) | Stores raw text chunks and `DocumentMetadata` payloads |
+| `entities` | Vertex Table | `id`, `payload`, `embedding` (`vector`) | Canonical entity nodes (`name`, `type`, `description`, `aliases`) |
+| `communities` | Vertex Table | `id`, `payload`, `embedding` (`vector`) | Leiden community summary reports with promoted `level` |
+| `realm_metadata` | Vertex Table | `id`, `payload` | Realm-level metadata including `(embedding_model, embedding_dim)` fingerprint |
+| `relations` | Edge Table | `from_id`, `to_id`, `relation_type`, `payload`, `embedding` | Directed entity-to-entity triples with bi-temporal & supersession stamps |
+| `doc_mentions` | Edge Table | `from_id`, `to_id`, `relation_type` | Directed edges connecting document chunks to mentioned entities |
+| `community_members` / `community_children` | Edge Tables | `from_id`, `to_id`, `relation_type` | Links entities to leaf communities and child communities to parent themes |
 | `{table}_audit` | Audit Table | `audit_id`, `action`, `changed_by`, `changed_at` | Automatic shadow audit logging for all graph mutations |
 | `{table}_data` | History Table | `data_id`, `payload`, `timestamp`, `embedding` | Append-only historical records for vertices and edges |
 
