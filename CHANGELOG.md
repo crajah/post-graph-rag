@@ -3,6 +3,15 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.20.1
+
+### Changed
+
+- Require `post-graph >= 1.15.0`, which replaces the unindexed `SELECT MAX(id)`
+  sequence sync on explicit-ID `add_vertex` / `add_edge` writes with an `O(1)`
+  monotonic `pg_sequence_last_value` advance (eliminating full-table scans and
+  space-scoped RLS sequence rewinds; `crajah/post-graph#4`).
+
 ## 1.20.0
 
 ### Added
