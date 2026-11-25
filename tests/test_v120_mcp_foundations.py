@@ -64,8 +64,15 @@ def _single_triple(
 
 
 class TestVersionAndConfig:
-    def test_package_version_is_1_20_0(self):
-        assert post_graph_rag.__version__ == "1.20.0"
+    def test_package_version_at_least_1_20_and_matches_pyproject(self):
+        import pathlib
+        import tomllib
+
+        pyproject = pathlib.Path(__file__).resolve().parents[1] / "pyproject.toml"
+        expected = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+        assert post_graph_rag.__version__ == expected
+        parts = tuple(int(p) for p in post_graph_rag.__version__.split(".")[:2])
+        assert parts >= (1, 20)
         assert normalise_predicate("has_role") == "role"
 
     def test_functional_predicates_defaults_and_env(self, monkeypatch):
