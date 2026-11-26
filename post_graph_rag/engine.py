@@ -925,7 +925,11 @@ class GraphRAG:
                             old_to_id = c_info.get("to_id")
                             old_obj_v = (
                                 await self.store.client.get_vertex(
-                                    "entities", realm=self.store.realm, vertex_id=str(old_to_id)
+                                    "entities",
+                                    realm=self.store.realm,
+                                    vertex_id=str(old_to_id),
+                                    payload_fields=["name"],
+                                    include_embedding=False,
                                 )
                                 if old_to_id else None
                             )

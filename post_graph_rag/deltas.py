@@ -93,10 +93,10 @@ class DeltaReader:
             if not summary:
                 delta.new_relations = await c.find_edges(
                     "relations", realm=realm, space=space, where=new_w,
-                    order_by="t_created", limit=limit)
+                    order_by="t_created", limit=limit, include_embedding=False)
                 delta.superseded_relations = await c.find_edges(
                     "relations", realm=realm, space=space, where=sup_w,
-                    order_by="t_expired", limit=limit)
+                    order_by="t_expired", limit=limit, include_embedding=False)
 
         if "entities" in include:
             # Entities have no belief stamp of their own; creation is the row
@@ -107,7 +107,7 @@ class DeltaReader:
             if not summary:
                 delta.dormant_entities = await c.find_vertices(
                     "entities", realm=realm, space=space, where=dor_w,
-                    order_by="dormant_since", limit=limit)
+                    order_by="dormant_since", limit=limit, include_embedding=False)
             new_e, revived = await self.store.entities_changed_since(
                 since, space=space, limit=limit, count_only=summary)
             if summary:

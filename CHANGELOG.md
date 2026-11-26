@@ -3,6 +3,21 @@
 Releases before 1.13.0 are recorded in the git history and in the GitHub
 releases page; this file starts where the first entry was written.
 
+## 1.20.2
+
+### Changed
+
+- Require `post-graph >= 1.16.0`, eliminating unconditional `to_jsonb(t)` TOAST
+  payload decompression and full-row JSONB serialization on reads (`crajah/post-graph#5`)
+  and enabling server-side JSONB key and vector projection (`crajah/post-graph#6`).
+- Adopt `include_embedding=False` and `payload_fields` across `RAGGraphStore`,
+  `GraphRAG`, and `CorpusDelta` read/search/traversal paths (`search_similar_entities`,
+  `search_similar_documents`, `search_similar_communities`, `search_similar_relations`,
+  `documents_stats`, `supersede_*`, `get_active_subject_relations`, `get_neighbors`,
+  `get_relations_by_ids`, `community_children`, and delta feeds) so unused vector
+  columns and unrequested chunk/entity blobs are omitted inside PostgreSQL before
+  wire transfer.
+
 ## 1.20.1
 
 ### Changed

@@ -240,3 +240,42 @@ async def test_fts_index_still_raises_on_a_real_failure():
     with pytest.raises(Exception, match="permission denied"):
         await store._ensure_relation_fts_index()
     assert not store._fts_index_ready
+
+
+@pytest.mark.asyncio
+async def test_read_and_search_paths_omit_unused_embeddings_and_project_doc_keys(rag_factory):
+    """Read, search, and document-discovery paths must omit vector columns on
+    returned Vertex/Edge objects and discover doc_keys without transferring chunk text."""
+    rag = await rag_factory(embed_relations=True)
+    store = rag.store
+    a = await store.upsert_entity("Ada Lovelace", "Person", "mathematician", fake_embed("ada"))
+    b = await store.upsert_entity("Analytical Engine", "System", "computer", fake_embed("engine"))
+    doc = await store.add_document(
+        "Ada Lovelace wrote notes on the Analytical Engine.",
+        fake_embed("ada engine"),
+        metadata={"doc_key": "doc_ada", "paragraph": 0},
+    )
+    await store.add_doc_mention(doc, a)
+    await store.add_doc_mention(doc, b)
+    rel = await store.add_relation(
+        a, b, "programmed", "wrote algorithm", embedding=fake_embed("programmed"), source_chunk=doc.id
+    )
+
+    ent_hits = await store.search_similar_entities(fake_embed("ada"), top_k=2)
+    assert ent_hits and all(v.embedding is None for v, _ in ent_hits)
+
+    doc_hits = await store.search_similar_documents(fake_embed("ada engine"), top_k=2)
+    assert doc_hits and all(v.embedding is None for v, _ in doc_hits)
+
+    rel_hits = await store.search_similar_relations(fake_embed("programmed"), top_k=2)
+    assert rel_hits and all(e.embedding is None for e, _ in rel_hits)
+
+    found = await store.find_entity_by_name("Ada Lovelace")
+    assert found is not None and found.embedding is None
+
+    from_v, to_v = await store.get_relation_endpoints(rel)
+    assert from_v is not None and from_v.embedding is None
+    assert to_v is not None and to_v.embedding is None
+
+    stats = await store.documents_stats()
+    assert "doc_ada" in stats and stats["doc_ada"].chunks == 1 and stats["doc_ada"].relations == 1

@@ -366,6 +366,7 @@ class RAGGraphStore:
             realm=self.realm,
             space="_system",
             filters={"key": "embedding_fingerprint"},
+            include_embedding=False,
         )
         fingerprint_payload = {
             "key": "embedding_fingerprint",
@@ -797,7 +798,12 @@ class RAGGraphStore:
             )
         if not rows:
             return None
-        return await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(rows[0]["id"]))
+        return await self.client.get_vertex(
+            "entities",
+            realm=self.realm,
+            vertex_id=str(rows[0]["id"]),
+            include_embedding=False,
+        )
 
     async def find_entity(self, name: str, space: Optional[str] = None) -> Optional[Vertex]:
         """Alias for :meth:`find_entity_by_name`."""
@@ -1236,15 +1242,24 @@ class RAGGraphStore:
             return []
         if include_dormant:
             return await self.client.vector_search_edges(
-                "relations", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+                "relations",
+                realm=self.realm,
+                space=space,
+                query_vector=query_vec,
+                top_k=top_k,
+                include_embedding=False,
             )
         # The edge vector search takes no predicate, so over-fetch and drop the
         # retired rows rather than returning them. Widened by a fixed factor so
         # a handful of dormant neighbours cannot starve the channel; a caller
         # asking for k still gets at most k.
         hits = await self.client.vector_search_edges(
-            "relations", realm=self.realm, space=space, query_vector=query_vec,
+            "relations",
+            realm=self.realm,
+            space=space,
+            query_vector=query_vec,
             top_k=max(top_k * 4, top_k + 20),
+            include_embedding=False,
         )
         kept = [(e, d) for e, d in hits if not (e.payload or {}).get("dormant_since")]
         return kept[:top_k]
@@ -1352,7 +1367,13 @@ class RAGGraphStore:
         if not candidates:
             return []
 
-        subj_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(from_id))
+        subj_v = await self.client.get_vertex(
+            "entities",
+            realm=self.realm,
+            vertex_id=str(from_id),
+            payload_fields=["name"],
+            include_embedding=False,
+        )
         subj_name = (subj_v.payload or {}).get("name", str(from_id)) if subj_v else str(from_id)
         closed = set(
             await self.mark_superseded(
@@ -1413,7 +1434,13 @@ class RAGGraphStore:
         if not candidates:
             return []
 
-        subj_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(from_id))
+        subj_v = await self.client.get_vertex(
+            "entities",
+            realm=self.realm,
+            vertex_id=str(from_id),
+            payload_fields=["name"],
+            include_embedding=False,
+        )
         subj_name = (subj_v.payload or {}).get("name", str(from_id)) if subj_v else str(from_id)
         closed = set(
             await self.mark_superseded(
@@ -1444,7 +1471,13 @@ class RAGGraphStore:
         if limit <= 0:
             return []
         target_space = space or self.space
-        subj_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=str(from_id))
+        subj_v = await self.client.get_vertex(
+            "entities",
+            realm=self.realm,
+            vertex_id=str(from_id),
+            payload_fields=["name"],
+            include_embedding=False,
+        )
         if subj_v is None:
             return []
         subj_name = (subj_v.payload or {}).get("name", str(from_id))
@@ -1773,8 +1806,13 @@ class RAGGraphStore:
         """
         where = [("level", "=", int(level))] if level is not None else None
         return await self.client.vector_search(
-            "communities", realm=self.realm, space=space, query_vector=query_vec,
-            top_k=top_k, where=where
+            "communities",
+            realm=self.realm,
+            space=space,
+            query_vector=query_vec,
+            top_k=top_k,
+            where=where,
+            include_embedding=False,
         )
 
     async def latest_graph_write(self, space: Optional[str] = None) -> Optional[str]:
@@ -1822,14 +1860,24 @@ class RAGGraphStore:
     async def communities_at_level(self, level: int, space: Optional[str] = None):
         """Community vertices at one hierarchy level, via an indexed predicate."""
         return await self.client.find_vertices(
-            "communities", realm=self.realm, space=space or self.space,
-            where=[("level", "=", level)])
+            "communities",
+            realm=self.realm,
+            space=space or self.space,
+            where=[("level", "=", level)],
+            include_embedding=False,
+        )
 
     async def community_children(self, community_id: str,
                                  space: Optional[str] = None) -> List[str]:
         edges = await self.client.find_edges(
-            "community_children", realm=self.realm, space=space or self.space,
-            filters={}, relation_type="has_child")
+            "community_children",
+            realm=self.realm,
+            space=space or self.space,
+            filters={},
+            relation_type="has_child",
+            payload_fields=[],
+            include_embedding=False,
+        )
         return [e.to_id for e in edges if str(e.from_id) == str(community_id)]
 
     async def entity_retention_stats(self, space: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -2124,20 +2172,34 @@ class RAGGraphStore:
         if self.config.exclude_dormant_entities:
             where.append(("dormant_since", "is_null", None))
         return await self.client.vector_search(
-            "entities", realm=self.realm, space=space, query_vector=query_vec,
-            top_k=top_k, where=where
+            "entities",
+            realm=self.realm,
+            space=space,
+            query_vector=query_vec,
+            top_k=top_k,
+            where=where,
+            include_embedding=False,
         )
 
     async def search_similar_documents(self, query_vec: List[float], top_k: int = 5, space: Optional[str] = None) -> List[Tuple[Vertex, float]]:
         """Vector similarity search over document vertices, optionally scoped by space."""
         return await self.client.vector_search(
-            "documents", realm=self.realm, space=space, query_vector=query_vec, top_k=top_k
+            "documents",
+            realm=self.realm,
+            space=space,
+            query_vector=query_vec,
+            top_k=top_k,
+            include_embedding=False,
         )
 
     async def get_relation_endpoints(self, edge: Edge) -> Tuple[Optional[Vertex], Optional[Vertex]]:
         """Resolve the source and target entity vertices of a relation edge."""
-        from_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=edge.from_id)
-        to_v = await self.client.get_vertex("entities", realm=self.realm, vertex_id=edge.to_id)
+        from_v = await self.client.get_vertex(
+            "entities", realm=self.realm, vertex_id=edge.from_id, include_embedding=False
+        )
+        to_v = await self.client.get_vertex(
+            "entities", realm=self.realm, vertex_id=edge.to_id, include_embedding=False
+        )
         return from_v, to_v
 
     async def get_neighbors(
@@ -2156,7 +2218,13 @@ class RAGGraphStore:
         """
         if direction not in ("out", "in", "both"):
             raise ValueError(f"direction must be 'out', 'in', or 'both', not {direction!r}")
-        vertex = await self.client.get_vertex("entities", realm=self.realm, vertex_id=entity_id)
+        vertex = await self.client.get_vertex(
+            "entities",
+            realm=self.realm,
+            vertex_id=entity_id,
+            payload_fields=[],
+            include_embedding=False,
+        )
         if not vertex:
             return []
         raw_neighbors = await self.client.get_neighbors(
@@ -2214,7 +2282,9 @@ class RAGGraphStore:
             raise ValueError(f"direction must be 'out', 'in', or 'both', not {direction!r}")
 
         if max_hops <= 1:
-            anchor = await self.client.get_vertex("entities", realm=self.realm, vertex_id=entity_id)
+            anchor = await self.client.get_vertex(
+                "entities", realm=self.realm, vertex_id=entity_id, include_embedding=False
+            )
             if anchor is None:
                 return []
             out_1hop: List[Tuple[Edge, Vertex, Vertex, int]] = []
@@ -2295,7 +2365,8 @@ class RAGGraphStore:
         ent_ref = self.client._get_table_ref("entities", self.realm)
         dormant_sql = "" if include_dormant else " AND " + _not_dormant()
         rows = await self.client._fetch(
-            f"SELECT * FROM {rel_ref} WHERE realm = $1 AND id = ANY($2::bigint[])"
+            f"SELECT id, realm, space, from_id, to_id, relation_type, payload, created_at, updated_at "
+            f"FROM {rel_ref} WHERE realm = $1 AND id = ANY($2::bigint[])"
             f"{dormant_sql}",
             self.realm, [int(e) for e in edge_ids],
         )
@@ -2303,7 +2374,8 @@ class RAGGraphStore:
         if not wanted:
             return []
         ent_rows = await self.client._fetch(
-            f"SELECT * FROM {ent_ref} WHERE realm = $1 AND id = ANY($2::bigint[])",
+            f"SELECT id, realm, space, payload, created_at, updated_at "
+            f"FROM {ent_ref} WHERE realm = $1 AND id = ANY($2::bigint[])",
             self.realm, list(wanted),
         )
         vertices = {r["id"]: self._row_to_vertex(r) for r in ent_rows}
@@ -2348,7 +2420,8 @@ class RAGGraphStore:
         entities = await self.client.get_vertices(
             "entities",
             realm=self.realm,
-            space=target_space if target_space != RESERVED_SPACE_ALL else RESERVED_SPACE_ALL
+            space=target_space if target_space != RESERVED_SPACE_ALL else RESERVED_SPACE_ALL,
+            include_embedding=False,
         )
 
         results = []
@@ -2402,7 +2475,11 @@ class RAGGraphStore:
         target_space = self._require_space(space)
         if doc_keys is None:
             doc_vertices = await self.client.find_vertices(
-                "documents", realm=self.realm, space=target_space
+                "documents",
+                realm=self.realm,
+                space=target_space,
+                payload_fields=["doc_key"],
+                include_embedding=False,
             )
             doc_keys = list(
                 dict.fromkeys(

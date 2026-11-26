@@ -37,7 +37,7 @@ from post_graph_rag.models import (
 from post_graph_rag.reporting import CommunityReport, CommunityReporter, Finding
 from post_graph_rag.retention import RetentionReport
 
-__version__ = "1.20.1"
+__version__ = "1.20.2"
 __all__ = [
     "CorpusDelta",
     "RetentionReport",
